@@ -11,6 +11,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
+import { MailTestPanel } from "@/components/admin/settings/MailTestPanel";
 
 type PreviewTable = {
   table: string;
@@ -128,7 +129,7 @@ export default function AdminSettings() {
     <AdminLayout>
       <div className="flex animate-fade-up flex-col gap-[18px]">
         <p className="text-sm text-muted-foreground">
-          PIN-Sperren der B2B-Seiten und Launch-Reset zum Bereinigen der Testdaten vor
+          PIN-Sperren der B2B-Seiten, E-Mail-Test und Launch-Reset zum Bereinigen der Testdaten vor
           dem Go-Live.
         </p>
 
@@ -187,6 +188,9 @@ export default function AdminSettings() {
             </div>
           </div>
         </Card>
+
+        {/* E-Mail-Test — jede ausgehende Mail mit Beispieldaten verschicken */}
+        <MailTestPanel />
 
         {/* Launch-Reset — löscht Testdaten, Stammdaten und Inhalte bleiben */}
         <Card className="rounded-2xl border-[hsl(0_100%_71%/0.26)] bg-gradient-card p-5 sm:p-6">

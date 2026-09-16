@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
-import { encodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
+import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 
@@ -291,7 +291,7 @@ serve(async (req) => {
     const emailResponse = await resend.emails.send({
       from: DEFAULT_FROM,
       to: [recipientEmail],
-      reply_to: REPLY_TO_EMAIL,
+      replyTo: REPLY_TO_EMAIL,
       subject: subjectLine,
       html: htmlContent,
       attachments: [

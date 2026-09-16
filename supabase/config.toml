@@ -129,3 +129,6 @@ verify_jwt = true
 
 [functions.news-like]
 verify_jwt = false
+
+[functions.admin-mail-test]
+verify_jwt = true

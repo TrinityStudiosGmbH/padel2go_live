@@ -345,7 +345,7 @@ export async function sendBrandedEmail(
     to: [to],
     subject,
     html,
-    ...(replyTo ? { reply_to: replyTo } : {}),
+    ...(replyTo ? { replyTo: replyTo } : {}),
     ...(opts?.attachments && opts.attachments.length ? { attachments: opts.attachments } : {}),
   });
   // Resend's SDK does NOT throw on API errors — it returns { data, error }. Throw so callers

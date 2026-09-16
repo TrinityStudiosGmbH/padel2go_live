@@ -48,7 +48,7 @@ serve(async (req) => {
     // TEST MODE — one email, no subscriber writes.
     if (test_to) {
       const html = renderNewsletterHtml(campaign, { unsubscribeUrl: `${APP}/newsletter/abmelden?token=preview` });
-      const r = await resend.emails.send({ from: DEFAULT_FROM, to: [test_to], reply_to: REPLY_TO_EMAIL, subject: `[TEST] ${campaign.subject}`, html });
+      const r = await resend.emails.send({ from: DEFAULT_FROM, to: [test_to], replyTo: REPLY_TO_EMAIL, subject: `[TEST] ${campaign.subject}`, html });
       if (r.error) return new Response(JSON.stringify({ error: r.error.message ?? "Resend-Fehler" }), { status: 502, headers: H });
       return new Response(JSON.stringify({ success: true, test: true, id: r.data?.id }), { headers: H });
     }
@@ -89,7 +89,7 @@ serve(async (req) => {
         const oneClickUrl = `${url}/functions/v1/newsletter-unsubscribe?token=${r.unsubscribe_token}`;
         try {
           const resp = await resend.emails.send({
-            from: DEFAULT_FROM, to: [r.email], reply_to: REPLY_TO_EMAIL, subject: campaign.subject,
+            from: DEFAULT_FROM, to: [r.email], replyTo: REPLY_TO_EMAIL, subject: campaign.subject,
             html: renderNewsletterHtml(campaign, { unsubscribeUrl }),
             headers: { "List-Unsubscribe": `<${oneClickUrl}>`, "List-Unsubscribe-Post": "List-Unsubscribe=One-Click" },
           });

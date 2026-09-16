@@ -166,7 +166,7 @@ const handler = async (req: Request): Promise<Response> => {
     const emailResponse = await resend.emails.send({
       from: DEFAULT_FROM,
       to: [INTERNAL_INBOX],
-      reply_to: email,
+      replyTo: email,
       subject: `Kontaktanfrage: ${reasonLabel} - ${name}`,
       html: brandedEmailHtml({
         internal: true,
