@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { useTranslation } from "react-i18next";
 import type { DbLocation } from "@/types/database";
 import { StorageImage } from "@/components/StorageImage";
+import { WhatsAppGroupButton } from "@/components/WhatsAppBusiness";
 
 interface LocationCardProps {
   location: DbLocation;
@@ -174,12 +175,21 @@ export function LocationCard({ location, todayFreeSlots, occupancyPercent, index
               {hours ? t("locationCard.hoursRange", { open: hours.open, close: hours.close }) : t("locationCard.closed")}
             </span>
           </span>
-          <Button variant="lime" size="sm" className="group/btn shrink-0" asChild>
-            <NavLink to={`/booking/locations/${location.slug}`}>
-              {t("locationCard.select")}
-              <ArrowRight className="w-[15px] h-[15px] group-hover/btn:translate-x-1 transition-transform" />
-            </NavLink>
-          </Button>
+          <div className="flex shrink-0 items-center gap-2">
+            {location.whatsapp_group_url && (
+              <WhatsAppGroupButton
+                href={location.whatsapp_group_url}
+                label={t("locationCard.whatsapp")}
+                compact
+              />
+            )}
+            <Button variant="lime" size="sm" className="group/btn shrink-0" asChild>
+              <NavLink to={`/booking/locations/${location.slug}`}>
+                {t("locationCard.select")}
+                <ArrowRight className="w-[15px] h-[15px] group-hover/btn:translate-x-1 transition-transform" />
+              </NavLink>
+            </Button>
+          </div>
         </div>
       </div>
     </motion.div>

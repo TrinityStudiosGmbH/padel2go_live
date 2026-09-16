@@ -22,6 +22,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { TranslatableField } from "@/components/admin/TranslatableField";
+import { WhatsAppIcon } from "@/components/WhatsAppBusiness";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, MapPin, Image as ImageIcon, ImagePlus, CalendarClock, AlertTriangle } from "lucide-react";
 
@@ -42,6 +43,7 @@ interface TeaserForm {
   is_active: boolean;
   image_url: string;
   club_url: string;
+  whatsapp_group_url: string;
 }
 
 const emptyForm: TeaserForm = {
@@ -61,6 +63,7 @@ const emptyForm: TeaserForm = {
   is_active: true,
   image_url: "",
   club_url: "",
+  whatsapp_group_url: "",
 };
 
 const TRANSLATABLE_FIELDS = ["title", "description", "city", "expected_date"];
@@ -102,6 +105,7 @@ export default function AdminLocationTeasers() {
         is_active: data.is_active,
         image_url: data.image_url || null,
         club_url: data.club_url || null,
+        whatsapp_group_url: data.whatsapp_group_url.trim() || null,
         updated_at: new Date().toISOString(),
       };
 
@@ -173,6 +177,7 @@ export default function AdminLocationTeasers() {
       is_active: t.is_active,
       image_url: t.image_url || "",
       club_url: t.club_url || "",
+      whatsapp_group_url: t.whatsapp_group_url || "",
     });
     setDialogOpen(true);
   };
@@ -248,6 +253,11 @@ export default function AdminLocationTeasers() {
                           EN
                         </span>
                       )}
+                      {t.whatsapp_group_url && (
+                        <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-full border border-[#25D366]/30 bg-[#25D366]/10 px-2 py-[3px] font-mono text-[9.5px] uppercase tracking-[0.1em] text-[#25D366]">
+                          <WhatsAppIcon className="h-3 w-3" /> WhatsApp
+                        </span>
+                      )}
                     </div>
                     {t.expected_date && (
                       <span className="inline-flex items-center gap-[7px] font-mono text-[11.5px] text-muted-foreground">
@@ -300,6 +310,11 @@ export default function AdminLocationTeasers() {
             className="flex flex-col gap-[15px]"
             onSubmit={(e) => {
               e.preventDefault();
+              const wa = form.whatsapp_group_url.trim();
+              if (wa && !wa.startsWith("https://")) {
+                toast.error("WhatsApp-Link muss mit https:// beginnen");
+                return;
+              }
               saveMutation.mutate({ ...form, id: editId || undefined });
             }}
           >
@@ -395,6 +410,17 @@ export default function AdminLocationTeasers() {
                   value={form.club_url}
                   onChange={(e) => setForm((f) => ({ ...f, club_url: e.target.value }))}
                   placeholder="https://..."
+                  className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04]"
+                />
+              </div>
+              <div className="flex flex-col gap-[7px]">
+                <Label className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                  WhatsApp-Gruppe (Einladungslink)
+                </Label>
+                <Input
+                  value={form.whatsapp_group_url}
+                  onChange={(e) => setForm((f) => ({ ...f, whatsapp_group_url: e.target.value }))}
+                  placeholder="https://chat.whatsapp.com/..."
                   className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04]"
                 />
               </div>

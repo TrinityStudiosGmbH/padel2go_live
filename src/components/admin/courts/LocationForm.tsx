@@ -24,6 +24,7 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
     name: location?.name || "",
     slug: location?.slug || "",
     description: location?.description || "",
+    whatsapp_group_url: location?.whatsapp_group_url || "",
     address: location?.address || "",
     postal_code: location?.postal_code || "",
     city: location?.city || "",
@@ -73,10 +74,15 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
 
   const saveMutation = useMutation({
     mutationFn: async () => {
+      const wa = formData.whatsapp_group_url.trim();
+      if (wa && !wa.startsWith("https://")) {
+        throw new Error("WhatsApp-Link muss mit https:// beginnen");
+      }
       const payload = {
         name: formData.name,
         slug: formData.slug,
         description: formData.description || null,
+        whatsapp_group_url: formData.whatsapp_group_url.trim() || null,
         address: formData.address || null,
         postal_code: formData.postal_code || null,
         city: formData.city || null,
@@ -324,6 +330,21 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
           placeholder="Beschreibung des Standorts..."
           className="bg-background border-border min-h-[100px]"
         />
+      </div>
+
+      {/* WhatsApp-Gruppe */}
+      <div className="space-y-2">
+        <Label htmlFor="whatsapp_group_url">WhatsApp-Gruppe (Einladungslink)</Label>
+        <Input
+          id="whatsapp_group_url"
+          value={formData.whatsapp_group_url}
+          onChange={(e) => setFormData((p) => ({ ...p, whatsapp_group_url: e.target.value }))}
+          placeholder="https://chat.whatsapp.com/..."
+          className="bg-background border-border"
+        />
+        <p className="text-xs text-muted-foreground">
+          Erscheint als WhatsApp-Button auf der Standort-Kachel und in der Buchungsmaske. Leer lassen = kein Button.
+        </p>
       </div>
 
       {/* Address */}

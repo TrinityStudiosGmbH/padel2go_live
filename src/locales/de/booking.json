@@ -187,6 +187,11 @@
     "cta": "Tennis-Courts ansehen",
     "imageAlt": "Tennisplatz am Standort"
   },
+  "whatsappTeaser": {
+    "title": "Spielpartner gesucht?",
+    "description": "Tritt der PADEL2GO-WhatsApp-Gruppe für {{name}} bei — Updates, Mitspieler & spontane Matches.",
+    "cta": "Gruppe beitreten"
+  },
   "summary": {
     "title": "Buchungsübersicht",
     "location": "Standort",
@@ -259,6 +264,7 @@
     "slots": "{{count}} Slots",
     "hoursRange": "{{open}} - {{close}} Uhr",
     "closed": "Geschlossen",
-    "select": "Auswählen"
+    "select": "Auswählen",
+    "whatsapp": "WhatsApp-Gruppe"
   }
 }

@@ -6,6 +6,7 @@ import { useLocationTeasers } from "@/hooks/useLocationTeasers";
 import { localized } from "@/lib/localized";
 import SectionDivider from "@/components/SectionDivider";
 import { StorageImage } from "@/components/StorageImage";
+import { WhatsAppGroupButton } from "@/components/WhatsAppBusiness";
 
 export function LocationTeasersSection() {
   const { t, i18n } = useTranslation("index");
@@ -130,17 +131,27 @@ export function LocationTeasersSection() {
                       </div>
                     )}
 
-                    {/* Club Link */}
-                    {teaser.club_url && (
-                      <a
-                        href={teaser.club_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="group/link mt-1 inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
-                      >
-                        {t("locationTeasers.toClub")}
-                        <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
-                      </a>
+                    {/* Club Link + WhatsApp-Gruppe */}
+                    {(teaser.club_url || teaser.whatsapp_group_url) && (
+                      <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+                        {teaser.club_url && (
+                          <a
+                            href={teaser.club_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="group/link inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+                          >
+                            {t("locationTeasers.toClub")}
+                            <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />
+                          </a>
+                        )}
+                        {teaser.whatsapp_group_url && (
+                          <WhatsAppGroupButton
+                            href={teaser.whatsapp_group_url}
+                            label={t("locationTeasers.whatsappJoin")}
+                          />
+                        )}
+                      </div>
                     )}
                   </div>
                 </motion.div>

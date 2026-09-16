@@ -17,6 +17,7 @@ export interface LocationTeaser {
   expected_date_en: string | null;
   expected_date_en_locked: boolean;
   club_url: string | null;
+  whatsapp_group_url: string | null;
   sort_order: number;
   is_active: boolean;
   created_at: string;

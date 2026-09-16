@@ -13,6 +13,7 @@ import { BookingLocationHeader } from "@/components/booking/BookingLocationHeade
 import { BookingSlotPicker } from "@/components/booking/BookingSlotPicker";
 import { BookingSummary } from "@/components/booking/BookingSummary";
 import { BookingTennisTeaser } from "@/components/booking/BookingTennisTeaser";
+import { BookingWhatsAppTeaser } from "@/components/booking/BookingWhatsAppTeaser";
 import { GuestCheckoutModal } from "@/components/booking/GuestCheckoutModal";
 import { useBookingLocation } from "@/hooks/useBookingLocation";
 import { useCourtsVisibility } from "@/hooks/useCourtsVisibility";
@@ -151,6 +152,10 @@ const BookingLocation = () => {
             )}
 
             <BookingLocationHeader location={location} sport={selectedSport} />
+
+            {location.whatsapp_group_url && (
+              <BookingWhatsAppTeaser locationName={location.name} href={location.whatsapp_group_url} />
+            )}
 
             <div
               id="bk-detail"

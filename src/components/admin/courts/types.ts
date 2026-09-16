@@ -46,6 +46,7 @@ export interface Location {
   lng: number | null;
   main_image_url: string | null;
   tennis_image_url: string | null;
+  whatsapp_group_url: string | null;
   gallery_image_urls: string[];
   opening_hours_json: Record<string, { open: string; close: string }>;
   rewards_enabled: boolean;

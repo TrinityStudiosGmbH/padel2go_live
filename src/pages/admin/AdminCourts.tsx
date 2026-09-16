@@ -53,6 +53,7 @@ export default function AdminCourts() {
           lng,
           main_image_url,
           tennis_image_url,
+          whatsapp_group_url,
           gallery_image_urls,
           opening_hours_json,
           rewards_enabled,

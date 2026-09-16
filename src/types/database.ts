@@ -72,6 +72,7 @@ export interface DbLocation {
   ai_analysis_enabled: boolean;
   vending_enabled: boolean;
   features_json: Record<string, boolean | undefined> | null;
+  whatsapp_group_url: string | null;
   timezone: string;
   created_at: string;
   updated_at: string;
