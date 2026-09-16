@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
     start.setHours(18, 0, 0, 0);
     return icsResponse(buildBookingIcs({
       id: "sample-booking", start, end: new Date(start.getTime() + 90 * 60000),
-      courtName: "Court 2 · Outdoor", locationName: "SkyPadel München", address: "Am Neudeck 10", city: "München",
+      courtName: "Court 2 · Outdoor", locationName: "SkyPadel München", address: "Musterstraße 1", city: "München",
     }));
   }
 

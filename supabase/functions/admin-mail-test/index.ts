@@ -43,7 +43,7 @@ interface CatalogEntry {
 
 // ── Beispieldaten ────────────────────────────────────────────────────────────
 const NAME = "Florian";
-const LOCATION = { name: "SkyPadel München", address: "Am Neudeck 10", city: "München" };
+const LOCATION = { name: "SkyPadel München", address: "Musterstraße 1", city: "München" };
 const COURT = "Court 2 · Outdoor";
 const start = (() => {
   const d = new Date();

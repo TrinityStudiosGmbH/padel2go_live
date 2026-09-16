@@ -96,7 +96,7 @@ Neue Felder auf `marketplace_items`: `manufacturer_name/address/email`,
 - Neu: **`/widerruf`** (Widerrufsbelehrung + Muster-Formular), **`/versand`**
   (Versand & Zahlung). Bestehend aktualisiert: `/agb` (12 §§, u. a. § 5 Warenkauf,
   § 6 Widerruf, § 8 Bonusprogramm: 100 P = 1 €, max. 50 %, Verfall 36 Monate),
-  `/impressum` (UG, Am Neudeck 10, DDG/MStV), `/datenschutz` (15 Abschnitte,
+  `/impressum` (UG, Am Neudeck 12, DDG/MStV), `/datenschutz` (15 Abschnitte,
   neu: Shop, **Push**, **Community/Matchmaking**, **Kameras**, **Drittland**).
 - App-Impressumspflicht: Impressum + Datenschutz müssen auch in der App in
   ≤ 2 Klicks erreichbar sein (Settings-Links reichen).
