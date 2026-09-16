@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
-import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX } from "../_shared/email.ts";
+import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
 
 // Stripe webhooks are server-to-server, minimal CORS needed
 const corsHeaders = {
@@ -237,24 +237,22 @@ serve(async (req) => {
                     from: DEFAULT_FROM,
                     to: [INTERNAL_INBOX],
                     subject: `KRITISCH: Bezahlte Marketplace-Bestellung storniert - ${releasedOrder?.reference_code ?? redemptionId}`,
-                    html: `
-                      <html>
-                        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                            <h1 style="color: #b00020; margin-bottom: 20px;">Bezahlte Bestellung wurde storniert</h1>
-                            <p>Eine per Karte bezahlte Marketplace-Bestellung wurde storniert, bevor der Zahlungs-Webhook eintraf. Punkte und Bestand wurden bereits zurueckgebucht.</p>
-                            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
-                              <p><strong>Referenz:</strong> ${escapeHtml(releasedOrder?.reference_code ?? redemptionId)}</p>
-                              <p><strong>Bestell-ID:</strong> ${redemptionId}</p>
-                              <p><strong>Status:</strong> ${escapeHtml(releasedOrder?.status ?? "nicht gefunden")}</p>
-                              <p><strong>Stripe Session:</strong> ${session.id}</p>
-                              <p><strong>Bezahlt (Cent):</strong> ${session.amount_total ?? 0}</p>
-                              <p><strong>Automatische Rueckerstattung:</strong> ${refundOk ? "ausgeloest" : "FEHLGESCHLAGEN - bitte manuell pruefen"}</p>
-                            </div>
-                          </div>
-                        </body>
-                      </html>
-                    `,
+                    html: brandedEmailHtml({
+                      internal: true,
+                      title: "KRITISCH: Bezahlte Marketplace-Bestellung storniert",
+                      emoji: "🚨",
+                      heading: "Bezahlte Bestellung wurde storniert",
+                      intro: "Eine per Karte bezahlte Marketplace-Bestellung wurde storniert, bevor der Zahlungs-Webhook eintraf. Punkte und Bestand wurden bereits zurückgebucht.",
+                      rows: [
+                        { label: "Referenz", value: String(releasedOrder?.reference_code ?? redemptionId) },
+                        { label: "Bestell-ID", value: redemptionId },
+                        { label: "Status", value: String(releasedOrder?.status ?? "nicht gefunden") },
+                        { label: "Stripe Session", value: session.id },
+                        { label: "Bezahlt", value: `${((session.amount_total ?? 0) / 100).toFixed(2).replace(".", ",")} €` },
+                      ],
+                      highlight: { label: "Automatische Rückerstattung", value: refundOk ? "ausgelöst" : "FEHLGESCHLAGEN" },
+                      note: refundOk ? "Keine weitere Aktion nötig." : "Bitte manuell in Stripe prüfen und erstatten.",
+                    }),
                   });
                   logStep("Marketplace: critical release alert emailed", { redemptionId });
                 } else {
@@ -407,38 +405,35 @@ serve(async (req) => {
                   const formattedAddress = item?.product_type === "purchase"
                     ? `${order?.shipping_address_line1 ?? ""}\n${order?.shipping_postal_code ?? ""} ${order?.shipping_city ?? ""}\n${order?.shipping_country ?? "Deutschland"}`
                     : "— (kein Versand nötig)";
+                  // `item` kommt aus einem untypisierten Select (never) — lokal typisieren.
+                  const itemInfo = item as { name?: string; category?: string } | null;
                   const resend = new Resend(resendApiKey);
                   await resend.emails.send({
                     from: DEFAULT_FROM,
                     to: [INTERNAL_INBOX],
                     subject: `Neue Marketplace-Bestellung: ${item.name} - ${order?.reference_code ?? redemptionId}`,
-                    html: `
-                      <html>
-                        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                            <h1 style="color: #111; margin-bottom: 20px;">Neue Marketplace-Bestellung</h1>
-                            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                              <h2 style="color: #333; margin-top: 0;">Bestelldetails</h2>
-                              <p><strong>Referenz:</strong> ${escapeHtml(order?.reference_code ?? redemptionId)}</p>
-                              <p><strong>Produkt:</strong> ${escapeHtml(item.name)}</p>
-                              <p><strong>Kategorie:</strong> ${escapeHtml(item.category)}</p>
-                              <p><strong>Menge:</strong> ${order?.quantity ?? 1}</p>
-                              <p><strong>Bezahlt mit Punkten:</strong> ${pointsSpent}</p>
-                              <p><strong>Bezahlt bar (Cent):</strong> ${order?.amount_cents ?? session.amount_total ?? 0}</p>
-                            </div>
-                            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                              <h2 style="color: #333; margin-top: 0;">Kundeninformationen</h2>
-                              <p><strong>Name:</strong> ${escapeHtml(customerName)}</p>
-                              <p><strong>E-Mail:</strong> ${escapeHtml(customerEmail)}</p>
-                            </div>
-                            <div style="background: #e8f5e9; padding: 20px; border-radius: 8px;">
-                              <h2 style="color: #333; margin-top: 0;">Lieferadresse</h2>
-                              <p style="white-space: pre-line; margin: 0;">${escapeHtml(formattedAddress)}</p>
-                            </div>
-                          </div>
-                        </body>
-                      </html>
-                    `,
+                    html: brandedEmailHtml({
+                      internal: true,
+                      title: `Neue Marketplace-Bestellung: ${itemInfo?.name ?? "Artikel"}`,
+                      preheader: `${order?.reference_code ?? redemptionId} · ${customerName}`,
+                      emoji: "🛍️",
+                      heading: "Neue Marketplace-Bestellung",
+                      intro: "Eine bezahlte Bestellung wartet auf Bearbeitung.",
+                      rowsTitle: "Bestelldetails",
+                      rows: [
+                        { label: "Referenz", value: String(order?.reference_code ?? redemptionId) },
+                        { label: "Produkt", value: itemInfo?.name ?? "Artikel" },
+                        { label: "Kategorie", value: itemInfo?.category ?? "-" },
+                        { label: "Menge", value: String(order?.quantity ?? 1) },
+                        { label: "Bezahlt mit Punkten", value: String(pointsSpent) },
+                        { label: "Bezahlt bar", value: `${((order?.amount_cents ?? session.amount_total ?? 0) / 100).toFixed(2).replace(".", ",")} €` },
+                        { label: "Kunde", value: customerName },
+                        { label: "E-Mail", value: customerEmail },
+                        { label: "Lieferadresse", value: formattedAddress.replace(/\n/g, ", ") },
+                      ],
+                      ctaLabel: "Bestellung im Admin öffnen",
+                      ctaUrl: "https://www.padel2go-official.de/admin/marketplace",
+                    }),
                   });
                   logStep("Marketplace: fulfillment email sent", { redemptionId });
                 } catch (emailError) {
@@ -736,23 +731,21 @@ serve(async (req) => {
                     from: DEFAULT_FROM,
                     to: [INTERNAL_INBOX],
                     subject: `KRITISCH: Bezahlte Buchung storniert - ${bookingId}`,
-                    html: `
-                      <html>
-                        <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                          <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                            <h1 style="color: #b00020; margin-bottom: 20px;">Bezahlte Buchung wurde storniert</h1>
-                            <p>Eine per Karte bezahlte Buchung wurde storniert, bevor der Zahlungs-Webhook eintraf. Die reservierten Credits wurden bereits zurueckgebucht.</p>
-                            <div style="background: #f9f9f9; padding: 20px; border-radius: 8px;">
-                              <p><strong>Buchungs-ID:</strong> ${bookingId}</p>
-                              <p><strong>Status:</strong> ${releasedBooking?.status ?? "nicht gefunden"}</p>
-                              <p><strong>Stripe Session:</strong> ${session.id}</p>
-                              <p><strong>Bezahlt (Cent):</strong> ${session.amount_total ?? 0}</p>
-                              <p><strong>Automatische Rueckerstattung:</strong> ${refundOk ? "ausgeloest" : "FEHLGESCHLAGEN - bitte manuell pruefen"}</p>
-                            </div>
-                          </div>
-                        </body>
-                      </html>
-                    `,
+                    html: brandedEmailHtml({
+                      internal: true,
+                      title: "KRITISCH: Bezahlte Buchung storniert",
+                      emoji: "🚨",
+                      heading: "Bezahlte Buchung wurde storniert",
+                      intro: "Eine per Karte bezahlte Buchung wurde storniert, bevor der Zahlungs-Webhook eintraf. Die reservierten Credits wurden bereits zurückgebucht.",
+                      rows: [
+                        { label: "Buchungs-ID", value: bookingId },
+                        { label: "Status", value: String(releasedBooking?.status ?? "nicht gefunden") },
+                        { label: "Stripe Session", value: session.id },
+                        { label: "Bezahlt", value: `${((session.amount_total ?? 0) / 100).toFixed(2).replace(".", ",")} €` },
+                      ],
+                      highlight: { label: "Automatische Rückerstattung", value: refundOk ? "ausgelöst" : "FEHLGESCHLAGEN" },
+                      note: refundOk ? "Keine weitere Aktion nötig." : "Bitte manuell in Stripe prüfen und erstatten.",
+                    }),
                   });
                   logStep("Booking: critical release alert emailed", { bookingId });
                 } else {

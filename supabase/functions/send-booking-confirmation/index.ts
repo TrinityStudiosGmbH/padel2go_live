@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { encodeBase64 } from "https://deno.land/std@0.190.0/encoding/base64.ts";
-import { DEFAULT_FROM, REPLY_TO_EMAIL } from "../_shared/email.ts";
+import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 
 // Resend is initialized lazily inside the handler so we can fall back to DB config
@@ -196,11 +196,9 @@ serve(async (req) => {
       .eq("source_id", booking_id)
       .maybeSingle();
     const taxLine = bookingReceipt && (bookingReceipt.tax_cents ?? 0) > 0
-      ? `<div style="color: #94a3b8; font-size: 12px; margin-top: 4px;">enthaltene USt (${Number(bookingReceipt.tax_rate ?? 19).toFixed(0)} %): ${((bookingReceipt.tax_cents ?? 0) / 100).toFixed(2).replace(".", ",")} €</div>`
+      ? `enthaltene USt (${Number(bookingReceipt.tax_rate ?? 19).toFixed(0)} %): ${((bookingReceipt.tax_cents ?? 0) / 100).toFixed(2).replace(".", ",")} €`
       : "";
-    const receiptNumberLine = bookingReceipt?.receipt_number
-      ? `<div style="color: #94a3b8; font-size: 12px; margin-top: 4px;">Belegnr. ${bookingReceipt.receipt_number}</div>`
-      : "";
+    const receiptNumberLine = bookingReceipt?.receipt_number ? `Belegnr. ${bookingReceipt.receipt_number}` : "";
 
     const finalAmountCents = paidAmountCents ?? 0;
     const paidAmount = (finalAmountCents / 100).toFixed(2).replace('.', ',');
@@ -264,144 +262,30 @@ serve(async (req) => {
       ? `${resolvedAppUrl}/booking`
       : `${resolvedAppUrl}/dashboard/booking`;
 
-    const htmlContent = `
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${subjectLine}</title>
-</head>
-<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background-color: #0a0a0a;">
-  <table role="presentation" style="width: 100%; border-collapse: collapse;">
-    <tr>
-      <td style="padding: 40px 20px;">
-        <table role="presentation" style="max-width: 520px; margin: 0 auto; background: #101010; border: 1px solid rgba(199,240,17,0.18); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 40px rgba(0,0,0,0.5);">
-          <!-- Header -->
-          <tr>
-            <td style="padding: 32px 32px 24px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1);">
-              <div style="font-size: 28px; font-weight: 800; color: #FAFAFA; letter-spacing: -0.5px;">
-                PADEL<span style="color: #C7F011;">2</span>GO
-              </div>
-            </td>
-          </tr>
-          
-          <!-- Main Content -->
-          <tr>
-            <td style="padding: 32px;">
-              <!-- Success Icon & Title -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🎾</div>
-                <h1 style="margin: 0; font-size: 24px; font-weight: 800; color: #C7F011;">
-                  ${headerText}
-                </h1>
-                <p style="margin: 12px 0 0; color: #94a3b8; font-size: 15px;">
-                  ${introText}
-                </p>
-              </div>
-
-              <!-- Greeting -->
-              <p style="color: #e2e8f0; font-size: 15px; margin: 0 0 24px;">
-                Hallo ${recipientName},
-              </p>
-
-              <!-- Booking Details Card -->
-              <div style="background: rgba(255,255,255,0.05); border-radius: 12px; padding: 24px; margin-bottom: 24px;">
-                <h2 style="margin: 0 0 16px; font-size: 14px; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 1px;">
-                  Buchungsdetails
-                </h2>
-                
-                <div style="margin-bottom: 16px;">
-                  <div style="display: flex; align-items: center; margin-bottom: 12px;">
-                    <span style="font-size: 18px; margin-right: 12px;">📍</span>
-                    <div>
-                      <div style="color: #ffffff; font-weight: 600; font-size: 16px;">${location.name}</div>
-                      ${location.address ? `<div style="color: #94a3b8; font-size: 14px;">${location.address}${location.city ? `, ${location.city}` : ''}</div>` : ''}
-                    </div>
-                  </div>
-                </div>
-
-                <div style="display: grid; gap: 12px;">
-                  <div style="display: flex; align-items: center;">
-                    <span style="font-size: 16px; margin-right: 12px;">📅</span>
-                    <span style="color: #e2e8f0; font-size: 15px;">${formattedDate}</span>
-                  </div>
-                  <div style="display: flex; align-items: center;">
-                    <span style="font-size: 16px; margin-right: 12px;">🕐</span>
-                    <span style="color: #e2e8f0; font-size: 15px;">${startTime} - ${endTime} Uhr (${durationMinutes} Min)</span>
-                  </div>
-                  <div style="display: flex; align-items: center;">
-                    <span style="font-size: 16px; margin-right: 12px;">🎾</span>
-                    <span style="color: #e2e8f0; font-size: 15px;">${court.name}</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Payment Info -->
-              <div style="background: rgba(199,240,17,0.08); border: 1px solid rgba(199,240,17,0.25); border-radius: 12px; padding: 20px; margin-bottom: 24px;">
-                <div style="display: flex; justify-content: space-between; align-items: center;">
-                  <div>
-                    <div style="color: #94a3b8; font-size: 13px; margin-bottom: 4px;">Bezahlt</div>
-                    <div style="color: #C7F011; font-size: 24px; font-weight: 800;">${paidAmount} €</div>
-                    ${taxLine}
-                  </div>
-                  <div style="text-align: right;">
-                    <div style="color: #94a3b8; font-size: 13px; margin-bottom: 4px;">Buchungsnr.</div>
-                    <div style="color: #e2e8f0; font-size: 14px; font-weight: 600;">#${bookingRef}</div>
-                    ${receiptNumberLine}
-                  </div>
-                </div>
-              </div>
-
-              <!-- CTA Button -->
-              <div style="text-align: center; margin-bottom: 16px;">
-                <a href="${bookingUrl}" style="display: inline-block; background: #C7F011; color: #000000; text-decoration: none; padding: 14px 32px; border-radius: 999px; font-weight: 700; font-size: 15px; box-shadow: 0 4px 20px rgba(199,240,17,0.35);">
-                  Buchung ansehen
-                </a>
-              </div>
-
-              <!-- Add to Calendar -->
-              <div style="text-align: center; margin-bottom: 24px;">
-                <a href="${googleCalUrl}" style="display: inline-block; background: rgba(255,255,255,0.08); color: #e2e8f0; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: 600; font-size: 14px; border: 1px solid rgba(255,255,255,0.15);">
-                  📅 Zum Google Kalender hinzufügen
-                </a>
-                <div style="color: #64748b; font-size: 12px; margin-top: 8px;">Die .ics-Datei im Anhang funktioniert mit Apple Kalender &amp; Outlook.</div>
-              </div>
-
-              <!-- Footer Message -->
-              <p style="text-align: center; color: #94a3b8; font-size: 14px; margin: 0;">
-                Wir freuen uns auf dein Match! 🏆
-              </p>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding: 24px 32px; background: rgba(0,0,0,0.2); text-align: center;">
-              <p style="margin: 0 0 10px; color: #64748b; font-size: 12px; line-height: 1.6;">
-                PADEL2GO UG (haftungsbeschränkt) · Am Neudeck 10 · 81541 München<br>
-                Geschäftsführer: Florian Steinfelder, David Klemm · Amtsgericht München, HRB 306377
-              </p>
-              <p style="margin: 0 0 10px; font-size: 12px;">
-                <a href="${resolvedAppUrl}/impressum" style="color: #8a8a8a;">Impressum</a> ·
-                <a href="${resolvedAppUrl}/agb" style="color: #8a8a8a;">AGB</a> ·
-                <a href="${resolvedAppUrl}/datenschutz" style="color: #8a8a8a;">Datenschutz</a>
-              </p>
-              <p style="margin: 0 0 10px; color: #64748b; font-size: 12px;">
-                Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).
-              </p>
-              <p style="margin: 0; color: #64748b; font-size: 13px;">
-                © ${new Date().getFullYear()} PADEL2GO. Alle Rechte vorbehalten.
-              </p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-    `;
+    const htmlContent = brandedEmailHtml({
+      title: subjectLine,
+      preheader: `${formattedDate}, ${startTime} Uhr · ${court.name} @ ${location.name}`,
+      emoji: "🎾",
+      heading: headerText,
+      intro: introText,
+      greetingName: recipientName,
+      rowsTitle: "Buchungsdetails",
+      rows: [
+        { label: "Standort", value: location.name },
+        ...(location.address ? [{ label: "Adresse", value: `${location.address}${location.city ? `, ${location.city}` : ""}` }] : []),
+        { label: "Datum", value: formattedDate },
+        { label: "Uhrzeit", value: `${startTime} – ${endTime} Uhr (${durationMinutes} Min)` },
+        { label: "Court", value: court.name },
+        { label: "Buchungsnr.", value: `#${bookingRef}` },
+      ],
+      highlight: { label: "Bezahlt", value: `${paidAmount} €`, sub: [taxLine, receiptNumberLine] },
+      ctaLabel: "Buchung ansehen",
+      ctaUrl: bookingUrl,
+      secondaryCtaLabel: "📅 Zum Google Kalender hinzufügen",
+      secondaryCtaUrl: googleCalUrl,
+      note: "Die .ics-Datei im Anhang funktioniert mit Apple Kalender & Outlook. Wir freuen uns auf dein Match! 🏆",
+      legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
+    });
 
     // Send email
     const emailResponse = await resend.emails.send({

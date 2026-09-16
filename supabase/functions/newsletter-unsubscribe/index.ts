@@ -17,7 +17,7 @@ const cors = (origin: string | null) => ({
 const page = (ok: boolean) => `<!DOCTYPE html><html lang="de"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>${ok ? "Abgemeldet" : "Link ungültig"}</title></head>
 <body style="margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;background:#0a0a0a;color:#FAFAFA;display:flex;min-height:100vh;align-items:center;justify-content:center;text-align:center;">
   <div style="max-width:420px;padding:32px;">
-    <div style="font-size:24px;font-weight:800;margin-bottom:16px;">PADEL<span style="color:#C7F011;">2</span>GO</div>
+    <img src="https://www.padel2go-official.de/email/logo-written.png" alt="PADEL2GO" width="200" style="display:block;width:200px;height:auto;margin:0 auto 20px;">
     ${ok
       ? `<h1 style="color:#C7F011;font-size:22px;margin:0 0 8px;">Du wurdest abgemeldet</h1><p style="color:#8a8a8a;">Schade, dass du gehst! Du erhältst keine Newsletter mehr von uns.</p>`
       : `<h1 style="font-size:22px;margin:0 0 8px;">Link ungültig</h1><p style="color:#8a8a8a;">Dieser Abmeldelink ist ungültig oder abgelaufen.</p>`}

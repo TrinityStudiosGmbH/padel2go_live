@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@4.0.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { DEFAULT_FROM, INTERNAL_INBOX } from "../_shared/email.ts";
+import { DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml, blockMessage } from "../_shared/email.ts";
 
 // Resend is initialized lazily inside the handler so we can fall back to DB config
 
@@ -147,21 +147,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Sanitize inputs for HTML (basic XSS prevention)
-    const sanitize = (str: string) => str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#039;');
-
-    const safeName = sanitize(name);
-    const safeEmail = sanitize(email);
-    const safeMessage = sanitize(message);
-    const safeOrganization = organization ? sanitize(organization) : null;
-
     const reasonLabel = reasonLabels[reason] || reason || "Allgemeine Anfrage";
-    const safeReasonLabel = sanitize(reasonLabel);
 
     // Log the request for rate limiting (before sending email)
     const { error: logError } = await supabaseAdmin
@@ -181,44 +167,25 @@ const handler = async (req: Request): Promise<Response> => {
       from: DEFAULT_FROM,
       to: [INTERNAL_INBOX],
       reply_to: email,
-      subject: `Kontaktanfrage: ${safeReasonLabel} - ${safeName}`,
-      html: `
-        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%); padding: 30px; border-radius: 12px 12px 0 0;">
-            <h1 style="color: #C7F011; margin: 0; font-size: 24px;">Neue Kontaktanfrage</h1>
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 30px; border-radius: 0 0 12px 12px; border: 1px solid #e9ecef; border-top: none;">
-            <table style="width: 100%; border-collapse: collapse;">
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #495057;">Anfrageart:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; color: #212529;">${safeReasonLabel}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #495057;">Name:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; color: #212529;">${safeName}</td>
-              </tr>
-              <tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #495057;">E-Mail:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; color: #212529;"><a href="mailto:${safeEmail}" style="color: #007bff;">${safeEmail}</a></td>
-              </tr>
-              ${safeOrganization ? `<tr>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; font-weight: bold; color: #495057;">Organisation:</td>
-                <td style="padding: 10px 0; border-bottom: 1px solid #e9ecef; color: #212529;">${safeOrganization}</td>
-              </tr>` : ''}
-            </table>
-            
-            <div style="margin-top: 20px;">
-              <h3 style="color: #495057; margin-bottom: 10px;">Nachricht:</h3>
-              <div style="background: white; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; white-space: pre-wrap; color: #212529;">${safeMessage}</div>
-            </div>
-          </div>
-          
-          <p style="color: #6c757d; font-size: 12px; text-align: center; margin-top: 20px;">
-            Diese E-Mail wurde automatisch über das Kontaktformular auf padel2go-official.de gesendet.
-          </p>
-        </div>
-      `,
+      subject: `Kontaktanfrage: ${reasonLabel} - ${name}`,
+      html: brandedEmailHtml({
+        internal: true,
+        title: `Kontaktanfrage: ${reasonLabel}`,
+        preheader: `${name} · ${reasonLabel}`,
+        emoji: "✉️",
+        heading: "Neue Kontaktanfrage",
+        intro: "Über das Kontaktformular auf padel2go-official.de eingegangen.",
+        rows: [
+          { label: "Anfrageart", value: reasonLabel },
+          { label: "Name", value: name },
+          { label: "E-Mail", value: email },
+          ...(organization ? [{ label: "Organisation", value: organization }] : []),
+        ],
+        bodyHtml: blockMessage(message, "Nachricht"),
+        ctaLabel: "Antworten",
+        ctaUrl: `mailto:${encodeURIComponent(email)}?subject=${encodeURIComponent(`Re: ${reasonLabel}`)}`,
+        note: "Antworten auf diese Mail gehen direkt an die absendende Person (Reply-To).",
+      }),
     });
 
     // Resend's SDK does NOT throw on API errors — it returns { data, error }. Surface it

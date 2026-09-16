@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
-import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX } from "../_shared/email.ts";
+import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -398,33 +398,28 @@ serve(async (req) => {
               from: DEFAULT_FROM,
               to: [INTERNAL_INBOX],
               subject: `Neue Marketplace-Bestellung: ${item.name} - ${referenceCode}`,
-              html: `
-                <html>
-                  <body style="font-family: Arial, sans-serif; padding: 20px; background-color: #f5f5f5;">
-                    <div style="max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 10px;">
-                      <h1 style="color: #111; margin-bottom: 20px;">Neue Marketplace-Bestellung</h1>
-                      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h2 style="color: #333; margin-top: 0;">Bestelldetails</h2>
-                        <p><strong>Referenz:</strong> ${escapeHtml(referenceCode)}</p>
-                        <p><strong>Produkt:</strong> ${escapeHtml(item.name)}</p>
-                        <p><strong>Kategorie:</strong> ${escapeHtml(item.category)}</p>
-                        <p><strong>Menge:</strong> ${quantity}</p>
-                        <p><strong>Bezahlt mit Punkten:</strong> ${appliedPlay + appliedReward}</p>
-                        <p><strong>Bezahlt bar (Cent):</strong> ${Math.max(0, remainderCents)}</p>
-                      </div>
-                      <div style="background: #f9f9f9; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h2 style="color: #333; margin-top: 0;">Kundeninformationen</h2>
-                        <p><strong>Name:</strong> ${escapeHtml(displayName)}</p>
-                        <p><strong>E-Mail:</strong> ${escapeHtml(effectiveEmail)}</p>
-                      </div>
-                      <div style="background: #e8f5e9; padding: 20px; border-radius: 8px;">
-                        <h2 style="color: #333; margin-top: 0;">Lieferadresse</h2>
-                        <p style="white-space: pre-line; margin: 0;">${escapeHtml(formattedAddress)}</p>
-                      </div>
-                    </div>
-                  </body>
-                </html>
-              `,
+              html: brandedEmailHtml({
+                internal: true,
+                title: `Neue Marketplace-Bestellung: ${item.name}`,
+                preheader: `${referenceCode} · ${displayName}`,
+                emoji: "🛍️",
+                heading: "Neue Marketplace-Bestellung",
+                intro: "Eine Bestellung wartet auf Bearbeitung.",
+                rowsTitle: "Bestelldetails",
+                rows: [
+                  { label: "Referenz", value: referenceCode },
+                  { label: "Produkt", value: item.name },
+                  { label: "Kategorie", value: item.category },
+                  { label: "Menge", value: String(quantity) },
+                  { label: "Bezahlt mit Punkten", value: String(appliedPlay + appliedReward) },
+                  { label: "Bezahlt bar", value: `${(Math.max(0, remainderCents) / 100).toFixed(2).replace(".", ",")} €` },
+                  { label: "Kunde", value: displayName },
+                  { label: "E-Mail", value: effectiveEmail },
+                  { label: "Lieferadresse", value: formattedAddress.replace(/\n/g, ", ") },
+                ],
+                ctaLabel: "Bestellung im Admin öffnen",
+                ctaUrl: "https://www.padel2go-official.de/admin/marketplace",
+              }),
             });
             logStep("Free path: fulfillment email sent", { referenceCode });
           } else {
