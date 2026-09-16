@@ -102,6 +102,8 @@ export function emailShell(o: EmailShellOpts): string {
       .p2g-container { width:100% !important; }
       .p2g-px { padding-left:20px !important; padding-right:20px !important; }
       .p2g-logo { width:200px !important; height:auto !important; }
+      .p2g-cal-cell { display:block !important; padding:4px 0 !important; }
+      .p2g-cal-cell table { margin:0 auto !important; }
     }
   </style>
   <!--[if mso]><style>* { font-family: Arial, Helvetica, sans-serif !important; }</style><![endif]-->
@@ -255,6 +257,30 @@ export function blockButtonSecondary(label: string, url: string): string {
               </table>`;
 }
 
+export const CAL_GOOGLE_ICON_URL = `${APP_URL}/email/cal-google.png`;
+export const CAL_APPLE_ICON_URL = `${APP_URL}/email/cal-apple.png`;
+
+/** "Zum Kalender hinzufügen": Google + Apple nebeneinander, mit Logos; stapelt sich auf Mobile. */
+export function blockCalendarButtons(googleUrl: string, appleUrl: string): string {
+  const btn = (url: string, icon: string, label: string) => `
+                    <td align="center" class="p2g-cal-cell" style="padding:4px 6px;">
+                      <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                        <tr>
+                          <td align="center" style="border:1px solid ${BRAND.border};border-radius:999px;background-color:${BRAND.cardAlt};">
+                            <a href="${esc(url)}" target="_blank" style="display:inline-block;padding:11px 20px 11px 16px;font-family:${FONT_BODY};font-size:14px;font-weight:600;color:${BRAND.text};text-decoration:none;border-radius:999px;white-space:nowrap;">
+                              <img src="${icon}" width="18" height="18" alt="" style="display:inline-block;width:18px;height:18px;vertical-align:-4px;border:0;margin-right:8px;">${esc(label)}</a>
+                          </td>
+                        </tr>
+                      </table>
+                    </td>`;
+  return `
+              <div style="text-align:center;margin:0 0 6px;font-size:12px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:${BRAND.muted};">Zum Kalender hinzufügen</div>
+              <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center" style="margin:0 auto 18px;">
+                <tr>${btn(googleUrl, CAL_GOOGLE_ICON_URL, "Google Kalender")}${btn(appleUrl, CAL_APPLE_ICON_URL, "Apple Kalender")}
+                </tr>
+              </table>`;
+}
+
 /** Small muted note (typically the last line above the footer). */
 export function blockNote(text: string): string {
   return `<p style="margin:6px 0 0;font-size:13px;line-height:1.6;text-align:center;color:${BRAND.muted};">${esc(text)}</p>`;
@@ -297,6 +323,7 @@ export interface BrandedEmailOpts {
   ctaUrl?: string;
   secondaryCtaLabel?: string;
   secondaryCtaUrl?: string;
+  calendar?: { googleUrl: string; appleUrl: string }; // "Zum Kalender hinzufügen" (Google + Apple)
   note?: string;                 // muted line above the footer
   legalHtml?: string;            // pre-escaped legal block (e.g. Widerrufsbelehrung) below the note
   internal?: boolean;            // admin-inbox alert
@@ -312,6 +339,7 @@ export function brandedEmailHtml(o: BrandedEmailOpts): string {
     o.bodyHtml ?? "",
     o.ctaLabel && o.ctaUrl ? blockButton(o.ctaLabel, o.ctaUrl) : "",
     o.secondaryCtaLabel && o.secondaryCtaUrl ? blockButtonSecondary(o.secondaryCtaLabel, o.secondaryCtaUrl) : "",
+    o.calendar ? blockCalendarButtons(o.calendar.googleUrl, o.calendar.appleUrl) : "",
     o.note ? blockNote(o.note) : "",
     o.legalHtml ? blockLegal(o.legalHtml) : "",
   ].join("");

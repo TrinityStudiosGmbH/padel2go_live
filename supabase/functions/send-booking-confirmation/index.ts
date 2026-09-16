@@ -4,6 +4,7 @@ import { Resend } from "npm:resend@4.0.0";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
+import { buildBookingIcs, googleCalendarUrl, signBookingIcsToken, bookingIcsUrl } from "../_shared/bookingIcs.ts";
 
 // Resend is initialized lazily inside the handler so we can fall back to DB config
 
@@ -208,38 +209,14 @@ serve(async (req) => {
     const location = (Array.isArray(booking.locations) ? booking.locations[0] : booking.locations) as { id: string; name: string; address?: string; city?: string };
     const court = (Array.isArray(booking.courts) ? booking.courts[0] : booking.courts) as { id: string; name: string };
 
-    // ── Calendar (.ics attachment + Add-to-Google-Calendar link) ──
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const toICS = (d: Date) =>
-      `${d.getUTCFullYear()}${pad(d.getUTCMonth() + 1)}${pad(d.getUTCDate())}T${pad(d.getUTCHours())}${pad(d.getUTCMinutes())}${pad(d.getUTCSeconds())}Z`;
-    const icsEscape = (s: string) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-    const calSummary = `Padel: ${court.name} @ ${location.name}`;
-    const calLocation = [location.name, location.address, location.city].filter(Boolean).join(", ");
-    const calDescription = `Deine PADEL2GO Buchung – Buchungsnr. #${bookingRef}`;
-    const icsContent = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//PADEL2GO//Booking//DE",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:${booking.id}@padel2go`,
-      `DTSTAMP:${toICS(new Date())}`,
-      `DTSTART:${toICS(startDate)}`,
-      `DTEND:${toICS(endDate)}`,
-      `SUMMARY:${icsEscape(calSummary)}`,
-      `LOCATION:${icsEscape(calLocation)}`,
-      `DESCRIPTION:${icsEscape(calDescription)}`,
-      "STATUS:CONFIRMED",
-      "END:VEVENT",
-      "END:VCALENDAR",
-    ].join("\r\n");
-    const googleCalUrl =
-      `https://calendar.google.com/calendar/render?action=TEMPLATE` +
-      `&text=${encodeURIComponent(calSummary)}` +
-      `&dates=${toICS(startDate)}/${toICS(endDate)}` +
-      `&location=${encodeURIComponent(calLocation)}` +
-      `&details=${encodeURIComponent(calDescription)}`;
+    // ── Kalender: .ics im Anhang, Google-Link, signierter Apple-/.ics-Link ──
+    const calendarInput = {
+      id: booking.id, start: startDate, end: endDate,
+      courtName: court.name, locationName: location.name, address: location.address, city: location.city,
+    };
+    const icsContent = buildBookingIcs(calendarInput);
+    const googleCalUrl = googleCalendarUrl(calendarInput);
+    const appleCalUrl = bookingIcsUrl(booking.id, await signBookingIcsToken(booking.id));
 
     // Different messaging for owner vs participant
     const isOwner = payment_type === "owner";
@@ -281,9 +258,8 @@ serve(async (req) => {
       highlight: { label: "Bezahlt", value: `${paidAmount} €`, sub: [taxLine, receiptNumberLine] },
       ctaLabel: "Buchung ansehen",
       ctaUrl: bookingUrl,
-      secondaryCtaLabel: "📅 Zum Google Kalender hinzufügen",
-      secondaryCtaUrl: googleCalUrl,
-      note: "Die .ics-Datei im Anhang funktioniert mit Apple Kalender & Outlook. Wir freuen uns auf dein Match! 🏆",
+      calendar: { googleUrl: googleCalUrl, appleUrl: appleCalUrl },
+      note: "Die .ics-Datei im Anhang funktioniert auch mit Outlook. Wir freuen uns auf dein Match! 🏆",
       legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
     });
 

@@ -93,8 +93,11 @@ const CATALOG: CatalogEntry[] = [
         ],
         highlight: { label: "Bezahlt", value: eur(3600), sub: ["enthaltene USt (19 %): 5,75 €", "Belegnr. B-2026-000123"] },
         ctaLabel: "Buchung ansehen", ctaUrl: `${APP_URL}/dashboard/booking`,
-        secondaryCtaLabel: "📅 Zum Google Kalender hinzufügen", secondaryCtaUrl: "https://calendar.google.com/",
-        note: "Die .ics-Datei im Anhang funktioniert mit Apple Kalender & Outlook. Wir freuen uns auf dein Match! 🏆",
+        calendar: {
+          googleUrl: "https://calendar.google.com/calendar/render?action=TEMPLATE&text=Padel%3A%20Court%202%20%40%20SkyPadel",
+          appleUrl: `${Deno.env.get("SUPABASE_URL") ?? ""}/functions/v1/booking-ics?sample=1`,
+        },
+        note: "Die .ics-Datei im Anhang funktioniert auch mit Outlook. Wir freuen uns auf dein Match! 🏆",
         legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
       }),
     }),
