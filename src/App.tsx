@@ -79,13 +79,11 @@ const AdminMarketplace = lazy(() => import("./pages/admin/AdminMarketplace"));
 const AdminP2GPoints = lazy(() => import("./pages/admin/AdminP2GPoints"));
 const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const AdminFeatures = lazy(() => import("./pages/admin/AdminFeatures"));
-const AdminClubOwners = lazy(() => import("./pages/admin/AdminClubOwners"));
 const AdminClubs = lazy(() => import("./pages/admin/AdminClubs"));
 const AdminVouchers = lazy(() => import("./pages/admin/AdminVouchers"));
 const AdminLocationTeasers = lazy(() => import("./pages/admin/AdminLocationTeasers"));
 const AdminSkyPadelGallery = lazy(() => import("./pages/admin/AdminSkyPadelGallery"));
 const AdminPartnerTiles = lazy(() => import("./pages/admin/AdminPartnerTiles"));
-const AdminTouchpointSlides = lazy(() => import("./pages/admin/AdminTouchpointSlides"));
 const AdminQrPanel = lazy(() => import("./pages/admin/AdminQrPanel"));
 const QrLanding = lazy(() => import("./pages/QrLanding"));
 const AdminNews = lazy(() => import("./pages/admin/AdminNews"));
@@ -134,14 +132,18 @@ const App = () => (
               <Route path="/fuer-vereine" element={<FuerVereine />} />
               <Route path="/app-booking" element={<AppBooking />} />
               <Route path="/league" element={<League />} />
-              <Route path="/events" element={<Events />} />
-              <Route path="/events/:slug" element={<EventDetail />} />
+              <Route element={<RequireFeature feature="events" />}>
+                <Route path="/events" element={<Events />} />
+                <Route path="/events/:slug" element={<EventDetail />} />
+              </Route>
               <Route path="/news" element={<News />} />
               <Route path="/news/:slug" element={<NewsArticle />} />
-              <Route path="/marketplace" element={<Marketplace />} />
-              <Route path="/marketplace/success" element={<MarketplaceSuccess />} />
-              <Route path="/marketplace/:slug" element={<MarketplaceProduct />} />
-              <Route path="/marketplace/:slug/checkout" element={<MarketplaceCheckout />} />
+              <Route element={<RequireFeature feature="marketplace" />}>
+                <Route path="/marketplace" element={<Marketplace />} />
+                <Route path="/marketplace/success" element={<MarketplaceSuccess />} />
+                <Route path="/marketplace/:slug" element={<MarketplaceProduct />} />
+                <Route path="/marketplace/:slug/checkout" element={<MarketplaceCheckout />} />
+              </Route>
               <Route path="/faq-kontakt" element={<FaqKontakt />} />
               <Route path="/impressum" element={<Impressum />} />
               <Route path="/auth" element={<Auth />} />
@@ -149,10 +151,13 @@ const App = () => (
               <Route path="/newsletter/bestaetigen" element={<NewsletterConfirm />} />
               <Route path="/newsletter/abmelden" element={<NewsletterUnsubscribe />} />
 
-              {/* Public booking routes — no login required (guest checkout supported) */}
-              <Route path="/booking" element={<Booking />} />
-              <Route path="/booking/locations/:slug" element={<BookingLocation />} />
-              <Route path="/booking/checkout" element={<BookingCheckout />} />
+              {/* Public booking routes — no login required (guest checkout supported).
+                  Sichtbarkeit über feature_booking_state; Success/Cancel bleiben offen (Rückkehr von Stripe). */}
+              <Route element={<RequireFeature feature="booking" />}>
+                <Route path="/booking" element={<Booking />} />
+                <Route path="/booking/locations/:slug" element={<BookingLocation />} />
+                <Route path="/booking/checkout" element={<BookingCheckout />} />
+              </Route>
               <Route path="/booking/success" element={<BookingSuccess />} />
               <Route path="/booking/cancel" element={<BookingCancel />} />
 
@@ -165,12 +170,12 @@ const App = () => (
                 {/* Logged-in users use the same redesigned public booking flow. */}
                 <Route path="/dashboard/booking" element={<Navigate to="/booking" replace />} />
 
-                {/* Friends + Chat — released to everyone */}
-                <Route path="/dashboard/friends" element={<DashboardFriends />} />
-                <Route path="/dashboard/chat" element={<DashboardChat />} />
-
-                {/* Feature-gated player routes — 3-state visibility (visible / demo / hidden).
-                    canSee shows "demo" features to admins only; "hidden" redirects everyone. */}
+                {/* Alle Funktionen laufen über denselben Guard (visible / demo / hidden).
+                    Unsichtbar zeigt immer die „Bald verfügbar"-Seite, nie einen stillen Redirect. */}
+                <Route element={<RequireFeature feature="friends" />}>
+                  <Route path="/dashboard/friends" element={<DashboardFriends />} />
+                  <Route path="/dashboard/chat" element={<DashboardChat />} />
+                </Route>
                 <Route element={<RequireFeature feature="lobbies" />}>
                   <Route path="/lobbies" element={<Lobbies />} />
                   <Route path="/lobbies/:id" element={<Lobbies />} />
@@ -181,8 +186,9 @@ const App = () => (
                 <Route element={<RequireFeature feature="league" />}>
                   <Route path="/dashboard/league" element={<DashboardLeague />} />
                 </Route>
-                {/* Events sind sichtbar, sobald sie veröffentlicht sind (wie die öffentliche /events-Seite) — kein Feature-Flag-Gate. */}
-                <Route path="/dashboard/events" element={<DashboardEvents />} />
+                <Route element={<RequireFeature feature="events" />}>
+                  <Route path="/dashboard/events" element={<DashboardEvents />} />
+                </Route>
                 {/* Logged-in users use the same public shop; old route redirects. */}
                 <Route path="/dashboard/marketplace" element={<Navigate to="/marketplace" replace />} />
 
@@ -211,13 +217,11 @@ const App = () => (
                 <Route path="/admin/utilization" element={<AdminUtilization />} />
                 <Route path="/admin/visuals" element={<AdminVisuals />} />
                 <Route path="/admin/features" element={<AdminFeatures />} />
-                <Route path="/admin/club-owners" element={<AdminClubOwners />} />
                 <Route path="/admin/clubs" element={<AdminClubs />} />
                 <Route path="/admin/vouchers" element={<AdminVouchers />} />
                 <Route path="/admin/location-teasers" element={<AdminLocationTeasers />} />
                 <Route path="/admin/skypadel-gallery" element={<AdminSkyPadelGallery />} />
                 <Route path="/admin/partner-tiles" element={<AdminPartnerTiles />} />
-                <Route path="/admin/touchpoint-slides" element={<AdminTouchpointSlides />} />
                 <Route path="/admin/qr-panel" element={<AdminQrPanel />} />
                 <Route path="/admin/news" element={<AdminNews />} />
                 <Route path="/admin/farben" element={<AdminColors />} />

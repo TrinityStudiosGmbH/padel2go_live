@@ -4,6 +4,14 @@
 
 **Rahmen für alle Seiten:** Jede Admin-Seite ist in `AdminLayout` gekapselt (Sidebar + `AdminHeader` + `LegalFooterLinks`). Zugriffsschutz via `useAdminAuth`: Ladespinner während der Prüfung; ohne Login → Redirect `/auth`; ohne Admin-Rolle → Redirect `/`. Die Sidebar (`AdminSidebar.tsx`) listet die 25 Menüpunkte in der Reihenfolge dieses Dokuments.
 
+## Änderungen seit 03.08.2026 (Stand 17.09.2026)
+
+- **Entfernt:** „Club Owners“ (`/admin/club-owners`, Legacy-Modell `club_owner_assignments` war leer — Clubs laufen über `/admin/clubs`), „Touchpoint Slides“ (`/admin/touchpoint-slides`, die Partner-Seite `/fuer-partner` existiert nicht mehr), PayPal-Karte unter Integrationen, Felder `resend.from_email` und `stripe.mode`, Rolle „Moderator“, Standort-Felder Breiten-/Längengrad, Galerie und `amenities`, Partner-Kachel-Felder Typ und Region, Artist-Feld Spotify, KPI „Ausstehende Freigaben“ (P2G), Header-Glocke ohne Funktion, PIN-Sperre unter Einstellungen (war wirkungslos).
+- **Umbenannt:** „Features“ → **„Sichtbarkeit“** (`/admin/features`): sieben Funktions-Schalter mit je einem Zustand (Für alle / Nur Admins / Aus), der Nav-Link, Route und Buttons gemeinsam steuert; darunter eine Status-Übersicht der Inhalte (Standorte, Courts, Events, Artikel, Produkte) mit Links zu den Pflegeseiten; Launch-Datum ist reine Anzeige. Die Credits-Regeln liegen nur noch unter P2G Points.
+- **Neu:** Einstellungen → **E-Mail-Test** (jede ausgehende Mail mit Beispieldaten an eine beliebige Adresse, Vorschau im Dialog). Kamera-Testsimulator nur noch für den Superadmin.
+- **Rollen:** delegierte Rollen dürfen jetzt in den `media`-Bucket hochladen; `qr_sections`, `marketplace_categories/brands`, `marketplace_redemptions` (write) und `match_analyses` sind im Seiten-Mapping; „Auslastung“ ist nicht mehr delegierbar (RPCs prüfen auf Voll-Admin).
+- Die Abschnitte unten beschreiben den Stand vom 03.08.2026 und sind für die entfernten Seiten/Felder überholt.
+
 ## Inhaltsverzeichnis
 
 | # | Seite | Route |

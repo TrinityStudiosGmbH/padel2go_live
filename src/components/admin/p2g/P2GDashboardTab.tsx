@@ -22,11 +22,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Coins,
   Gift,
   Wallet,
   TrendingUp,
-  Clock,
   Package,
   Trophy,
   Loader2,
@@ -102,18 +100,6 @@ export function P2GDashboardTab() {
     },
   });
 
-  // Fetch pending approvals count
-  const { data: pendingApprovals } = useQuery({
-    queryKey: ["admin", "pending-approvals-count"],
-    queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke("admin-credits", {
-        body: { action: "list_pending_approvals" },
-      });
-      if (error) throw error;
-      return data.rewards?.length || 0;
-    },
-  });
-
   // Repair mutation
   const repairMutation = useMutation({
     mutationFn: async () => {
@@ -127,7 +113,6 @@ export function P2GDashboardTab() {
       toast.success(data.message || "Reparatur abgeschlossen");
       queryClient.invalidateQueries({ queryKey: ["admin-credit-stats"] });
       queryClient.invalidateQueries({ queryKey: ["admin-leaderboard"] });
-      queryClient.invalidateQueries({ queryKey: ["admin", "pending-approvals-count"] });
     },
     onError: (error: Error) => {
       toast.error(`Fehler: ${error.message}`);
@@ -215,13 +200,6 @@ export function P2GDashboardTab() {
       icon: TrendingUp,
       color: "text-green-500",
       bgColor: "bg-green-500/10",
-    },
-    {
-      label: "Ausstehende Freigaben",
-      value: pendingApprovals?.toString() || "0",
-      icon: Clock,
-      color: "text-yellow-500",
-      bgColor: "bg-yellow-500/10",
     },
     {
       label: "Claimable Rewards",

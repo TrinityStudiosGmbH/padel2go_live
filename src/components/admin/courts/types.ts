@@ -38,16 +38,12 @@ export interface Location {
   description: string | null;
   is_online: boolean;
   is_24_7: boolean;
-  amenities: string[];
   postal_code: string | null;
   city: string | null;
   country: string;
-  lat: number | null;
-  lng: number | null;
   main_image_url: string | null;
   tennis_image_url: string | null;
   whatsapp_group_url: string | null;
-  gallery_image_urls: string[];
   opening_hours_json: Record<string, { open: string; close: string }>;
   rewards_enabled: boolean;
   ai_analysis_enabled: boolean;

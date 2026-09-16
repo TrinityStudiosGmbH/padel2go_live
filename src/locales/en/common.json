@@ -55,5 +55,16 @@
   "news": {
     "aiBadge": "AI-assisted content"
   },
-  "newsAllLink": "View all news"
+  "newsAllLink": "View all news",
+  "featureComingSoon": {
+    "title": "Coming soon",
+    "back": "Back",
+    "booking": "Court booking is in its final test phase. We'll open it shortly – check back soon!",
+    "marketplace": "The PADEL2GO shop opens shortly. Check back soon!",
+    "events": "Our events are being prepared. Check back soon!",
+    "lobbies": "Lobbies aren't live yet. Soon you'll find open games here.",
+    "league": "The league isn't live yet. Soon you'll find rankings and stats here.",
+    "p2g": "P2G points aren't live yet. Soon you'll collect points for bookings and matches here.",
+    "friends": "Friends & chat aren't live yet. Check back soon!"
+  }
 }

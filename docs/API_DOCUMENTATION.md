@@ -709,22 +709,6 @@ POST /referral-api/attribution
 
 ### 4.5 Notifications
 
-#### `send-invite-notification` 🔒
-
-Sends email notification when a player is invited to a booking.
-
-**Method:** POST  
-**Auth:** Required
-
-**Request Body:**
-```json
-{
-  "participantId": "uuid"
-}
-```
-
----
-
 #### `send-contact-email` 🌐
 
 Handles contact form submissions.

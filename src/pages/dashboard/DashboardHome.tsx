@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
+import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { useAccountData } from "@/hooks/useAccountData";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import { usePointsValue } from "@/hooks/usePointsValue";
@@ -31,6 +32,7 @@ const MON = ["Januar","Februar","März","April","Mai","Juni","Juli","August","Se
 
 const DashboardHome = () => {
   const { user } = useAuth();
+  const { canSee } = useFeatureToggles();
   const { profile, wallet } = useAccountData();
   const { summary } = useP2GPoints();
   const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
@@ -122,12 +124,13 @@ const DashboardHome = () => {
   const memberSince = user?.created_at ? `Mitglied seit ${MON[new Date(user.created_at).getMonth()]} ${new Date(user.created_at).getFullYear()}` : "";
 
   const regCount = (myRegs ?? []).length;
-  const quick: Array<{ icon: typeof CalendarCheck; label: string; sub: string; to: string; section: SectionKey }> = [
-    { icon: CalendarCheck, label: "Meine Buchungen", sub: `${upcoming.length} anstehend`, to: "/account?tab=bookings", section: "booking" },
-    { icon: Trophy, label: "Events", sub: `${bookableEvents.length} Events · ${regCount} Anmeldung${regCount === 1 ? "" : "en"}`, to: "/dashboard/events", section: "events" },
-    { icon: ShoppingBag, label: "Marketplace", sub: `${shopItems.length} Artikel im Shop`, to: "/marketplace", section: "market" },
-    { icon: UserIcon, label: "Mein Profil", sub: "Konto & Einstellungen", to: "/account", section: "profile" },
+  const quickAll: Array<{ icon: typeof CalendarCheck; label: string; sub: string; to: string; section: SectionKey; show: boolean }> = [
+    { icon: CalendarCheck, label: "Meine Buchungen", sub: `${upcoming.length} anstehend`, to: "/account?tab=bookings", section: "booking", show: true },
+    { icon: Trophy, label: "Events", sub: `${bookableEvents.length} Events · ${regCount} Anmeldung${regCount === 1 ? "" : "en"}`, to: "/dashboard/events", section: "events", show: canSee("events") },
+    { icon: ShoppingBag, label: "Marketplace", sub: `${shopItems.length} Artikel im Shop`, to: "/marketplace", section: "market", show: canSee("marketplace") },
+    { icon: UserIcon, label: "Mein Profil", sub: "Konto & Einstellungen", to: "/account", section: "profile", show: true },
   ];
+  const quick = quickAll.filter((q) => q.show);
 
   return (
     <DashboardLayout>

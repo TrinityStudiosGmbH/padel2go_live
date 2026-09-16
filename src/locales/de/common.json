@@ -55,5 +55,16 @@
   "news": {
     "aiBadge": "KI-unterstützt erstellt"
   },
-  "newsAllLink": "Alle News ansehen"
+  "newsAllLink": "Alle News ansehen",
+  "featureComingSoon": {
+    "title": "Bald verfügbar",
+    "back": "Zurück",
+    "booking": "Die Court-Buchung ist noch in der finalen Testphase. Wir schalten sie in Kürze frei – schau bald wieder vorbei!",
+    "marketplace": "Der PADEL2GO Shop öffnet in Kürze. Schau bald wieder vorbei!",
+    "events": "Unsere Events werden gerade vorbereitet. Schau bald wieder vorbei!",
+    "lobbies": "Lobbies sind noch nicht freigeschaltet. Bald kannst du hier offene Spielrunden finden.",
+    "league": "Die Liga ist noch nicht freigeschaltet. Bald findest du hier Ranglisten und Statistiken.",
+    "p2g": "P2G-Punkte sind noch nicht freigeschaltet. Bald sammelst du hier Punkte für Buchungen und Matches.",
+    "friends": "Freunde & Chat sind noch nicht freigeschaltet. Schau bald wieder vorbei!"
+  }
 }

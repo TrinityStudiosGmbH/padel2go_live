@@ -15,6 +15,8 @@ export interface AdminPage {
 export interface UseAdminAuthReturn {
   /** Vollzugriff: sieht und darf alles. */
   isAdmin: boolean;
+  /** Hardcodierte Superadmin-Adresse — fuer Werkzeuge, die echte Daten erzeugen (Kamera-Simulator). */
+  isSuperAdmin: boolean;
   /** Zugang übers Admin-Menü — Vollzugriff ODER mindestens eine zugewiesene Seite. */
   hasAdminAccess: boolean;
   /** Seiten, die dieser Nutzer öffnen darf. Beim Vollzugriff alle. */
@@ -94,6 +96,7 @@ export function useAdminAuth(): UseAdminAuthReturn {
 
   return {
     isAdmin,
+    isSuperAdmin: !!user?.email && SUPERADMIN_EMAILS.includes(user.email),
     hasAdminAccess: isAdmin || pages.length > 0,
     pages,
     canAccess,

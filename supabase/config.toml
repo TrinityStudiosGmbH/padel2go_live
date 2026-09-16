@@ -84,8 +84,6 @@ verify_jwt = false
 [functions.voucher-redeem]
 verify_jwt = false
 
-[functions.validate-pin]
-verify_jwt = false
 
 [functions.generate-article]
 verify_jwt = true

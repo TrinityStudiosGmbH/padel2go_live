@@ -25,22 +25,26 @@ German padel court booking + community platform. Pre-launch phase as of April 20
 
 ### Auth & Route Guards
 - `RequireAuth` — wraps all routes needing login. Shows spinner while loading, redirects to `/auth?redirect=<path>` if no user.
-- `RequireAppLaunched` — wraps routes hidden until admin flips `feature_app_launched`. Admins always pass through immediately.
-- `useAdminAuth` — checks `user_roles` table + hardcoded superadmin email bypass for `fsteinfelder@padel2go.eu`.
+- `RequireFeature feature="…"` — the ONE guard for function visibility (see below). Hidden → renders the shared "Bald verfügbar" page (never a silent redirect). Admin preview → small blue pill bottom-left.
+- `AdminLayout` + `useAdminAuth` — every `/admin/*` page gates itself: `user_roles` table, hardcoded superadmin email bypass for `fsteinfelder@padel2go.eu`, plus per-page delegated roles (`my_admin_pages()`). `isSuperAdmin` exists for tools that write real data (camera simulator).
 
-### Feature Flags
-All flags live in `site_settings` table (single row, id = `global`):
-- `feature_app_launched` — master switch; when false, logged-in users only see `/booking`
-- `feature_lobbies_enabled`, `feature_p2g_enabled`, `feature_marketplace_enabled`, `feature_league_enabled`, `feature_events_enabled`, `feature_rewards_enabled`, `feature_friends_enabled`, `feature_matching_enabled`
+### Sichtbarkeit (feature visibility)
+One model for everything. `site_settings` (single row, id = `global`) has one column per function, `feature_<name>_state` ∈ `visible | demo | hidden`:
+- `visible` → everyone · `demo` → admins only (with preview pill), everyone else sees "Bald verfügbar" · `hidden` → nobody, admins included
+- Functions: `booking`, `marketplace`, `events`, `lobbies`, `league`, `p2g`, `friends` (list in `src/hooks/useFeatureToggles.ts`)
+- One state controls nav link (public + dashboard), route (`RequireFeature` in `App.tsx`) and in-page entry points (`canSee()`).
+- `feature_courts_public_enabled` is derived from `feature_booking_state` by a DB trigger (kept for the mobile app only — never set it directly).
+- Content visibility (`locations.is_online`, `courts.is_active`, `events.is_published`, `articles.is_published`, `marketplace_items.is_active/status`) is separate and lives where the content is edited; Admin → Sichtbarkeit only shows the counts.
+- `launch_date` is display-only (homepage countdown, "Events kommen bald" text). There is no master launch switch and no PIN lock anymore.
 
-Hook: `useFeatureToggles()` — reads all flags, used in `DashboardNavigation` and `RequireAppLaunched`.
+Admin UI: `/admin/features` ("Sichtbarkeit"). Hook: `useFeatureToggles()` → `canSee`, `stateOf`, `isPreview`.
 
 ### Edge Functions
 Located in `supabase/functions/`. Pattern: try `Deno.env.get("KEY")` first, then fall back to `site_integration_configs` DB table.
-Key functions: `create-checkout-session`, `stripe-webhook`, `send-booking-confirmation`, `send-contact-email`, `send-invite-notification`, `integrations-admin-api`.
+Key functions: `create-checkout-session`, `stripe-webhook`, `send-booking-confirmation`, `send-contact-email`, `admin-credits`, `admin-mail-test`, `booking-ics`. All outgoing mail uses the shell in `_shared/email.ts` (logo header, fonts, footer).
 
 ### Admin Panel
-22 pages at `/admin/*`. Always accessible to admins regardless of `app_launched`. Protected by `AdminLayout` + `useAdminAuth`.
+25 pages at `/admin/*`, catalogued in `admin_pages` (custom roles). Protected by `AdminLayout` + `useAdminAuth`. Every outgoing mail can be test-sent from Einstellungen → E-Mail-Test.
 
 ---
 
@@ -49,7 +53,7 @@ Key functions: `create-checkout-session`, `stripe-webhook`, `send-booking-confir
 ### Before starting any task
 1. Read the relevant files first — never suggest changes without reading current code
 2. For features touching DB schema: check existing migrations before writing new ones
-3. For tasks touching auth/routing: re-read `RequireAuth`, `RequireAppLaunched`, `App.tsx`
+3. For tasks touching auth/routing/visibility: re-read `RequireAuth`, `RequireFeature`, `useFeatureToggles`, `App.tsx`
 
 ### Code Rules
 - **No speculative code** — only build what was asked, no future-proofing
@@ -81,7 +85,7 @@ src/
   App.tsx                          — Route definitions, all guards wired here
   components/
     RequireAuth.tsx                — Login gate
-    RequireAppLaunched.tsx         — Launch mode gate
+    RequireFeature.tsx             — Visibility gate + shared „Bald verfügbar" page
     Navigation.tsx                 — Public nav (switches to DashboardNavigation when logged in)
     DashboardNavigation.tsx        — Logged-in nav, respects feature flags
     Footer.tsx                     — 4-column footer: Brand | Plattform | Unternehmen | Rechtliches
@@ -89,11 +93,11 @@ src/
   hooks/
     useAuth.ts                     — Supabase auth session
     useAdminAuth.ts                — Admin role check
-    useFeatureToggles.ts           — All feature flags from site_settings
+    useFeatureToggles.ts           — Visibility states (visible/demo/hidden) from site_settings
     useClubAuth.ts                 — Club owner role check
   pages/admin/
-    AdminFeatures.tsx              — Toggle all feature flags + master app_launched switch
-    AdminIntegrations.tsx          — Configure Stripe / Resend / PayPal / App URL
+    AdminFeatures.tsx              — „Sichtbarkeit": function states, content status, launch date
+    AdminIntegrations.tsx          — Configure Stripe / Resend / DeepL / App URL
   integrations/supabase/
     client.ts                      — Supabase JS client
     types.ts                       — Auto-generated DB types (update after migrations)
@@ -114,6 +118,5 @@ supabase/
 ---
 
 ## Pending Migrations (not yet run in production)
-- `20260411000001_add_app_launched_toggle.sql`
-- `20260411000002_add_integration_configs.sql`
-- `20260411000003_add_page_feature_toggles.sql`
+- `20260917130000_visibility_and_roles.sql` — feature_booking_state, storage policy for delegated roles, page-table mapping
+- `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed

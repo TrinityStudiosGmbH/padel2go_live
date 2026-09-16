@@ -540,7 +540,7 @@ export default function AdminOverview() {
       title: "Kontingent-Nutzung",
       value: `${clubQuotaStats?.percentage ?? 0}%`,
       icon: Gauge,
-      description: `${clubQuotaStats?.used ?? 0} / ${clubQuotaStats?.total ?? 0} Min`,
+      description: `${(clubQuotaStats?.used ?? 0).toLocaleString("de-DE")} / ${(clubQuotaStats?.total ?? 0).toLocaleString("de-DE")} Min`,
       progress: Math.min(100, clubQuotaStats?.percentage ?? 0),
     },
   ];

@@ -1,8 +1,6 @@
 import { useLocation } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
-import { Bell } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { menuItems } from "./AdminSidebar";
 
 export function AdminHeader() {
@@ -28,9 +26,6 @@ export function AdminHeader() {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon" className="text-muted-foreground hover:text-foreground">
-          <Bell className="h-5 w-5" />
-        </Button>
         <div className="flex items-center gap-2.5 rounded-full border border-[hsl(0_0%_14%)] bg-white/[0.04] py-[5px] pl-[5px] pr-3">
           <span className="flex h-[27px] w-[27px] flex-none items-center justify-center rounded-full bg-gradient-lime font-display text-[11px] font-extrabold text-primary-foreground">
             {initials}

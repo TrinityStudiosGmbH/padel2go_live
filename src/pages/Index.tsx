@@ -100,7 +100,7 @@ const Index = () => {
   const sectionColor = useSectionTheme("home");
   const { user, isLoading } = useAuth();
   const { t } = useTranslation("index");
-  const { launchDate } = useLaunchDate();
+  const { launchDate, hasLaunched } = useLaunchDate();
 
   if (!isLoading && user) {
     return <Navigate to="/dashboard" replace />;
@@ -132,7 +132,7 @@ const Index = () => {
           }
           badgeLabel={t("hero.badgeLabel")}
           badgeText={format(launchDate, "d. MMMM yyyy", { locale: de })}
-          showCountdown={true}
+          showCountdown={!hasLaunched}
           countdownTargetDate={launchDate}
           showLogo={true}
         >

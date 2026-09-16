@@ -6,13 +6,12 @@ import Navigation from "@/components/Navigation";
 import { sectionThemeVars, useSectionTheme } from "@/hooks/useSectionThemes";
 import { SectionShaderBackdrop } from "@/components/SectionShaderBackdrop";
 import Footer from "@/components/Footer";
-import { EyeOff, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { BookingStepper } from "@/components/booking/BookingStepper";
 import { LocationCard } from "@/components/booking/LocationCard";
 import { MyBookings } from "@/components/booking/MyBookings";
 import { useAuth } from "@/hooks/useAuth";
-import { useCourtsVisibility } from "@/hooks/useCourtsVisibility";
 import { fetchLocationMinPriceCents } from "@/hooks/useCourtPrices";
 import type { DbLocation } from "@/types/database";
 
@@ -29,18 +28,12 @@ const Booking = () => {
   const sectionColor = useSectionTheme("booking");
   const { t } = useTranslation("booking");
   const { user } = useAuth();
-  const { canSeeCourts, publicEnabled, isAdmin, loading: visibilityLoading } = useCourtsVisibility();
   const [locations, setLocations] = useState<LocationWithAvailability[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (visibilityLoading) return;
-    if (!canSeeCourts) {
-      setLoading(false);
-      return;
-    }
     fetchLocations();
-  }, [visibilityLoading, canSeeCourts]);
+  }, []);
 
   const fetchLocations = async () => {
     try {
@@ -142,7 +135,7 @@ const Booking = () => {
         })
       );
 
-      setLocations(locationsWithAvailability as LocationWithAvailability[]);
+      setLocations(locationsWithAvailability as unknown as LocationWithAvailability[]);
     } catch (error) {
       console.error("Error fetching locations:", error);
     } finally {
@@ -196,20 +189,8 @@ const Booking = () => {
               </div>
             )}
 
-            {isAdmin && !publicEnabled && (
-              <div className="mt-8 rounded-2xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 flex items-start gap-3">
-                <EyeOff className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-foreground">{t("common.adminPreviewLabel")}</p>
-                  <p className="text-muted-foreground">
-                    {t("landing.adminPreviewDescription")}
-                  </p>
-                </div>
-              </div>
-            )}
-
             <div className="mt-11">
-              {visibilityLoading || loading ? (
+              {loading ? (
                 <div className="grid gap-5" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(min(300px, 100%), 1fr))" }}>
                   {[0, 1, 2].map((i) => (
                     <div
@@ -217,16 +198,6 @@ const Booking = () => {
                       className="h-[440px] rounded-2xl border border-[hsl(0_0%_12%)] bg-gradient-card animate-pulse"
                     />
                   ))}
-                </div>
-              ) : !canSeeCourts ? (
-                <div className="text-center py-20 max-w-md mx-auto">
-                  <div className="inline-flex p-4 rounded-2xl bg-primary/10 mb-4">
-                    <EyeOff className="w-10 h-10 text-primary" />
-                  </div>
-                  <h2 className="text-2xl font-bold mb-2">{t("common.comingSoonTitle")}</h2>
-                  <p className="text-muted-foreground">
-                    {t("landing.comingSoonDescription")}
-                  </p>
                 </div>
               ) : locations.length === 0 ? (
                 <div className="text-center py-20">

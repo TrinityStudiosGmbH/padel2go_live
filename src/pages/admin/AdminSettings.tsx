@@ -2,15 +2,13 @@ import { useState } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Lock, AlertTriangle, Eraser, RefreshCw, CheckCircle2 } from "lucide-react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { AlertTriangle, Eraser, RefreshCw, CheckCircle2 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { MailTestPanel } from "@/components/admin/settings/MailTestPanel";
 
 type PreviewTable = {
@@ -45,41 +43,11 @@ type ResetResult = {
   message: string;
 };
 
-const LOCKS = [
-  {
-    key: "pin_lock_vereine" as const,
-    label: 'Sperre für „Für Vereine"',
-    hint: "PIN-Eingabe für /fuer-vereine erforderlich",
-  },
-  {
-    key: "pin_lock_partner" as const,
-    label: 'Sperre für „Für Partner"',
-    hint: "PIN-Eingabe für /fuer-partner erforderlich",
-  },
-];
-
 export default function AdminSettings() {
-  const { settings, isLoading, isSaving, updateSetting } = useSiteSettings();
-
   const [preview, setPreview] = useState<PreviewCategory[] | null>(null);
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [confirmText, setConfirmText] = useState("");
   const [resetResult, setResetResult] = useState<ResetResult | null>(null);
-
-  const { data: launchState } = useQuery({
-    queryKey: ["admin-settings-app-launched"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_settings")
-        .select("feature_app_launched")
-        .eq("id", "global")
-        .maybeSingle();
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const appLaunched = launchState?.feature_app_launched === true;
 
   const previewMutation = useMutation({
     mutationFn: async () => {
@@ -129,65 +97,9 @@ export default function AdminSettings() {
     <AdminLayout>
       <div className="flex animate-fade-up flex-col gap-[18px]">
         <p className="text-sm text-muted-foreground">
-          PIN-Sperren der B2B-Seiten, E-Mail-Test und Launch-Reset zum Bereinigen der Testdaten vor
-          dem Go-Live.
+          E-Mail-Test und Launch-Reset zum Bereinigen der Testdaten vor dem Go-Live. Sichtbarkeit von
+          Funktionen wird unter „Sichtbarkeit" gesteuert.
         </p>
-
-        {/* Inhalts-Sperre — echtes Backend (site_settings) */}
-        <Card className="rounded-2xl border-border bg-gradient-card p-5 sm:p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-wrap items-start justify-between gap-3.5">
-              <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] border border-primary/30 bg-primary/10 text-primary">
-                  <Lock className="h-4 w-4" />
-                </span>
-                <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="font-display text-base font-bold tracking-tight text-foreground">
-                    Inhalts-Sperre
-                  </span>
-                  <span className="text-xs leading-snug text-muted-foreground">
-                    B2B-Seiten für nicht autorisierte Besucher sperren (PIN erforderlich).
-                  </span>
-                </div>
-              </div>
-              <span className="inline-flex flex-none items-center gap-[7px] whitespace-nowrap rounded-full border border-primary/[0.28] bg-primary/[0.09] px-2.5 py-1 font-mono text-[10px] uppercase tracking-[0.1em] text-primary">
-                <span className="h-[5px] w-[5px] rounded-full bg-primary" />
-                Persistiert
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-[11px]">
-              {LOCKS.map((lock) => (
-                <div
-                  key={lock.key}
-                  className="flex flex-wrap items-center gap-3.5 rounded-[14px] border border-[hsl(0_0%_12%)] bg-white/[0.03] p-[15px]"
-                >
-                  <div className="flex min-w-[180px] flex-1 flex-col gap-[3px]">
-                    <Label className="text-sm font-bold text-foreground">{lock.label}</Label>
-                    <span className="text-xs text-muted-foreground">{lock.hint}</span>
-                    <span className="font-mono text-[10px] tracking-[0.06em] text-muted-foreground/70">
-                      site_settings.{lock.key}
-                    </span>
-                  </div>
-                  <Switch
-                    checked={settings?.[lock.key] ?? true}
-                    onCheckedChange={(checked) => updateSetting(lock.key, checked)}
-                    disabled={isLoading || isSaving}
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-start gap-3 rounded-[13px] border border-[hsl(41_100%_65%/0.22)] bg-[hsl(41_100%_65%/0.06)] px-[15px] py-[13px]">
-              <AlertTriangle className="mt-0.5 h-[15px] w-[15px] flex-none text-[#FFC44D]" />
-              <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
-                Beim Aktivieren einer Sperre werden{" "}
-                <span className="font-semibold text-foreground">alle bisherigen Entsperrungen ungültig</span> —
-                Besucher müssen die PIN erneut eingeben.
-              </span>
-            </div>
-          </div>
-        </Card>
 
         {/* E-Mail-Test — jede ausgehende Mail mit Beispieldaten verschicken */}
         <MailTestPanel />
@@ -222,21 +134,6 @@ export default function AdminSettings() {
               Shop-Produkte, News-Artikel, Events, Konfigurationen, Profile und Newsletter-Empfänger.
               Wallets werden nicht gelöscht, sondern auf 0 gesetzt.
             </p>
-
-            {appLaunched && (
-              <div className="flex items-start gap-3 rounded-[13px] border border-[hsl(0_100%_71%/0.26)] bg-[hsl(0_100%_71%/0.07)] px-[15px] py-[13px]">
-                <AlertTriangle className="mt-0.5 h-[15px] w-[15px] flex-none text-[#FF6B6B]" />
-                <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_80%)]">
-                  <span className="font-semibold text-foreground">
-                    Plattform ist bereits gelauncht
-                  </span>{" "}
-                  — hier fallen echte Kundendaten! Nur ausführen, wenn du dir absolut sicher bist.
-                  <span className="ml-1.5 font-mono text-[10px] tracking-[0.06em] text-muted-foreground/70">
-                    site_settings.feature_app_launched
-                  </span>
-                </span>
-              </div>
-            )}
 
             <div className="flex flex-wrap items-center gap-2.5">
               <Button

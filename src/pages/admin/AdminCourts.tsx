@@ -19,6 +19,7 @@ import { LocationAnalyticsTab } from "@/components/admin/courts/LocationAnalytic
 import { courtSport } from "@/components/admin/courts/types";
 import { SportScopeTabs, type SportScope } from "@/components/admin/SportScopeTabs";
 import { CameraApiKeysTab, CameraSessionsTab, CameraTestSimulator } from "@/components/admin/cameras";
+import { useAdminAuth } from "@/hooks/useAdminAuth";
 
 const TAB_TRIGGER_CLASSES =
   "-mb-px gap-2 rounded-none border-b-2 border-transparent bg-transparent px-0.5 pb-[11px] pt-0 text-sm font-bold text-[hsl(0_0%_60%)] shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none";
@@ -27,6 +28,7 @@ const TAB_COUNT_CLASSES =
   "rounded-full bg-white/[0.07] px-[7px] py-[2px] font-mono text-[10.5px] font-normal leading-none";
 
 export default function AdminCourts() {
+  const { isSuperAdmin } = useAdminAuth();
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("standorte");
@@ -45,16 +47,12 @@ export default function AdminCourts() {
           description,
           is_online,
           is_24_7,
-          amenities,
           postal_code,
           city,
           country,
-          lat,
-          lng,
           main_image_url,
           tennis_image_url,
           whatsapp_group_url,
-          gallery_image_urls,
           opening_hours_json,
           rewards_enabled,
           ai_analysis_enabled,
@@ -274,7 +272,8 @@ export default function AdminCourts() {
           >
             <div className="flex min-w-0 flex-col gap-[18px]">
               <CameraSessionsTab />
-              <CameraTestSimulator />
+              {/* Schreibt Zufalls-Matches in echte Wallets — nur fuer den Superadmin. */}
+              {isSuperAdmin && <CameraTestSimulator />}
             </div>
             <div className="min-w-0">
               <CameraApiKeysTab />

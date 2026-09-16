@@ -343,7 +343,7 @@ export default function AdminUsers() {
   });
 
   const toggleRoleMutation = useMutation({
-    mutationFn: async ({ userId, role, hasRole }: { userId: string; role: "admin" | "moderator" | "club_owner" | "user"; hasRole: boolean }) => {
+    mutationFn: async ({ userId, role, hasRole }: { userId: string; role: "admin" | "club_owner" | "user"; hasRole: boolean }) => {
       if (hasRole) {
         const { error } = await supabase
           .from("user_roles")
@@ -549,14 +549,6 @@ export default function AdminUsers() {
                                   Admin
                                 </Badge>
                               )}
-                              {user.roles.includes("moderator") && (
-                                <Badge
-                                  variant="outline"
-                                  className={`${ROLE_PILL} border-[hsl(200_100%_75%/0.3)] bg-[hsl(200_100%_75%/0.1)] text-[#7FD4FF]`}
-                                >
-                                  Mod
-                                </Badge>
-                              )}
                               {user.roles.includes("club_owner") && (
                                 <Badge
                                   variant="outline"
@@ -641,18 +633,6 @@ export default function AdminUsers() {
                                   >
                                     <ShieldCheck className="h-4 w-4 mr-2" />
                                     {user.roles.includes("admin") ? "Admin entfernen" : "Admin machen"}
-                                  </DropdownMenuItem>
-                                  <DropdownMenuItem
-                                    onClick={() =>
-                                      toggleRoleMutation.mutate({
-                                        userId: user.user_id,
-                                        role: "moderator",
-                                        hasRole: user.roles.includes("moderator"),
-                                      })
-                                    }
-                                  >
-                                    <Shield className="h-4 w-4 mr-2" />
-                                    {user.roles.includes("moderator") ? "Moderator entfernen" : "Moderator machen"}
                                   </DropdownMenuItem>
                                   <DropdownMenuSeparator />
                                   <DropdownMenuItem

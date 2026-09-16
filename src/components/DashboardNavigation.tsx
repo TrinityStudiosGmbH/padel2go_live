@@ -52,13 +52,12 @@ const DashboardNavigation = () => {
       .slice(0, 2)
       .toUpperCase() || "?";
 
-  // Feature-gated nav links: canSee folds in the 3-state model (visible for
-  // everyone, demo for admins only), so hidden features drop out for both.
+  // Nav-Links folgen derselben Sichtbarkeit wie die Routen (Admin → Sichtbarkeit).
   const dashboardItems = [
     { name: t("nav.meinP2G"), url: "/dashboard/home", show: true, color: sectionThemes.home },
-    { name: t("nav.booking"), url: "/booking", show: true, color: sectionThemes.booking },
+    { name: t("nav.booking"), url: "/booking", show: canSee("booking"), color: sectionThemes.booking },
     { name: t("nav.marketplace"), url: "/marketplace", show: canSee("marketplace"), color: sectionThemes.market },
-    { name: t("nav.events"), url: "/dashboard/events", show: true, color: sectionThemes.events },
+    { name: t("nav.events"), url: "/dashboard/events", show: canSee("events"), color: sectionThemes.events },
     { name: t("nav.news"), url: "/news", show: true, color: sectionThemes.news },
   ]
     .filter((item) => item.show)

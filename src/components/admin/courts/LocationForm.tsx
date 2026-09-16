@@ -4,8 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { Badge } from "@/components/ui/badge";
-import { MapPin, Plus, X, Image as ImageIcon, Clock, Trophy, Brain, ShoppingCart } from "lucide-react";
+import { MapPin, X, Image as ImageIcon, Clock, Trophy, Brain, ShoppingCart } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMediaFile } from "@/lib/uploadMedia";
@@ -29,11 +28,8 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
     postal_code: location?.postal_code || "",
     city: location?.city || "",
     country: location?.country || "DE",
-    lat: location?.lat?.toString() || "",
-    lng: location?.lng?.toString() || "",
     is_online: location?.is_online || false,
     is_24_7: location?.is_24_7 || false,
-    amenities: location?.amenities || [],
     opening_hours_json: location?.opening_hours_json || {
       monday: { open: "06:00", close: "23:00" },
       tuesday: { open: "06:00", close: "23:00" },
@@ -50,7 +46,6 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
   });
   const [mainImageUrl, setMainImageUrl] = useState(location?.main_image_url || "");
   const [tennisImageUrl, setTennisImageUrl] = useState(location?.tennis_image_url || "");
-  const [galleryUrls, setGalleryUrls] = useState<string[]>(location?.gallery_image_urls || []);
   const [uploading, setUploading] = useState(false);
   
 
@@ -87,15 +82,11 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
         postal_code: formData.postal_code || null,
         city: formData.city || null,
         country: formData.country,
-        lat: formData.lat ? parseFloat(formData.lat) : null,
-        lng: formData.lng ? parseFloat(formData.lng) : null,
         is_online: formData.is_online,
         is_24_7: formData.is_24_7,
-        amenities: [], // Deprecated - using features_json instead
         opening_hours_json: formData.opening_hours_json,
         main_image_url: mainImageUrl || null,
         tennis_image_url: tennisImageUrl || null,
-        gallery_image_urls: galleryUrls,
         rewards_enabled: formData.rewards_enabled,
         ai_analysis_enabled: formData.ai_analysis_enabled,
         vending_enabled: formData.vending_enabled,
@@ -133,7 +124,7 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
 
   const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    type: "main" | "tennis" | "gallery"
+    type: "main" | "tennis"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -144,10 +135,8 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
 
       if (type === "main") {
         setMainImageUrl(url);
-      } else if (type === "tennis") {
-        setTennisImageUrl(url);
       } else {
-        setGalleryUrls((prev) => [...prev, url]);
+        setTennisImageUrl(url);
       }
       toast.success("Bild hochgeladen");
     } catch (error: any) {
@@ -157,9 +146,6 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
     }
   };
 
-  const removeGalleryImage = (url: string) => {
-    setGalleryUrls((prev) => prev.filter((u) => u !== url));
-  };
 
 
   const updateOpeningHours = (day: string, field: "open" | "close", value: string) => {
@@ -262,40 +248,6 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
         </div>
       </div>
 
-      {/* Gallery */}
-      <div className="space-y-2">
-        <Label>Galerie</Label>
-        <div className="grid grid-cols-4 gap-2">
-          {galleryUrls.map((url, idx) => (
-            <div key={idx} className="relative aspect-square rounded-lg overflow-hidden">
-              <img src={url} alt={`Galerie ${idx + 1}`} className="w-full h-full object-cover" />
-              <Button
-                variant="destructive"
-                size="icon"
-                className="absolute top-1 right-1 h-6 w-6"
-                onClick={() => removeGalleryImage(url)}
-              >
-                <X className="h-3 w-3" />
-              </Button>
-            </div>
-          ))}
-          <label className="aspect-square border-2 border-dashed border-border rounded-lg cursor-pointer hover:bg-secondary/50 transition-colors flex items-center justify-center">
-            {uploading ? (
-              <div className="animate-pulse text-muted-foreground text-xs">...</div>
-            ) : (
-              <Plus className="h-6 w-6 text-muted-foreground" />
-            )}
-            <input
-              type="file"
-              className="hidden"
-              accept="image/*"
-              onChange={(e) => handleImageUpload(e, "gallery")}
-              disabled={uploading}
-            />
-          </label>
-        </div>
-      </div>
-
       {/* Basic Info */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
@@ -389,32 +341,6 @@ export function LocationForm({ location, onSuccess }: LocationFormProps) {
               id="country"
               value={formData.country}
               onChange={(e) => setFormData((p) => ({ ...p, country: e.target.value }))}
-              className="bg-background border-border"
-            />
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="lat">Breitengrad (optional)</Label>
-            <Input
-              id="lat"
-              type="number"
-              step="any"
-              value={formData.lat}
-              onChange={(e) => setFormData((p) => ({ ...p, lat: e.target.value }))}
-              placeholder="49.1234"
-              className="bg-background border-border"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="lng">Längengrad (optional)</Label>
-            <Input
-              id="lng"
-              type="number"
-              step="any"
-              value={formData.lng}
-              onChange={(e) => setFormData((p) => ({ ...p, lng: e.target.value }))}
-              placeholder="11.1234"
               className="bg-background border-border"
             />
           </div>

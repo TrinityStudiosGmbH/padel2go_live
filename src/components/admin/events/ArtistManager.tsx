@@ -9,8 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Plus, Trash2, Instagram, Music2, Globe, Image as ImageIcon, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { Plus, Trash2, Instagram, Globe, Image as ImageIcon, X } from "lucide-react";
 import { uploadMediaFile } from "@/lib/uploadMedia";
 import { toast } from "sonner";
 
@@ -20,7 +19,6 @@ export interface Artist {
   role: string;
   image_url: string | null;
   instagram_url: string | null;
-  spotify_url: string | null;
   website_url: string | null;
   sort_order: number;
 }
@@ -51,7 +49,6 @@ export function ArtistManager({ artists, onChange }: ArtistManagerProps) {
         role: "DJ",
         image_url: null,
         instagram_url: null,
-        spotify_url: null,
         website_url: null,
         sort_order: artists.length,
       },
@@ -203,17 +200,6 @@ export function ArtistManager({ artists, onChange }: ArtistManagerProps) {
                     placeholder="@username"
                     value={artist.instagram_url || ""}
                     onChange={(e) => updateArtist(index, "instagram_url", e.target.value || null)}
-                    className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13px]"
-                  />
-                </div>
-                <div className="flex flex-col gap-[6px]">
-                  <Label className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                    <Music2 className="h-3 w-3" /> Spotify
-                  </Label>
-                  <Input
-                    placeholder="Spotify URL"
-                    value={artist.spotify_url || ""}
-                    onChange={(e) => updateArtist(index, "spotify_url", e.target.value || null)}
                     className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13px]"
                   />
                 </div>

@@ -6,7 +6,7 @@ import { sectionThemeVars, useSectionTheme } from "@/hooks/useSectionThemes";
 import { SectionShaderBackdrop } from "@/components/SectionShaderBackdrop";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Loader2, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2 } from "lucide-react";
 import { useParams, useNavigate } from "react-router-dom";
 import { BookingStepper } from "@/components/booking/BookingStepper";
 import { BookingLocationHeader } from "@/components/booking/BookingLocationHeader";
@@ -16,7 +16,6 @@ import { BookingTennisTeaser } from "@/components/booking/BookingTennisTeaser";
 import { BookingWhatsAppTeaser } from "@/components/booking/BookingWhatsAppTeaser";
 import { GuestCheckoutModal } from "@/components/booking/GuestCheckoutModal";
 import { useBookingLocation } from "@/hooks/useBookingLocation";
-import { useCourtsVisibility } from "@/hooks/useCourtsVisibility";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 
 const BookingLocation = () => {
@@ -24,7 +23,6 @@ const BookingLocation = () => {
   const { t } = useTranslation("booking");
   const { slug } = useParams<{ slug: string }>();
   const navigate = useNavigate();
-  const { canSeeCourts, publicEnabled, isAdmin, loading: visibilityLoading } = useCourtsVisibility();
   const { canSee } = useFeatureToggles();
 
 
@@ -64,7 +62,7 @@ const BookingLocation = () => {
     handleGuestBooking,
   } = useBookingLocation(slug);
 
-  if (loading || visibilityLoading) {
+  if (loading) {
     return (
       <>
         <Navigation />
@@ -74,31 +72,6 @@ const BookingLocation = () => {
         >
           <Loader2 className="w-8 h-8 animate-spin text-primary" />
         </main>
-      </>
-    );
-  }
-
-  if (!canSeeCourts) {
-    return (
-      <>
-        <Navigation />
-        <main
-          className="relative min-h-screen bg-background pt-24 pb-12"
-          style={sectionThemeVars(sectionColor)}
-        >
-          <SectionShaderBackdrop color={sectionColor} />
-          <div className="relative z-[1] container mx-auto px-4 max-w-md text-center py-20">
-            <div className="inline-flex p-4 rounded-2xl bg-primary/10 mb-4">
-              <EyeOff className="w-10 h-10 text-primary" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">{t("common.comingSoonTitle")}</h1>
-            <p className="text-muted-foreground mb-6">
-              {t("location.comingSoonDescription")}
-            </p>
-            <Button variant="outline" onClick={() => navigate("/")}>{t("common.backToHome")}</Button>
-          </div>
-        </main>
-        <Footer />
       </>
     );
   }
@@ -138,18 +111,6 @@ const BookingLocation = () => {
               <ArrowLeft className="w-4 h-4 mr-1.5" />
               {t("location.back")}
             </Button>
-
-            {isAdmin && !publicEnabled && (
-              <div className="rounded-xl border border-blue-500/40 bg-blue-500/10 px-4 py-3 flex items-start gap-3">
-                <EyeOff className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-medium text-foreground">{t("common.adminPreviewLabel")}</p>
-                  <p className="text-muted-foreground">
-                    {t("location.adminPreviewDescription")}
-                  </p>
-                </div>
-              </div>
-            )}
 
             <BookingLocationHeader location={location} sport={selectedSport} />
 

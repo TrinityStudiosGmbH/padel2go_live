@@ -13,8 +13,6 @@ export interface PartnerTile {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  partner_type: 'equipment' | 'local';
-  region: string | null;
   description: string | null;
   description_en: string | null;
   description_en_locked: boolean;
@@ -33,7 +31,7 @@ export function usePartnerTiles(onlyActive = true) {
       if (onlyActive) q = q.eq("is_active", true);
       const { data, error } = await q;
       if (error) throw error;
-      return data as PartnerTile[];
+      return data as unknown as PartnerTile[];
     },
   });
 
@@ -64,7 +62,7 @@ export function usePartnerTiles(onlyActive = true) {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (tile: { name: string; slug: string; bg_color?: string; partner_type?: string }) => {
+    mutationFn: async (tile: { name: string; slug: string; bg_color?: string }) => {
       const { data: maxRow } = await supabase
         .from("partner_tiles")
         .select("sort_order")
@@ -78,7 +76,6 @@ export function usePartnerTiles(onlyActive = true) {
         slug: tile.slug,
         bg_color: tile.bg_color || "#FFFFFF",
         sort_order: nextOrder,
-        partner_type: tile.partner_type || "equipment",
       });
       if (error) throw error;
     },

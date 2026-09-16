@@ -127,7 +127,7 @@ const SectionEditor = ({
     if (!file) return;
     const v = validateFile(file);
     if (!v.ok) {
-      toast.error(v.reason);
+      toast.error("reason" in v ? v.reason : "Ungültige Datei");
       return;
     }
     setUploadingLang(lang);

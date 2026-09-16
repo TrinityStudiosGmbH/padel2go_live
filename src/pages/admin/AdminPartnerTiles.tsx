@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { TranslatableField } from "@/components/admin/TranslatableField";
 import {
   AlertDialog,
@@ -30,7 +29,6 @@ const AdminPartnerTiles = () => {
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
   const [newName, setNewName] = useState("");
   const [newSlug, setNewSlug] = useState("");
-  const [newType, setNewType] = useState<"equipment" | "local">("equipment");
   const [pendingDelete, setPendingDelete] = useState<PartnerTile | null>(null);
 
   const runTranslate = (id: string) => {
@@ -82,10 +80,9 @@ const AdminPartnerTiles = () => {
       return;
     }
     try {
-      await createMutation.mutateAsync({ name: newName, slug: newSlug, partner_type: newType });
+      await createMutation.mutateAsync({ name: newName, slug: newSlug });
       setNewName("");
       setNewSlug("");
-      setNewType("equipment");
       toast.success("Partner hinzugefügt");
     } catch (err: any) {
       toast.error(err.message);
@@ -105,7 +102,7 @@ const AdminPartnerTiles = () => {
     <AdminLayout>
       <div className="flex animate-fade-up flex-col gap-[18px]">
         <p className="text-sm text-muted-foreground">
-          Partner-Logos und Hintergrundfarben auf der Homepage verwalten — alle Felder speichern sofort.
+          Partner-Logos und Hintergrundfarben auf der Homepage verwalten — Logo, Farbe, Website und Sortierung speichern sofort, die Beschreibung über „Speichern“.
         </p>
 
         {/* Neuen Partner hinzufügen */}
@@ -136,18 +133,6 @@ const AdminPartnerTiles = () => {
                   placeholder="z. B. redbull"
                   className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] font-mono text-[13px]"
                 />
-              </div>
-              <div className="flex min-w-[176px] flex-col gap-[7px]">
-                <label className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Typ</label>
-                <Select value={newType} onValueChange={(v: "equipment" | "local") => setNewType(v)}>
-                  <SelectTrigger className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13.5px] font-semibold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="equipment">Equipment-Partner</SelectItem>
-                    <SelectItem value="local">Standortpartner</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
               <Button
                 onClick={handleCreate}
@@ -204,23 +189,6 @@ const AdminPartnerTiles = () => {
                     </div>
 
                     <div className="max-xl:col-span-full max-xl:flex max-xl:flex-wrap max-xl:items-end max-xl:gap-3.5 xl:contents">
-                      {/* Partner type */}
-                      <div className="flex min-w-0 flex-col gap-1.5 max-xl:w-44">
-                        <label className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">Typ</label>
-                        <Select
-                          value={tile.partner_type || "equipment"}
-                          onValueChange={(v) => updateMutation.mutate({ id: tile.id, partner_type: v } as any)}
-                        >
-                          <SelectTrigger className="h-9 rounded-[9px] border-[hsl(0_0%_16%)] bg-white/5 text-[12.5px] font-semibold">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="equipment">Equipment-Partner</SelectItem>
-                            <SelectItem value="local">Standortpartner</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
                       {/* Website URL */}
                       <div className="flex min-w-0 flex-col gap-1.5 max-xl:min-w-[min(220px,100%)] max-xl:flex-1">
                         <label className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">Website-URL</label>
@@ -287,25 +255,8 @@ const AdminPartnerTiles = () => {
                     </div>
                   </div>
 
-                  {/* Local partner fields: Region + Description */}
                   {/* Description for ALL partner types — translatable DE+EN */}
                   <div className="flex flex-col gap-2.5 border-t border-[hsl(0_0%_12%)] pt-3.5">
-                    {tile.partner_type === "local" && (
-                      <div className="flex w-full max-w-[280px] flex-col gap-1.5">
-                        <label className="font-mono text-[9.5px] uppercase tracking-[0.14em] text-muted-foreground">Region</label>
-                        <Input
-                          placeholder="z. B. Bamberg"
-                          defaultValue={tile.region || ""}
-                          onBlur={e => {
-                            const val = e.target.value.trim() || null;
-                            if (val !== (tile.region || null)) {
-                              updateMutation.mutate({ id: tile.id, region: val } as any);
-                            }
-                          }}
-                          className="h-9 rounded-[9px] border-[hsl(0_0%_16%)] bg-white/5 text-[12.5px]"
-                        />
-                      </div>
-                    )}
                     <div className="min-w-0">
                       <PartnerDescriptionEditor
                         tile={tile}

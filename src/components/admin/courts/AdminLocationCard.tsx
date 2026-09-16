@@ -213,7 +213,6 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
             </h3>
             <CourtCountSelector
               locationId={location.id}
-              locationName={location.name}
               currentCourts={courts}
               maxCourts={2}
             />

@@ -70,16 +70,6 @@ import {
   type CourtSport,
 } from "@/components/admin/courts/types";
 
-const WEEKDAYS = [
-  { value: 0, label: "Sonntag" },
-  { value: 1, label: "Montag" },
-  { value: 2, label: "Dienstag" },
-  { value: 3, label: "Mittwoch" },
-  { value: 4, label: "Donnerstag" },
-  { value: 5, label: "Freitag" },
-  { value: 6, label: "Samstag" },
-];
-
 /** Sportart-Chip wie in der Court-Verwaltung: Padel = Lime, Tennis = Hellblau. */
 const sportChip = (sport: CourtSport) => (
   <span

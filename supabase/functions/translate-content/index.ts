@@ -39,7 +39,6 @@ const TRANSLATABLE_TABLES: Record<string, FieldName[]> = {
   partner_tiles: ["description"],
   location_teasers: ["title", "description", "city", "expected_date"],
   skypadel_gallery: ["alt_text"],
-  partner_touchpoint_slides: ["title", "description"],
   qr_sections: ["title", "description"],
   articles: ["title", "excerpt", "body_html", "title_highlight", "lead"],
   events: ["title", "description", "price_label", "highlights"],
@@ -141,7 +140,7 @@ serve(async (req) => {
   // Geteiltes Werkzeug: wird aus mehreren Redaktionsseiten heraus aufgerufen.
   const TRANSLATE_PAGES = [
     "news", "events", "marketplace", "location-teasers",
-    "partner-tiles", "touchpoint-slides", "skypadel-gallery", "qr-panel",
+    "partner-tiles", "skypadel-gallery", "qr-panel",
   ];
   if (!(await hasAdminAccess(client, user, TRANSLATE_PAGES))) {
     return json(403, { error: "Admin access required" });

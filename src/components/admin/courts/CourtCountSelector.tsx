@@ -12,14 +12,12 @@ import { SportSelect } from "./SportSelect";
 
 interface CourtCountSelectorProps {
   locationId: string;
-  locationName: string;
   currentCourts: { id: string; name: string; is_active: boolean; sport?: string | null }[];
   maxCourts?: number;
 }
 
 export function CourtCountSelector({
   locationId,
-  locationName,
   currentCourts,
   maxCourts = 2,
 }: CourtCountSelectorProps) {

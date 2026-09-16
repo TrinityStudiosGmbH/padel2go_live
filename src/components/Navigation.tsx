@@ -8,6 +8,7 @@ import { NavLink } from "@/components/NavLink";
 import { TubelightNavBar } from "@/components/ui/tubelight-navbar";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
+import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import DashboardNavigation from "@/components/DashboardNavigation";
 import LanguageSwitch from "@/components/LanguageSwitch";
 import wordmark from "@/assets/padel2go-wordmark-light.png";
@@ -29,18 +30,20 @@ const PublicNavigation = () => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
+  const { canSee } = useFeatureToggles();
   const { t } = useTranslation("common");
   const sectionThemes = useSectionThemes();
 
+  // Nav-Links folgen derselben Sichtbarkeit wie die Routen (Admin → Sichtbarkeit).
   const navItems = [
-    { label: t("nav.home"), href: "/" },
-    { label: t("nav.bookCourt"), href: "/booking", color: sectionThemes.booking },
-    { label: t("nav.marketplace"), href: "/marketplace", color: sectionThemes.market },
-    { label: t("nav.events"), href: "/events", color: sectionThemes.events },
-    { label: t("nav.news"), href: "/news", color: sectionThemes.news },
-    { label: t("nav.players"), href: "/fuer-spieler" },
-    { label: t("nav.clubs"), href: "/fuer-vereine" },
-  ];
+    { label: t("nav.home"), href: "/", show: true },
+    { label: t("nav.bookCourt"), href: "/booking", color: sectionThemes.booking, show: canSee("booking") },
+    { label: t("nav.marketplace"), href: "/marketplace", color: sectionThemes.market, show: canSee("marketplace") },
+    { label: t("nav.events"), href: "/events", color: sectionThemes.events, show: canSee("events") },
+    { label: t("nav.news"), href: "/news", color: sectionThemes.news, show: true },
+    { label: t("nav.players"), href: "/fuer-spieler", show: true },
+    { label: t("nav.clubs"), href: "/fuer-vereine", show: true },
+  ].filter((item) => item.show);
 
   const tubelightItems = navItems.map(item => ({
     name: item.label,
@@ -134,14 +137,16 @@ const PublicNavigation = () => {
                 <NavLink to="/auth">{t("nav.login")}</NavLink>
               </Button>
             )}
-            <Button
-              variant="lime"
-              size="sm"
-              asChild
-              className="rounded-full px-5 shadow-lg shadow-primary/25"
-            >
-              <NavLink to="/booking">{t("nav.bookCourt")}</NavLink>
-            </Button>
+            {canSee("booking") && (
+              <Button
+                variant="lime"
+                size="sm"
+                asChild
+                className="rounded-full px-5 shadow-lg shadow-primary/25"
+              >
+                <NavLink to="/booking">{t("nav.bookCourt")}</NavLink>
+              </Button>
+            )}
             <LanguageSwitch variant="navigation" />
           </div>
 
@@ -204,9 +209,11 @@ const PublicNavigation = () => {
                     <NavLink to="/auth" onClick={() => setIsOpen(false)}>{t("nav.login")}</NavLink>
                   </Button>
                 )}
-                <Button variant="lime" className="w-full rounded-xl shadow-lg shadow-primary/25" asChild>
-                  <NavLink to="/booking" onClick={() => setIsOpen(false)}>{t("nav.bookCourt")}</NavLink>
-                </Button>
+                {canSee("booking") && (
+                  <Button variant="lime" className="w-full rounded-xl shadow-lg shadow-primary/25" asChild>
+                    <NavLink to="/booking" onClick={() => setIsOpen(false)}>{t("nav.bookCourt")}</NavLink>
+                  </Button>
+                )}
                 <div className="flex justify-center pt-2">
                   <LanguageSwitch variant="navigation" />
                 </div>

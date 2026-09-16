@@ -4,9 +4,8 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Loader2, Eye, EyeOff, Save, CreditCard, Mail, Sparkles, Languages, Globe, Wallet, ShieldCheck,
+  Loader2, Eye, EyeOff, Save, CreditCard, Mail, Sparkles, Languages, Globe, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -17,14 +16,12 @@ interface StripeConfig {
   secret_key: string;
   webhook_secret: string;
   publishable_key: string;
-  mode: string;
   has_secret_key: boolean;
   has_webhook_secret: boolean;
 }
 
 interface ResendConfig {
   api_key: string;
-  from_email: string;
   has_api_key: boolean;
 }
 
@@ -42,13 +39,6 @@ interface DeeplConfig {
   has_api_key: boolean;
 }
 
-interface PaypalConfig {
-  client_id: string;
-  client_secret: string;
-  mode: string;
-  has_client_id: boolean;
-  has_client_secret: boolean;
-}
 
 interface ServiceRow {
   service: string;
@@ -130,11 +120,11 @@ export default function AdminIntegrations() {
 
   // Per-service form state (empty string = "don't change")
   const [stripe, setStripe] = useState<StripeConfig>({
-    secret_key: "", webhook_secret: "", publishable_key: "", mode: "test",
+    secret_key: "", webhook_secret: "", publishable_key: "",
     has_secret_key: false, has_webhook_secret: false,
   });
   const [resendState, setResendState] = useState<ResendConfig>({
-    api_key: "", from_email: "", has_api_key: false,
+    api_key: "", has_api_key: false,
   });
   const [appState, setAppState] = useState<AppConfig>({ url: "" });
   const [anthropicState, setAnthropicState] = useState<AnthropicConfig>({
@@ -144,10 +134,6 @@ export default function AdminIntegrations() {
   const [deeplState, setDeeplState] = useState<DeeplConfig>({
     api_key: "",
     has_api_key: false,
-  });
-  const [paypal, setPaypal] = useState<PaypalConfig>({
-    client_id: "", client_secret: "", mode: "sandbox",
-    has_client_id: false, has_client_secret: false,
   });
 
   // Masked preview ("••••" + letzte 4 Zeichen aus der RPC) als Input-Placeholder,
@@ -188,7 +174,6 @@ export default function AdminIntegrations() {
           secret_key: "",
           webhook_secret: "",
           publishable_key: c.publishable_key ?? "",
-          mode: c.mode || "test",
           has_secret_key: !!c.secret_key,
           has_webhook_secret: !!c.webhook_secret,
         });
@@ -196,7 +181,6 @@ export default function AdminIntegrations() {
       if (row.service === "resend") {
         setResendState({
           api_key: "",
-          from_email: c.from_email ?? "",
           has_api_key: !!c.api_key,
         });
       }
@@ -213,15 +197,6 @@ export default function AdminIntegrations() {
         setDeeplState({
           api_key: "",
           has_api_key: !!c.api_key,
-        });
-      }
-      if (row.service === "paypal") {
-        setPaypal({
-          client_id: "",
-          client_secret: "",
-          mode: c.mode || "sandbox",
-          has_client_id: !!c.client_id,
-          has_client_secret: !!c.client_secret,
         });
       }
     }
@@ -300,7 +275,6 @@ export default function AdminIntegrations() {
   const fieldLabelClass = "font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground";
   const fieldInputClass = "h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13.5px]";
   const fieldHintClass = "text-[11px] leading-[1.45] text-muted-foreground";
-  const selectTriggerClass = "h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13.5px] font-semibold";
 
   return (
     <AdminLayout>
@@ -354,25 +328,12 @@ export default function AdminIntegrations() {
                     className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] font-mono text-[13px]"
                   />
                 </div>
-                <div className="flex flex-col gap-[7px]">
-                  <Label className={fieldLabelClass}>Modus</Label>
-                  <Select value={stripe.mode} onValueChange={(v) => setStripe(p => ({ ...p, mode: v }))}>
-                    <SelectTrigger className={selectTriggerClass}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="test">Test (Testmodus)</SelectItem>
-                      <SelectItem value="live">Live (Echtbetrieb)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
               </div>
               <Button
                 onClick={() => save("stripe", {
                   secret_key: stripe.secret_key,
                   webhook_secret: stripe.webhook_secret,
                   publishable_key: stripe.publishable_key,
-                  mode: stripe.mode,
                 })}
                 disabled={saving === "stripe"}
                 className={saveButtonClass}
@@ -406,25 +367,14 @@ export default function AdminIntegrations() {
                   placeholder={maskedPlaceholder("resend", "api_key")}
                   hint={resendState.has_api_key ? "••• API-Key hinterlegt" : "re_..."}
                 />
-                <div className="flex flex-col gap-[7px]">
-                  <Label className={fieldLabelClass}>Absender-E-Mail</Label>
-                  <Input
-                    value={resendState.from_email}
-                    onChange={(e) => setResendState(p => ({ ...p, from_email: e.target.value }))}
-                    placeholder="info@padel2go-official.de"
-                    type="email"
-                    className={fieldInputClass}
-                  />
-                  <p className={fieldHintClass}>
-                    Versand läuft zentral über <strong className="font-semibold text-foreground">info@padel2go-official.de</strong>{" "}
-                    (in Resend verifizierte Domain, Kunden können direkt antworten). Nur den API-Key eintragen genügt.
-                  </p>
-                </div>
+                <p className={fieldHintClass}>
+                  Versand läuft zentral über <strong className="font-semibold text-foreground">info@padel2go-official.de</strong>{" "}
+                  (in Resend verifizierte Domain, Kunden können direkt antworten). Nur den API-Key eintragen.
+                </p>
               </div>
               <Button
                 onClick={() => save("resend", {
                   api_key: resendState.api_key,
-                  from_email: resendState.from_email,
                 })}
                 disabled={saving === "resend"}
                 className={saveButtonClass}
@@ -544,61 +494,6 @@ export default function AdminIntegrations() {
                 className={saveButtonClass}
               >
                 {saving === "app" ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                Speichern
-              </Button>
-            </div>
-          </Card>
-
-          {/* ── PayPal (Coming Soon) ────────────────────────────────────────── */}
-          <Card className="rounded-2xl border-border bg-gradient-card p-5 sm:p-6">
-            <div className="flex flex-col gap-4 opacity-60">
-              <div className="flex flex-wrap items-start justify-between gap-3.5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[11px] border border-[hsl(0_0%_18%)] bg-white/5 text-[hsl(0_0%_72%)]">
-                    <Wallet className="h-[17px] w-[17px]" />
-                  </span>
-                  <div className="flex min-w-0 flex-col gap-0.5">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-display text-base font-bold tracking-tight text-foreground">PayPal</span>
-                      <span className="inline-flex flex-none items-center whitespace-nowrap rounded-full border border-[hsl(41_100%_65%/0.28)] bg-[hsl(41_100%_65%/0.1)] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[0.06em] text-[#FFC44D]">
-                        Demnächst verfügbar
-                      </span>
-                    </div>
-                    <span className="text-xs leading-snug text-muted-foreground">Alternative Zahlungsmethode</span>
-                  </div>
-                </div>
-              </div>
-              <div className="flex flex-col gap-[13px]">
-                <SecretInput
-                  label="Client ID"
-                  value={paypal.client_id}
-                  onChange={(v) => setPaypal(p => ({ ...p, client_id: v }))}
-                  placeholder="Noch nicht verfügbar"
-                />
-                <SecretInput
-                  label="Client Secret"
-                  value={paypal.client_secret}
-                  onChange={(v) => setPaypal(p => ({ ...p, client_secret: v }))}
-                  placeholder="Noch nicht verfügbar"
-                />
-                <div className="flex flex-col gap-[7px]">
-                  <Label className={fieldLabelClass}>Modus</Label>
-                  <Select value={paypal.mode} onValueChange={(v) => setPaypal(p => ({ ...p, mode: v }))} disabled>
-                    <SelectTrigger className={selectTriggerClass}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="sandbox">Sandbox (Test)</SelectItem>
-                      <SelectItem value="live">Live (Echtbetrieb)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <Button
-                disabled
-                className="h-10 self-start rounded-[11px] bg-[hsl(0_0%_14%)] px-[18px] text-[13px] font-bold text-[hsl(0_0%_45%)] disabled:opacity-100"
-              >
-                <Save className="w-4 h-4 mr-2" />
                 Speichern
               </Button>
             </div>

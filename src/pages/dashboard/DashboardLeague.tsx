@@ -4,11 +4,9 @@ import { Helmet } from "react-helmet-async";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
-import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { useAccountData } from "@/hooks/useAccountData";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ComingSoonOverlay } from "@/components/ComingSoonOverlay";
 import { ExpertLevelInfoPopover } from "@/components/p2g";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -143,7 +141,6 @@ const DashboardLeague = () => {
   const dateLocale = i18n.language === "en" ? enUS : de;
   const { user } = useAuth();
   const { isAdmin } = useAdminAuth();
-  const { league_enabled, isLoading: featureLoading } = useFeatureToggles();
   const { profile, skillStats, wallet, loading: isAccountLoading } = useAccountData(user);
   const { matchHistory, skillBalance, isSkillsLoading, rankings, isRankingsLoading, wlStats, isWLStatsLoading } = useP2GPoints();
 
@@ -177,31 +174,6 @@ const DashboardLeague = () => {
     ...r,
     isCurrentUser: r.is_current_user
   }));
-
-  // Show Coming Soon if feature is disabled and user is not admin
-  const showComingSoon = !league_enabled && !isAdmin && !featureLoading;
-
-  if (showComingSoon) {
-    return (
-      <DashboardLayout>
-        <ComingSoonOverlay
-          title={t("comingSoon.league.title")}
-          description={t("comingSoon.league.description")}
-          icon={Trophy}
-        >
-          <div className="container mx-auto px-4 py-6 md:py-8 space-y-6">
-            <div className="h-32 bg-muted/20 rounded-xl" />
-            <div className="h-64 bg-muted/20 rounded-xl" />
-            <div className="grid grid-cols-3 gap-6">
-              <div className="h-48 bg-muted/20 rounded-xl" />
-              <div className="h-48 bg-muted/20 rounded-xl" />
-              <div className="h-48 bg-muted/20 rounded-xl" />
-            </div>
-          </div>
-        </ComingSoonOverlay>
-      </DashboardLayout>
-    );
-  }
 
   return (
     <DashboardLayout>

@@ -2016,65 +2016,53 @@ export type Database = {
       }
       site_settings: {
         Row: {
-          feature_app_launched: boolean
-          feature_app_launched_updated_at: string | null
-          feature_events_enabled: boolean
-          feature_events_updated_at: string | null
-          feature_league_enabled: boolean | null
-          feature_league_updated_at: string | null
-          feature_lobbies_enabled: boolean | null
-          feature_lobbies_updated_at: string | null
-          feature_matching_enabled: boolean | null
-          feature_matching_updated_at: string | null
-          feature_p2g_enabled: boolean
-          feature_p2g_updated_at: string | null
+          credits_payment_max_percent: number
+          credits_per_euro: number
+          feature_booking_state: string
+          feature_courts_public_enabled: boolean
+          feature_credits_payment_enabled: boolean
+          feature_events_state: string
+          feature_friends_state: string
+          feature_league_state: string
+          feature_lobbies_state: string
+          feature_marketplace_state: string
+          feature_p2g_state: string
           id: string
-          pin_lock_partner: boolean
-          pin_lock_partner_activated_at: string | null
-          pin_lock_vereine: boolean
-          pin_lock_vereine_activated_at: string | null
+          launch_date: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
-          feature_app_launched?: boolean
-          feature_app_launched_updated_at?: string | null
-          feature_events_enabled?: boolean
-          feature_events_updated_at?: string | null
-          feature_league_enabled?: boolean | null
-          feature_league_updated_at?: string | null
-          feature_lobbies_enabled?: boolean | null
-          feature_lobbies_updated_at?: string | null
-          feature_matching_enabled?: boolean | null
-          feature_matching_updated_at?: string | null
-          feature_p2g_enabled?: boolean
-          feature_p2g_updated_at?: string | null
+          credits_payment_max_percent?: number
+          credits_per_euro?: number
+          feature_booking_state?: string
+          feature_courts_public_enabled?: boolean
+          feature_credits_payment_enabled?: boolean
+          feature_events_state?: string
+          feature_friends_state?: string
+          feature_league_state?: string
+          feature_lobbies_state?: string
+          feature_marketplace_state?: string
+          feature_p2g_state?: string
           id?: string
-          pin_lock_partner?: boolean
-          pin_lock_partner_activated_at?: string | null
-          pin_lock_vereine?: boolean
-          pin_lock_vereine_activated_at?: string | null
+          launch_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
-          feature_app_launched?: boolean
-          feature_app_launched_updated_at?: string | null
-          feature_events_enabled?: boolean
-          feature_events_updated_at?: string | null
-          feature_league_enabled?: boolean | null
-          feature_league_updated_at?: string | null
-          feature_lobbies_enabled?: boolean | null
-          feature_lobbies_updated_at?: string | null
-          feature_matching_enabled?: boolean | null
-          feature_matching_updated_at?: string | null
-          feature_p2g_enabled?: boolean
-          feature_p2g_updated_at?: string | null
+          credits_payment_max_percent?: number
+          credits_per_euro?: number
+          feature_booking_state?: string
+          feature_courts_public_enabled?: boolean
+          feature_credits_payment_enabled?: boolean
+          feature_events_state?: string
+          feature_friends_state?: string
+          feature_league_state?: string
+          feature_lobbies_state?: string
+          feature_marketplace_state?: string
+          feature_p2g_state?: string
           id?: string
-          pin_lock_partner?: boolean
-          pin_lock_partner_activated_at?: string | null
-          pin_lock_vereine?: boolean
-          pin_lock_vereine_activated_at?: string | null
+          launch_date?: string | null
           updated_at?: string
           updated_by?: string | null
         }

@@ -35,7 +35,6 @@ interface DbArtist {
   role: string;
   image_url: string | null;
   instagram_url: string | null;
-  spotify_url: string | null;
   website_url: string | null;
 }
 
@@ -114,7 +113,7 @@ const EventDetail = () => {
           postal_code,
           capacity,
           locations:location_id (name, address),
-          event_artists (id, name, role, image_url, instagram_url, spotify_url, website_url),
+          event_artists (id, name, role, image_url, instagram_url, website_url),
           event_brands (id, name, brand_type, logo_url, website_url, instagram_url)
         `)
         .eq("is_published", true);

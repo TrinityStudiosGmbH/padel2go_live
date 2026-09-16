@@ -82,7 +82,7 @@ import {
 } from "@/hooks/useMarketplaceCatalog";
 import { CatalogManagerDialog } from "@/components/admin/marketplace/CatalogManagerDialog";
 import { MarketplaceOrdersSection } from "@/components/admin/marketplace/MarketplaceOrdersSection";
-import type { MarketplaceItem, MarketplaceCategory, ProductType } from "@/hooks/useMarketplaceItems";
+import type { MarketplaceItem, MarketplaceCategory } from "@/hooks/useMarketplaceItems";
 import { useTranslateContent, toastTranslateResult } from "@/hooks/useTranslateContent";
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMediaFile } from "@/lib/uploadMedia";
@@ -1305,7 +1305,6 @@ const AdminMarketplace = () => {
                 />
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
                   Fixer Betrag an Points, den jeder Käufer bei diesem Produkt als Rabatt einlösen kann
-                  {(formData.credit_cost ?? 0) > 0 && ` (= ${formatEuro(Math.floor((formData.credit_cost ?? 0)))} bei 100 Points/€ — genauer Wert laut P2G-Einstellung)`}
                   . 0 = kein Punkterabatt.
                 </p>
               </div>

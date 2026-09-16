@@ -240,8 +240,6 @@ export function CameraTestSimulator() {
     setSelectedPlayers(newPlayers);
   };
 
-  const selectedCourt = courts?.find(c => c.id === selectedCourtId);
-
   return (
     <Card className="rounded-2xl border-border bg-gradient-card p-5 sm:p-6">
       <div className="flex flex-col gap-4">

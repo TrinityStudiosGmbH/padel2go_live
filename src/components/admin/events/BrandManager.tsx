@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Plus, Trash2, Instagram, Globe, Image as ImageIcon, X } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { uploadMediaFile } from "@/lib/uploadMedia";
 import { toast } from "sonner";
 

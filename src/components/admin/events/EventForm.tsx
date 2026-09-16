@@ -182,7 +182,6 @@ export function EventForm({ event, locations, onSuccess }: EventFormProps) {
               role: a.role,
               image_url: a.image_url,
               instagram_url: a.instagram_url,
-              spotify_url: a.spotify_url,
               website_url: a.website_url,
               sort_order: i,
             }));

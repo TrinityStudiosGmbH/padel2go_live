@@ -57,7 +57,7 @@ import { format } from "date-fns";
 import { de } from "date-fns/locale";
 import { EventForm, EVENT_TYPES, EVENT_TRANSLATE_FIELDS } from "@/components/admin/events";
 import type { Event, Location } from "@/components/admin/events";
-import { useTranslateContent, toastTranslateResult } from "@/hooks/useTranslateContent";
+import { useTranslateContent } from "@/hooks/useTranslateContent";
 
 const TYPE_BADGE_STYLES: Record<string, string> = {
   party: "border-[hsl(263_100%_82%/0.3)] bg-[hsl(263_100%_82%/0.1)] text-[#C7A6FF]",
