@@ -26,6 +26,9 @@ German padel court booking + community platform. Pre-launch phase as of April 20
 ### Auth & Route Guards
 - `RequireAuth` — wraps all routes needing login. Shows spinner while loading, redirects to `/auth?redirect=<path>` if no user.
 - `RequireFeature feature="…"` — the ONE guard for function visibility (see below). Hidden → renders the shared "Bald verfügbar" page (never a silent redirect). Admin preview → small blue pill bottom-left.
+- `RequireProfileComplete` — inside `RequireAuth`, sends anyone without `profiles.profile_completed_at` to `/willkommen` (one-time profile onboarding: username, display name, age, self-rated skill, matches played, optional avatar), then back to the original target. Finishing calls the `complete-profile` edge function, which sets the timestamp once and fires the `PROFILE_COMPLETED` reward.
+- Avatars: `UserAvatar` (`src/components/UserAvatar.tsx`) is the single avatar component — falls back to the person's initials on a stable per-name colour gradient instead of a grey placeholder.
+- Sign-in: email/password plus Google and Apple OAuth (`useAuth().signInWithProvider`). Providers must be enabled in the Supabase dashboard; the UI reports "not enabled" cleanly if they are not.
 - `AdminLayout` + `useAdminAuth` — every `/admin/*` page gates itself: `user_roles` table, hardcoded superadmin email bypass for `fsteinfelder@padel2go.eu`, plus per-page delegated roles (`my_admin_pages()`). `isSuperAdmin` exists for tools that write real data (camera simulator).
 
 ### Sichtbarkeit (feature visibility)
@@ -86,6 +89,8 @@ src/
   components/
     RequireAuth.tsx                — Login gate
     RequireFeature.tsx             — Visibility gate + shared „Bald verfügbar" page
+    RequireProfileComplete.tsx     — One-time profile onboarding gate (→ /willkommen)
+    UserAvatar.tsx                 — Avatar with initials fallback (used everywhere)
     Navigation.tsx                 — Public nav (switches to DashboardNavigation when logged in)
     DashboardNavigation.tsx        — Logged-in nav, respects feature flags
     Footer.tsx                     — 4-column footer: Brand | Plattform | Unternehmen | Rechtliches

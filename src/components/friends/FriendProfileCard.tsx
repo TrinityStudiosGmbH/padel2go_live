@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useQuery } from "@tanstack/react-query";
 import { X, Trophy, Target, TrendingUp, Calendar, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -73,7 +73,6 @@ export function FriendProfileCard({ username, isOpen, onClose }: FriendProfileCa
   };
 
   const displayName = profile?.display_name || profile?.username || username;
-  const initials = displayName?.slice(0, 2).toUpperCase() || "??";
 
   // Expert level gradient classes
   const getGradientClasses = (gradient: string) => {
@@ -132,12 +131,11 @@ export function FriendProfileCard({ username, isOpen, onClose }: FriendProfileCa
                     "absolute inset-0 rounded-full bg-gradient-to-br blur-sm opacity-60",
                     getGradientClasses(profile.expert_level.gradient)
                   )} />
-                  <Avatar className="w-16 h-16 relative border-2 border-background">
-                    <AvatarImage src={profile.avatar_url || undefined} />
-                    <AvatarFallback className="text-lg font-semibold bg-muted">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    src={profile.avatar_url}
+                    name={displayName || profile.username}
+                    className="w-16 h-16 relative border-2 border-background text-lg"
+                  />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg truncate">{displayName}</h3>

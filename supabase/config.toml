@@ -134,3 +134,6 @@ verify_jwt = true
 # Oeffentlicher .ics-Download fuer den "Apple Kalender"-Button — Zugriff per signiertem Token im Code.
 [functions.booking-ics]
 verify_jwt = false
+
+[functions.complete-profile]
+verify_jwt = true

@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Menu, X, LogOut, User, Settings, Building2, Coins, CalendarDays } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { NavLink } from "@/components/NavLink";
+import { UserAvatar } from "@/components/UserAvatar";
 import { TubelightNavBar } from "@/components/ui/tubelight-navbar";
 import { NotificationCenter } from "@/components/notifications";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,14 +44,6 @@ const DashboardNavigation = () => {
   const balanceWorthEuro = (totalCredits * centsPerPoint / 100).toFixed(2);
 
   const accountName = profile.display_name || profile.username || user?.email || t("menu.account");
-  const initials =
-    accountName
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?";
-
   // Nav-Links folgen derselben Sichtbarkeit wie die Routen (Admin → Sichtbarkeit).
   const dashboardItems = [
     { name: t("nav.meinP2G"), url: "/dashboard/home", show: true, color: sectionThemes.home },
@@ -108,12 +100,12 @@ const DashboardNavigation = () => {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button className="rounded-full outline-none focus-visible:ring-2 focus-visible:ring-primary/50 shrink-0">
-                  <Avatar className="w-9 h-9 border border-border/50">
-                    <AvatarImage src={profile.avatar_url || undefined} alt={accountName} />
-                    <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
+                  <UserAvatar
+                    src={profile.avatar_url}
+                    name={accountName}
+                    alt={accountName}
+                    className="w-9 h-9 border border-border/50 text-sm"
+                  />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">

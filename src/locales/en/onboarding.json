@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "Welcome"
+  },
+  "steps": {
+    "name": "Step 1 of 4",
+    "age": "Step 2 of 4",
+    "skill": "Step 3 of 4",
+    "avatar": "Step 4 of 4",
+    "done": "All set"
+  },
+  "welcome": {
+    "title": "Welcome to PADEL2GO!",
+    "body": "Great to have you. We need a few details for your profile once — so other players can find you and we can rank you properly.",
+    "duration": "Takes under a minute"
+  },
+  "name": {
+    "title": "What's your name?",
+    "subtitle": "Your username is your public handle, the display name is what other players see.",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "your_username",
+    "usernameHint": "3–30 characters, only a–z, 0–9, dot and underscore.",
+    "taken": "That username is already taken.",
+    "displayLabel": "Display name",
+    "displayPlaceholder": "Alex Smith",
+    "displayHint": "How we greet you and how other players see you."
+  },
+  "age": {
+    "title": "How old are you?",
+    "subtitle": "We only use this for age groups in the ranking.",
+    "label": "Age",
+    "hint": "18 years or older.",
+    "invalid": "Please enter an age between 18 and 99."
+  },
+  "skill": {
+    "title": "How well do you play?",
+    "subtitle": "Your own estimate. Real matches will replace it later.",
+    "scaleLow": "Just starting",
+    "scaleHigh": "Tournament level",
+    "gamesLabel": "How many matches have you played?",
+    "levels": {
+      "s1": "Complete beginner",
+      "s2": "First tries",
+      "s3": "Beginner",
+      "s4": "Solid basics",
+      "s5": "Casual player",
+      "s6": "Experienced",
+      "s7": "Advanced",
+      "s8": "Strong",
+      "s9": "Very strong",
+      "s10": "Tournament level"
+    },
+    "games": {
+      "none": "None yet",
+      "few": "1–10",
+      "some": "11–50",
+      "many": "More than 50"
+    }
+  },
+  "avatar": {
+    "title": "Show yourself",
+    "subtitle": "A photo is optional — without one we use your initials.",
+    "upload": "Upload photo",
+    "initialsHint": "Without a photo your initials appear in your personal colour.",
+    "hasPhoto": "Looking good! You can change the photo later in your account.",
+    "useInitials": "Remove photo and use initials",
+    "notAnImage": "Please pick an image.",
+    "tooLarge": "The image is larger than 5 MB.",
+    "failed": "Upload failed"
+  },
+  "done": {
+    "title": "You're all set!",
+    "subtitle": "Give your details a quick check, then let's go.",
+    "age": "Age",
+    "years": "years",
+    "skill": "Skill",
+    "games": "Matches",
+    "editHint": "You can change everything anytime under Account.",
+    "toast": "Profile saved — welcome aboard!",
+    "failed": "Saving failed"
+  },
+  "nav": {
+    "start": "Let's go",
+    "continue": "Continue",
+    "back": "Back",
+    "skip": "Skip",
+    "finish": "Save profile"
+  }
+}

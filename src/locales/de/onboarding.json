@@ -1,0 +1,89 @@
+{
+  "meta": {
+    "title": "Willkommen"
+  },
+  "steps": {
+    "name": "Schritt 1 von 4",
+    "age": "Schritt 2 von 4",
+    "skill": "Schritt 3 von 4",
+    "avatar": "Schritt 4 von 4",
+    "done": "Fertig"
+  },
+  "welcome": {
+    "title": "Willkommen bei PADEL2GO!",
+    "body": "Schön, dass du da bist. Wir brauchen einmalig ein paar Angaben für dein Profil — damit dich Mitspieler finden und wir dich richtig einsortieren.",
+    "duration": "Dauert unter einer Minute"
+  },
+  "name": {
+    "title": "Wie heißt du?",
+    "subtitle": "Dein Username ist deine öffentliche Adresse, der Anzeigename erscheint für Mitspieler.",
+    "usernameLabel": "Username",
+    "usernamePlaceholder": "dein_username",
+    "usernameHint": "3–30 Zeichen, nur a–z, 0–9, Punkt und Unterstrich.",
+    "taken": "Dieser Username ist schon vergeben.",
+    "displayLabel": "Anzeigename",
+    "displayPlaceholder": "Max Muster",
+    "displayHint": "So begrüßen wir dich und so sehen dich andere Spieler."
+  },
+  "age": {
+    "title": "Wie alt bist du?",
+    "subtitle": "Wir nutzen das nur für die Altersklassen in der Rangliste.",
+    "label": "Alter",
+    "hint": "Mindestens 18 Jahre.",
+    "invalid": "Bitte ein Alter zwischen 18 und 99 angeben."
+  },
+  "skill": {
+    "title": "Wie gut spielst du?",
+    "subtitle": "Deine Selbsteinschätzung. Später ersetzen echte Matches diesen Wert.",
+    "scaleLow": "Neu dabei",
+    "scaleHigh": "Turnierniveau",
+    "gamesLabel": "Wie viele Matches hast du schon gespielt?",
+    "levels": {
+      "s1": "Komplett neu",
+      "s2": "Erste Versuche",
+      "s3": "Anfänger",
+      "s4": "Solide Grundlagen",
+      "s5": "Freizeitspieler",
+      "s6": "Erfahren",
+      "s7": "Fortgeschritten",
+      "s8": "Stark",
+      "s9": "Sehr stark",
+      "s10": "Turnierniveau"
+    },
+    "games": {
+      "none": "Noch keins",
+      "few": "1–10",
+      "some": "11–50",
+      "many": "Mehr als 50"
+    }
+  },
+  "avatar": {
+    "title": "Zeig dich",
+    "subtitle": "Ein Foto ist optional — ohne Foto nutzen wir deine Initialen.",
+    "upload": "Foto hochladen",
+    "initialsHint": "Ohne Foto erscheinen deine Initialen in deiner persönlichen Farbe.",
+    "hasPhoto": "Sieht gut aus! Du kannst das Foto später im Konto ändern.",
+    "useInitials": "Foto entfernen und Initialen nutzen",
+    "notAnImage": "Bitte ein Bild auswählen.",
+    "tooLarge": "Das Bild ist größer als 5 MB.",
+    "failed": "Upload fehlgeschlagen"
+  },
+  "done": {
+    "title": "Alles bereit!",
+    "subtitle": "Prüf kurz deine Angaben, dann geht's los.",
+    "age": "Alter",
+    "years": "Jahre",
+    "skill": "Spielstärke",
+    "games": "Matches",
+    "editHint": "Du kannst alles jederzeit unter Konto ändern.",
+    "toast": "Profil gespeichert — willkommen an Bord!",
+    "failed": "Speichern fehlgeschlagen"
+  },
+  "nav": {
+    "start": "Los geht's",
+    "continue": "Weiter",
+    "back": "Zurück",
+    "skip": "Überspringen",
+    "finish": "Profil speichern"
+  }
+}

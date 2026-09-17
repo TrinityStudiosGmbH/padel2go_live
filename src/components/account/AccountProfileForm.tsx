@@ -1,12 +1,13 @@
 import { useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { motion } from "framer-motion";
-import { User, Camera, Save, Loader2, Check, X } from "lucide-react";
+import { User, Camera, Save, Loader2, Check, X, Trophy, Swords } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Slider } from "@/components/ui/slider";
 import type { Profile } from "./types";
-import { StorageImage } from "@/components/StorageImage";
+import { UserAvatar } from "@/components/UserAvatar";
 
 interface AccountProfileFormProps {
   profile: Profile;
@@ -48,15 +49,12 @@ export function AccountProfileForm({
       {/* Avatar */}
       <div className="flex items-center gap-4 mb-6">
         <div className="relative">
-          <div className="w-20 h-20 rounded-full bg-secondary overflow-hidden border-2 border-border">
-            {profile.avatar_url ? (
-              <StorageImage src={profile.avatar_url} renderWidth={200} alt={t("profileForm.avatarAlt")} className="w-full h-full object-cover" />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center">
-                <User className="w-8 h-8 text-muted-foreground" />
-              </div>
-            )}
-          </div>
+          <UserAvatar
+            src={profile.avatar_url}
+            name={profile.display_name || profile.username}
+            alt={t("profileForm.avatarAlt")}
+            className="w-20 h-20 border-2 border-border text-2xl"
+          />
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={uploadingAvatar}
@@ -119,6 +117,45 @@ export function AccountProfileForm({
           placeholder={t("profileForm.agePlaceholder")}
           className="mt-1 w-32"
         />
+      </div>
+
+      {/* Spielstärke (Selbsteinschätzung) */}
+      <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-border bg-white/[0.03] p-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <Label className="inline-flex items-center gap-1.5 text-sm font-semibold">
+            <Trophy className="h-4 w-4 text-primary" /> {t("profileForm.skillLabel")}
+          </Label>
+          <span className="font-stat text-xl font-extrabold text-primary">
+            {profile.skill_self_rating}
+            <span className="text-xs text-muted-foreground">/10</span>
+          </span>
+        </div>
+        <Slider
+          value={[profile.skill_self_rating || 5]}
+          onValueChange={([v]) => setProfile(prev => ({ ...prev, skill_self_rating: v }))}
+          min={1}
+          max={10}
+          step={1}
+          aria-label={t("profileForm.skillLabel")}
+        />
+        <p className="text-xs text-muted-foreground">{t("profileForm.skillHint")}</p>
+      </div>
+
+      {/* Gespielte Matches */}
+      <div className="mb-6">
+        <Label htmlFor="games" className="inline-flex items-center gap-1.5">
+          <Swords className="h-4 w-4 text-primary" /> {t("profileForm.gamesLabel")}
+        </Label>
+        <Input
+          id="games"
+          type="number"
+          min={0}
+          max={9999}
+          value={profile.games_played_self ?? 0}
+          onChange={(e) => setProfile(prev => ({ ...prev, games_played_self: e.target.value ? parseInt(e.target.value) : 0 }))}
+          className="mt-1 w-32"
+        />
+        <p className="mt-1 text-xs text-muted-foreground">{t("profileForm.gamesHint")}</p>
       </div>
 
       <Button onClick={onSave} variant="lime" disabled={saving} className="w-full sm:w-auto">

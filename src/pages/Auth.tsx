@@ -24,7 +24,7 @@ const Auth = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const { user, signUp, signInWithPassword, resetPassword } = useAuth();
+  const { user, signUp, signInWithPassword, signInWithProvider, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
@@ -33,6 +33,7 @@ const Auth = () => {
   const [termsAccepted, setTermsAccepted] = useState(false);
   const [adultConfirmed, setAdultConfirmed] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [oauthLoading, setOauthLoading] = useState<"google" | "apple" | null>(null);
   const [errors, setErrors] = useState<{ email?: string; password?: string; confirmPassword?: string }>({});
   // Captured synchronously on first render — Supabase strips the URL hash after
   // processing, so read the error markers before they disappear.
@@ -188,6 +189,20 @@ const Auth = () => {
     } else {
       navigate("/account");
     }
+  };
+
+  const handleOAuth = async (provider: "google" | "apple") => {
+    setOauthLoading(provider);
+    const { error } = await signInWithProvider(provider, safeRedirect ?? undefined);
+    if (error) {
+      setOauthLoading(null);
+      // Ein nicht aktivierter Provider meldet sich mit "provider is not enabled".
+      const notEnabled = /not enabled|unsupported provider/i.test(error.message ?? "");
+      toast.error(t("oauth.failed"), {
+        description: notEnabled ? t("oauth.notConfigured") : error.message,
+      });
+    }
+    // Erfolgsfall: Supabase leitet zu Google/Apple weiter, die Seite verlässt sich selbst.
   };
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -363,6 +378,14 @@ const Auth = () => {
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("signIn.submit")}
                     </Button>
                   </form>
+                  <OAuthButtons
+                    onSelect={handleOAuth}
+                    busy={oauthLoading}
+                    disabled={loading || oauthLoading !== null}
+                    dividerLabel={t("oauth.divider")}
+                    googleLabel={t("oauth.google")}
+                    appleLabel={t("oauth.apple")}
+                  />
                   <div className="mt-4 text-center space-y-2">
                     <button
                       onClick={() => setMode("forgot")}
@@ -471,6 +494,14 @@ const Auth = () => {
                       {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : t("signUp.submit")}
                     </Button>
                   </form>
+                  <OAuthButtons
+                    onSelect={handleOAuth}
+                    busy={oauthLoading}
+                    disabled={loading || oauthLoading !== null}
+                    dividerLabel={t("oauth.divider")}
+                    googleLabel={t("oauth.google")}
+                    appleLabel={t("oauth.apple")}
+                  />
                   <div className="mt-4 text-center">
                     <p className="text-sm text-muted-foreground">
                       {t("signUp.alreadyRegistered")}{" "}
@@ -648,5 +679,65 @@ const Auth = () => {
     </>
   );
 };
+
+/** Google- und Apple-Anmeldung. Gleiche Buttons für Login und Registrierung. */
+const OAuthButtons = ({
+  onSelect,
+  busy,
+  disabled,
+  dividerLabel,
+  googleLabel,
+  appleLabel,
+}: {
+  onSelect: (provider: "google" | "apple") => void;
+  busy: "google" | "apple" | null;
+  disabled: boolean;
+  dividerLabel: string;
+  googleLabel: string;
+  appleLabel: string;
+}) => (
+  <>
+    <div className="my-5 flex items-center gap-3">
+      <span className="h-px flex-1 bg-border" />
+      <span className="font-mono text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{dividerLabel}</span>
+      <span className="h-px flex-1 bg-border" />
+    </div>
+    <div className="flex flex-col gap-2.5">
+      <button
+        type="button"
+        onClick={() => onSelect("google")}
+        disabled={disabled}
+        className="inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-[12px] border border-[hsl(0_0%_18%)] bg-white/[0.04] px-4 text-[14px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-white/[0.07] disabled:opacity-60"
+      >
+        {busy === "google" ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleMark className="h-[18px] w-[18px]" />}
+        {googleLabel}
+      </button>
+      <button
+        type="button"
+        onClick={() => onSelect("apple")}
+        disabled={disabled}
+        className="inline-flex h-11 w-full items-center justify-center gap-2.5 rounded-[12px] border border-[hsl(0_0%_18%)] bg-white/[0.04] px-4 text-[14px] font-semibold text-foreground transition-colors hover:border-primary/40 hover:bg-white/[0.07] disabled:opacity-60"
+      >
+        {busy === "apple" ? <Loader2 className="h-4 w-4 animate-spin" /> : <AppleMark className="h-[19px] w-[19px]" />}
+        {appleLabel}
+      </button>
+    </div>
+  </>
+);
+
+const GoogleMark = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" className={className} aria-hidden="true">
+    <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z" />
+    <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z" />
+    <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24s.92 7.54 2.56 10.78l7.97-6.19z" />
+    <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z" />
+  </svg>
+);
+
+const AppleMark = ({ className }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" className={className} fill="currentColor" aria-hidden="true">
+    <path d="M17.05 12.54c.02 2.7 2.36 3.6 2.39 3.61-.02.06-.38 1.3-1.25 2.57-.75 1.1-1.53 2.2-2.76 2.22-1.21.02-1.6-.72-2.98-.72-1.39 0-1.82.7-2.96.74-1.19.04-2.1-1.18-2.86-2.28-1.66-2.4-2.93-6.79-1.23-9.75.85-1.47 2.36-2.4 4-2.43 1.17-.02 2.27.79 2.98.79.71 0 2.05-.97 3.46-.83.59.03 2.24.21 3.3 1.62-.09.06-1.97 1.15-1.95 3.44M14.9 4.42c.63-.76 1.05-1.82.94-2.87-.92.04-2.04.61-2.69 1.37-.59.67-1.09 1.75-.95 2.78 1.02.08 2.07-.52 2.7-1.28" />
+  </svg>
+);
 
 export default Auth;

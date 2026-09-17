@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsentBanner from "@/components/CookieConsentBanner";
 import { RequireAuth } from "@/components/RequireAuth";
 import { RequireFeature } from "@/components/RequireFeature";
+import { RequireProfileComplete } from "@/components/RequireProfileComplete";
 import { ClubLayout } from "./components/club/ClubLayout";
 
 // Route-level code splitting: each page is its own lazy chunk so first-time
@@ -64,6 +65,7 @@ const ClubCourtFeatures = lazy(() => import("./pages/club/ClubCourtFeatures"));
 const ClubUtilization = lazy(() => import("./pages/club/ClubUtilization"));
 
 // Admin Pages
+const Onboarding = lazy(() => import("./pages/Onboarding"));
 const AdminOverview = lazy(() => import("./pages/admin/AdminOverview"));
 const AdminBookings = lazy(() => import("./pages/admin/AdminBookings"));
 const AdminCourts = lazy(() => import("./pages/admin/AdminCourts"));
@@ -163,6 +165,11 @@ const App = () => (
 
               {/* Protected Routes — require login */}
               <Route element={<RequireAuth />}>
+                {/* Einmaliges Profil-Onboarding — liegt VOR dem Vollständigkeits-Guard. */}
+                <Route path="/willkommen" element={<Onboarding />} />
+
+                {/* Alles Weitere erst mit vollständigem Profil (sonst → /willkommen). */}
+                <Route element={<RequireProfileComplete />}>
                 {/* Always accessible after login: account + minimal dashboard (Übersicht + Booking) */}
                 <Route path="/account" element={<Account />} />
                 <Route path="/dashboard" element={<DashboardHome />} />
@@ -228,6 +235,7 @@ const App = () => (
                 <Route path="/admin/settings" element={<AdminSettings />} />
                 <Route path="/admin/integrations" element={<AdminIntegrations />} />
                 <Route path="/admin/newsletter" element={<AdminNewsletter />} />
+                </Route>
               </Route>
 
               {/* Public Profile */}

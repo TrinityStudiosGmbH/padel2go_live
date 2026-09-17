@@ -8,6 +8,7 @@ interface AuthContextType {
   loading: boolean;
   signUp: (email: string, password: string, meta?: Record<string, unknown>) => Promise<{ data: { user: User | null; session: Session | null } | null; error: any }>;
   signInWithPassword: (email: string, password: string) => Promise<{ error: any }>;
+  signInWithProvider: (provider: "google" | "apple", redirectPath?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: any }>;
   verifyPassword: (currentPassword: string) => Promise<{ error: any }>;
@@ -72,6 +73,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { data, error };
   };
 
+  /**
+   * Anmeldung über Google oder Apple. Supabase leitet zurück auf /auth, dort
+   * greift die bestehende Rollen-Weiterleitung; ein neues Konto landet danach
+   * über RequireProfileComplete automatisch im Profil-Onboarding.
+   */
+  const signInWithProvider = async (provider: "google" | "apple", redirectPath?: string) => {
+    const target = redirectPath && redirectPath.startsWith("/") && !redirectPath.startsWith("//")
+      ? `${window.location.origin}/auth?redirect=${encodeURIComponent(redirectPath)}`
+      : `${window.location.origin}/auth`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: target,
+        // Google gibt ohne diese Angabe bei einem zweiten Login kein Konto-Auswahlfenster.
+        ...(provider === "google" ? { queryParams: { prompt: "select_account" } } : {}),
+      },
+    });
+    return { error };
+  };
+
   const signInWithPassword = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
@@ -133,6 +154,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loading,
       signUp,
       signInWithPassword,
+      signInWithProvider,
       signOut,
       resetPassword,
       verifyPassword,

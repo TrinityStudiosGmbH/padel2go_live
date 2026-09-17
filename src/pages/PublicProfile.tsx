@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, UserPlus, UserCheck, Clock, UserX, Shield, Trophy, TrendingUp } from "lucide-react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
@@ -150,7 +150,6 @@ export default function PublicProfile() {
   }
 
   const displayName = profile.display_name || profile.username;
-  const initials = displayName?.slice(0, 2).toUpperCase() || "??";
   const apiGradient = profile.expert_level?.gradient || expertLevel?.gradient || "";
 
   return (
@@ -178,12 +177,11 @@ export default function PublicProfile() {
                 "absolute inset-0 rounded-full bg-gradient-to-br blur-md opacity-60 scale-110",
                 getGradientClasses(apiGradient)
               )} />
-              <Avatar className="w-24 h-24 relative border-4 border-background">
-                <AvatarImage src={profile.avatar_url || undefined} />
-                <AvatarFallback className="text-2xl bg-muted text-foreground">
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
+              <UserAvatar
+                src={profile.avatar_url}
+                name={displayName || profile.username}
+                className="w-24 h-24 relative border-4 border-background text-2xl"
+              />
             </div>
             
             <h1 className="text-2xl font-bold mt-4">{displayName}</h1>

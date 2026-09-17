@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { Search, UserPlus, Clock, Users, Loader2 } from "lucide-react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { UserAvatar } from "@/components/UserAvatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
@@ -32,12 +32,6 @@ function UserSearchResultCard({ result }: { result: SearchResult }) {
   const navigate = useNavigate();
   const { sendRequest, isSendingRequest, useFriendshipStatus } = useFriendships();
   const { data: friendshipStatus, isLoading: isLoadingStatus } = useFriendshipStatus(result.id);
-
-  const initials = result.display_name
-    ?.split(" ")
-    .map((n) => n[0])
-    .join("")
-    .toUpperCase() || result.username?.[0]?.toUpperCase() || "?";
 
   const handleProfileClick = () => {
     if (result.username) {
@@ -97,12 +91,12 @@ function UserSearchResultCard({ result }: { result: SearchResult }) {
     <div className="flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-card hover:bg-muted/30 transition-colors">
       {/* Avatar - Clickable */}
       <button onClick={handleProfileClick} className="focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full">
-        <Avatar className="w-12 h-12 border-2 border-muted cursor-pointer hover:border-primary/50 transition-colors">
-          <AvatarImage src={result.avatar_url || undefined} alt={result.display_name || result.username || t("common.userAlt")} />
-          <AvatarFallback className="bg-muted text-muted-foreground font-semibold">
-            {initials}
-          </AvatarFallback>
-        </Avatar>
+        <UserAvatar
+          src={result.avatar_url}
+          name={result.display_name || result.username}
+          alt={result.display_name || result.username || t("common.userAlt")}
+          className="w-12 h-12 border-2 border-muted cursor-pointer hover:border-primary/50 transition-colors"
+        />
       </button>
 
       {/* Info - Clickable */}

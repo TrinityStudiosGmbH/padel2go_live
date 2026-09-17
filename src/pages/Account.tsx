@@ -189,6 +189,8 @@ const Account = () => {
           display_name: profile.display_name || null,
           age: profile.age,
           avatar_url: profile.avatar_url,
+          skill_self_rating: profile.skill_self_rating,
+          games_played_self: profile.games_played_self,
         })
         .eq("user_id", user.id);
 

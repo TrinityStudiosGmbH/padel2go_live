@@ -124,7 +124,11 @@
     "displayNamePlaceholder": "Dein Name",
     "ageLabel": "Alter (optional)",
     "agePlaceholder": "25",
-    "save": "Speichern"
+    "save": "Speichern",
+    "skillLabel": "Spielstärke (Selbsteinschätzung)",
+    "skillHint": "1 = neu dabei, 10 = Turnierniveau. Wird durch echte Matches ersetzt.",
+    "gamesLabel": "Gespielte Matches",
+    "gamesHint": "Deine eigene Schätzung, bevor Matches über PADEL2GO laufen."
   },
   "rewardsCard": {
     "title": "P2G Points",
