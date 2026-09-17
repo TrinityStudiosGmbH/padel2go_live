@@ -121,7 +121,7 @@ export function LocationTeasersSection() {
                         </AnimatePresence>
                         <button
                           onClick={() => toggleExpand(teaser.id)}
-                          className="inline-flex items-center gap-1 text-xs text-primary font-medium mt-1 hover:underline"
+                          className="mt-1 inline-flex min-h-[36px] items-center gap-1 text-xs font-medium text-primary hover:underline"
                         >
                           {isExpanded ? t("locationTeasers.less") : t("locationTeasers.more")}
                           <ChevronDown
@@ -139,7 +139,7 @@ export function LocationTeasersSection() {
                             href={teaser.club_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="group/link inline-flex items-center gap-1.5 text-sm font-semibold text-primary"
+                            className="group/link inline-flex min-h-[40px] items-center gap-1.5 text-sm font-semibold text-primary"
                           >
                             {t("locationTeasers.toClub")}
                             <ArrowRight className="w-4 h-4 transition-transform group-hover/link:translate-x-1" />

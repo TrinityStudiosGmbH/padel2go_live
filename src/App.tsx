@@ -126,6 +126,9 @@ const App = () => (
             <AuthProvider>
             <SeoHead />
             <GeoLanguageBanner />
+            {/* Platz fuer die Sprachleiste: sie liegt fest oben, der Inhalt
+                rueckt entsprechend nach unten statt darunter zu verschwinden. */}
+            <div style={{ paddingTop: "var(--p2g-banner-h, 0px)" }}>
             <Suspense fallback={<PageLoader />}>
             <Routes>
               <Route path="/" element={<Index />} />
@@ -249,6 +252,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
             </Suspense>
+            </div>
             <CookieConsentBanner />
             </AuthProvider>
           </ErrorBoundary>

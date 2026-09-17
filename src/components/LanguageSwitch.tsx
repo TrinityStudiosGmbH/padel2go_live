@@ -25,10 +25,11 @@ const LanguageSwitch = ({ variant = "navigation", className = "" }: LanguageSwit
     }
   };
 
+  // Auf Touch-Geraeten brauchen die Knoepfe Flaeche; auf dem Desktop bleibt es schmal.
   const sizing =
     variant === "navigation"
-      ? "text-xs px-1 py-0.5 gap-1"
-      : "text-xs px-1.5 py-0.5 gap-1.5";
+      ? "text-xs px-1 py-1 gap-1 sm:py-0.5"
+      : "text-xs px-1.5 py-1 gap-1.5 sm:py-0.5";
 
   return (
     <div
@@ -46,7 +47,7 @@ const LanguageSwitch = ({ variant = "navigation", className = "" }: LanguageSwit
             onClick={() => handleClick(lang)}
             aria-pressed={isActive}
             aria-label={lang === "en" ? "Switch to English" : "Auf Deutsch wechseln"}
-            className={`uppercase font-semibold tracking-wide rounded-full px-2 py-0.5 transition-colors ${
+            className={`inline-flex min-h-[36px] min-w-[36px] items-center justify-center rounded-full px-2 py-0.5 font-semibold uppercase tracking-wide transition-colors sm:min-h-0 sm:min-w-0 ${
               isActive
                 ? "bg-primary text-primary-foreground"
                 : "text-muted-foreground hover:text-foreground"

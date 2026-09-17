@@ -254,3 +254,38 @@
   --tw-ring-color: var(--acc);
   border-color: var(--acc);
 }
+
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Mobile Safari
+   ───────────────────────────────────────────────────────────────────────────── */
+
+/* Auf iOS ist 100vh groesser als der sichtbare Bereich: die Adressleiste wird
+   mitgerechnet. Ergebnis sind ein toter Scrollbereich am Seitenende und Inhalte,
+   die unter der Browserleiste verschwinden. 100dvh misst den wirklich sichtbaren
+   Bereich. Die vh-Zeile bleibt als Rueckfall fuer aeltere Browser stehen.
+   Greift zentral fuer jedes bestehende min-h-screen / h-screen im Projekt. */
+@supports (height: 100dvh) {
+  .min-h-screen { min-height: 100dvh; }
+  .h-screen     { height: 100dvh; }
+  .max-h-screen { max-height: 100dvh; }
+}
+
+/* Feste Leisten am unteren Rand duerfen nicht unter dem Home-Indikator liegen. */
+.pb-safe { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
+.pb-safe-6 { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Antippbare Flaeche auf mindestens 44 px bringen, ohne die Optik zu aendern
+   (Apple-Richtwert). Der sichtbare Text bleibt, die Trefferflaeche waechst. */
+@media (hover: none) and (pointer: coarse) {
+  .tap-44 { position: relative; }
+  .tap-44::after {
+    content: "";
+    position: absolute;
+    left: 0; right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    min-height: 44px;
+    height: 100%;
+  }
+}

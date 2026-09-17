@@ -44,11 +44,14 @@ export function AdminLayout({ children }: AdminLayoutProps) {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-background">
+      <div className="flex min-h-screen w-full bg-background">
         <AdminSidebar />
-        <SidebarInset className="flex-1">
+        {/* min-w-0 ist entscheidend: ohne das weigert sich das Flex-Kind zu
+            schrumpfen, breite Tabellen blaehen die Seite auf und werden auf
+            dem Handy abgeschnitten statt in ihrem Container zu scrollen. */}
+        <SidebarInset className="min-w-0 flex-1">
           <AdminHeader />
-          <main className="p-6">
+          <main className="min-w-0 p-4 sm:p-6">
             {children}
           </main>
           <LegalFooterLinks />

@@ -13,7 +13,10 @@ export function AdminHeader() {
   );
 
   return (
-    <header className="sticky top-0 z-40 flex h-[66px] items-center justify-between gap-4 border-b border-[hsl(0_0%_12%)] bg-[hsl(0_0%_2%/0.86)] px-4 backdrop-blur-xl sm:px-6">
+    <header
+      style={{ top: "var(--p2g-banner-h, 0px)" }}
+      className="sticky z-40 flex h-[66px] items-center justify-between gap-4 border-b border-[hsl(0_0%_12%)] bg-[hsl(0_0%_2%/0.86)] px-4 backdrop-blur-xl sm:px-6"
+    >
       <div className="flex min-w-0 items-center gap-3">
         <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
         <span className="hidden whitespace-nowrap font-mono text-[11px] uppercase tracking-[0.14em] text-[hsl(0_0%_58%)] md:inline">

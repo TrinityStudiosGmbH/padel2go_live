@@ -181,8 +181,12 @@ const League = () => {
             </motion.div>
 
             {/* Punktesystem Grid */}
-            <div className="grid lg:grid-cols-2 gap-12 items-start mb-20">
+            {/* min-w-0: Grid-Kinder haben von sich aus min-width:auto und schrumpfen
+                sonst nicht unter die Breite ihres laengsten Wortes — auf 320 px lief
+                die Punkteliste dadurch aus dem Bild. */}
+            <div className="grid min-w-0 lg:grid-cols-2 gap-12 items-start mb-20">
               <motion.div
+                className="min-w-0"
                 initial={{ opacity: 0, x: -30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
@@ -201,15 +205,15 @@ const League = () => {
                       whileInView={{ opacity: 1, x: 0 }}
                       viewport={{ once: true }}
                       transition={{ delay: index * 0.1 }}
-                      className="flex items-center justify-between p-4 rounded-xl bg-background border border-border hover:border-primary/30 transition-colors group"
+                      className="flex items-center justify-between gap-3 p-3 sm:p-4 rounded-xl bg-background border border-border hover:border-primary/30 transition-colors group"
                     >
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <div className="w-10 h-10 flex-none rounded-lg bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
                           <Icon className="w-5 h-5 text-primary" />
                         </div>
-                        <span className="font-medium">{item.action}</span>
+                        <span className="min-w-0 text-[15px] font-medium">{item.action}</span>
                       </div>
-                      <span className="text-primary font-bold">{item.points}</span>
+                      <span className="flex-none whitespace-nowrap text-primary font-bold">{item.points}</span>
                     </motion.div>
                     );
                   })}
@@ -217,6 +221,7 @@ const League = () => {
               </motion.div>
 
               <motion.div
+                className="min-w-0"
                 initial={{ opacity: 0, x: 30 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}

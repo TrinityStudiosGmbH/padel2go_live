@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 const LegalFooterLinks = () => {
   const { t } = useTranslation("common");
   return (
-    <div className="py-6 text-center text-xs text-muted-foreground/70">
-      <span className="space-x-4">
-        <NavLink to="/impressum" className="hover:text-foreground transition-colors">{t("footer.links.imprint")}</NavLink>
-        <NavLink to="/datenschutz" className="hover:text-foreground transition-colors">{t("footer.links.privacy")}</NavLink>
-        <NavLink to="/agb" className="hover:text-foreground transition-colors">{t("footer.links.terms")}</NavLink>
-      </span>
+    <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 px-4 py-5 text-xs text-muted-foreground/70">
+      {/* Mindestens 44 px Trefferhoehe je Link — vorher 16 px und auf dem Handy
+          kaum zu treffen. */}
+      <NavLink to="/impressum" className="inline-flex min-h-[44px] items-center px-2 transition-colors hover:text-foreground">{t("footer.links.imprint")}</NavLink>
+      <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+      <NavLink to="/datenschutz" className="inline-flex min-h-[44px] items-center px-2 transition-colors hover:text-foreground">{t("footer.links.privacy")}</NavLink>
+      <span aria-hidden="true" className="text-muted-foreground/40">·</span>
+      <NavLink to="/agb" className="inline-flex min-h-[44px] items-center px-2 transition-colors hover:text-foreground">{t("footer.links.terms")}</NavLink>
     </div>
   );
 };

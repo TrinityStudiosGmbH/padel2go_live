@@ -35,21 +35,21 @@ const Footer = () => {
             </p>
             <div className="space-y-2">
               <a
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex min-h-[40px] items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0"
                 href="mailto:contact@padel2go.eu"
               >
                 <Mail className="w-4 h-4" />
                 contact@padel2go.eu
               </a>
               <a
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                className="flex min-h-[40px] items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0"
                 href="tel:+4917632350759"
               >
                 <Phone className="w-4 h-4" />
                 +49 176 32350759
               </a>
               <a
-                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-[#1FB855] transition-colors"
+                className="flex min-h-[40px] items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-[#1FB855] md:min-h-0"
                 href={whatsappUrl}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -78,7 +78,7 @@ const Footer = () => {
                 <li key={link.href}>
                   <NavLink
                     to={link.href}
-                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                    className="inline-flex min-h-[40px] items-center text-sm text-muted-foreground transition-colors hover:text-foreground md:min-h-0"
                   >
                     {link.label}
                   </NavLink>

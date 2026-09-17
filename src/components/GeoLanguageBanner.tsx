@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { Globe, X } from "lucide-react";
 import {
@@ -27,6 +27,7 @@ const BANNER_COPY: Record<
 const GeoLanguageBanner = () => {
   const { i18n } = useTranslation();
   const [target, setTarget] = useState<SupportedLanguage | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     try {
@@ -46,6 +47,26 @@ const GeoLanguageBanner = () => {
       /* navigator/localStorage may be unavailable */
     }
   }, [i18n.language]);
+
+  // Die Leiste liegt fest am oberen Rand und verdeckte bisher die Navigation
+  // (auf dem Handy samt Sidebar-Schalter im Admin). Sie meldet ihre Hoehe als
+  // CSS-Variable; alle festen Kopfzeilen setzen ihr top darauf.
+  useEffect(() => {
+    const el = ref.current;
+    const root = document.documentElement;
+    if (!el) {
+      root.style.removeProperty("--p2g-banner-h");
+      return;
+    }
+    const apply = () => root.style.setProperty("--p2g-banner-h", `${Math.round(el.getBoundingClientRect().height)}px`);
+    apply();
+    const ro = new ResizeObserver(apply);
+    ro.observe(el);
+    return () => {
+      ro.disconnect();
+      root.style.removeProperty("--p2g-banner-h");
+    };
+  }, [target]);
 
   if (!target) return null;
 
@@ -77,27 +98,30 @@ const GeoLanguageBanner = () => {
 
   return (
     <div
+      ref={ref}
       role="region"
       aria-label="Language suggestion"
       className="fixed top-0 left-0 right-0 z-[60] bg-primary text-primary-foreground shadow-sm"
     >
-      <div className="container mx-auto px-4 py-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
-        <div className="flex items-center gap-2 font-medium">
-          <Globe className="w-4 h-4" aria-hidden="true" />
-          <span>{copy.message}</span>
-        </div>
-        <div className="flex items-center gap-2">
+      {/* Auf dem Handy eine einzige Zeile: der Hinweis nahm vorher ein Sechstel
+          des Bildschirms ein und verdeckte die Kopfzeile darunter. */}
+      <div className="container mx-auto flex items-center gap-2 px-3 py-1.5 text-[13px] sm:justify-center sm:gap-4 sm:px-4 sm:py-2 sm:text-sm">
+        <Globe className="h-4 w-4 flex-none" aria-hidden="true" />
+        <span className="min-w-0 flex-1 truncate font-medium sm:flex-none sm:truncate-none sm:whitespace-normal">
+          {copy.message}
+        </span>
+        <div className="flex flex-none items-center gap-1 sm:gap-2">
           <button
             type="button"
             onClick={switchLanguage}
-            className="px-3 py-1 rounded-full bg-primary-foreground/15 hover:bg-primary-foreground/25 font-semibold transition-colors"
+            className="rounded-full bg-primary-foreground/15 px-2.5 py-1.5 font-semibold transition-colors hover:bg-primary-foreground/25 sm:px-3 sm:py-1"
           >
             {copy.switchCta}
           </button>
           <button
             type="button"
             onClick={dismiss}
-            className="px-3 py-1 rounded-full hover:bg-primary-foreground/10 transition-colors"
+            className="hidden rounded-full px-3 py-1 transition-colors hover:bg-primary-foreground/10 sm:inline-flex"
           >
             {copy.stayCta}
           </button>
@@ -105,9 +129,9 @@ const GeoLanguageBanner = () => {
             type="button"
             onClick={dismiss}
             aria-label="Dismiss"
-            className="p-1 rounded-full hover:bg-primary-foreground/10 transition-colors"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full transition-colors hover:bg-primary-foreground/10 sm:h-auto sm:w-auto sm:p-1"
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         </div>
       </div>
