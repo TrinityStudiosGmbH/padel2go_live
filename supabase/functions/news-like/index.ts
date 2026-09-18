@@ -23,13 +23,8 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: cors(req.headers.get("origin")) });
   try {
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
-    const { article_id } = await req.json().catch(() => ({}));
-    if (!article_id || typeof article_id !== "string")
-      return new Response(JSON.stringify({ error: "article_id fehlt" }), { status: 400, headers });
-
-    const { data: article } = await admin
-      .from("articles").select("id").eq("id", article_id).eq("is_published", true).maybeSingle();
-    if (!article) return new Response(JSON.stringify({ error: "Artikel nicht gefunden" }), { status: 404, headers });
+    const body = await req.json().catch(() => ({}));
+    const { article_id, peek } = body as { article_id?: string; peek?: boolean };
 
     // Eingeloggt → Identität über den JWT; anonym → gehashte IP (pseudonymisiert, kein Klartext in der DB).
     let userId: string | null = null;
@@ -40,6 +35,29 @@ serve(async (req) => {
     }
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
     const ipHash = await sha256Hex(`p2g-news-like-v1:${ip}`);
+
+    // Nur nachsehen, nichts ändern: liefert alle Artikel, die diese Identität
+    // bereits geliked hat. Gäste erfahren so ihren echten Zustand — ohne das
+    // sahen sie nach einem Gerätewechsel „nicht geliked" und ihr erster Klick
+    // hat den vorhandenen Like wieder entfernt.
+    if (peek) {
+      const q = userId
+        ? admin.from("news_likes").select("article_id").eq("user_id", userId)
+        : admin.from("news_likes").select("article_id").eq("ip_hash", ipHash).is("user_id", null);
+      const { data, error } = await q;
+      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 500, headers });
+      return new Response(
+        JSON.stringify({ liked_ids: (data ?? []).map((r: { article_id: string }) => r.article_id) }),
+        { headers },
+      );
+    }
+
+    if (!article_id || typeof article_id !== "string")
+      return new Response(JSON.stringify({ error: "article_id fehlt" }), { status: 400, headers });
+
+    const { data: article } = await admin
+      .from("articles").select("id").eq("id", article_id).eq("is_published", true).maybeSingle();
+    if (!article) return new Response(JSON.stringify({ error: "Artikel nicht gefunden" }), { status: 404, headers });
 
     const match = userId
       ? admin.from("news_likes").select("id").eq("article_id", article_id).eq("user_id", userId)

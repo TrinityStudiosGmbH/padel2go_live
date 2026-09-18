@@ -33,5 +33,6 @@
   "ctaDefaultLabel": "Book a court",
   "aiBadge": "Created with AI assistance",
   "toSource": "View source",
-  "like": "Like"
+  "like": "Like",
+  "likeFailed": "Could not save your like. Please try again."
 }

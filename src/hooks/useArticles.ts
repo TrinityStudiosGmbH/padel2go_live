@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
+import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -94,41 +96,55 @@ const readLiked = (): string[] => {
   }
 };
 
-/** Eigene Likes des eingeloggten Users — RLS liefert nur die eigenen Zeilen. */
+/**
+ * Eigene Likes dieser Identität — eingeloggt über RLS aus der DB, als Gast über
+ * die Edge Function (sie kennt die pseudonymisierte IP). Eine geteilte Abfrage
+ * für alle Karten, kein Aufruf je Artikel.
+ */
 function useMyNewsLikes() {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["my-news-likes", user?.id ?? "anon"],
-    enabled: !!user,
+    staleTime: 60_000,
     queryFn: async (): Promise<string[]> => {
-      const { data, error } = await (supabase as any).from("news_likes").select("article_id");
+      if (user) {
+        const { data, error } = await (supabase as any).from("news_likes").select("article_id");
+        if (error) throw error;
+        return (data ?? []).map((r: { article_id: string }) => r.article_id);
+      }
+      const { data, error } = await supabase.functions.invoke("news-like", { body: { peek: true } });
       if (error) throw error;
-      return (data ?? []).map((r: { article_id: string }) => r.article_id);
+      return ((data as { liked_ids?: string[] })?.liked_ids ?? []);
     },
   });
 }
 
 /**
  * Like-Toggle über die Edge Function news-like (1× pro User bzw. IP, serverseitig
- * erzwungen). Eingeloggt kommt der Button-Zustand aus der DB (geräteübergreifend),
- * für Gäste spiegelt localStorage den Zustand dieses Geräts.
+ * erzwungen). Der Knopfzustand kommt für alle vom Server; localStorage dient nur
+ * noch als Sofortanzeige, solange die Abfrage läuft.
  */
 export function useArticleLike(article: Article | null | undefined) {
   const queryClient = useQueryClient();
-  const { user } = useAuth();
-  const { data: myLikes } = useMyNewsLikes();
+  const { t } = useTranslation("news");
+  const { data: myLikes, isLoading: likesLoading } = useMyNewsLikes();
   const [pending, setPending] = useState(false);
-  const [localLiked, setLocalLiked] = useState<boolean | null>(null);
-  const [localCount, setLocalCount] = useState<number | null>(null);
+  // Die eigene Antwort des Servers gilt nur für GENAU diesen Artikel. Ohne die
+  // ID im Zustand blieb sie beim Wechsel auf einen anderen Artikel stehen und
+  // zeigte dort einen fremden Zählstand.
+  const [override, setOverride] = useState<{ id: string; liked: boolean; count: number } | null>(null);
+  const active = article && override?.id === article.id ? override : null;
 
-  const liked =
-    localLiked ??
-    (article
-      ? user
-        ? (myLikes ?? []).includes(article.id)
-        : readLiked().includes(article.id)
-      : false);
-  const likeCount = localCount ?? article?.like_count ?? 0;
+  const liked = active
+    ? active.liked
+    : article
+      ? myLikes
+        ? myLikes.includes(article.id)
+        : likesLoading
+          ? readLiked().includes(article.id)
+          : false
+      : false;
+  const likeCount = active ? active.count : article?.like_count ?? 0;
 
   const toggle = async () => {
     if (!article || pending) return;
@@ -138,9 +154,10 @@ export function useArticleLike(article: Article | null | undefined) {
         body: { article_id: article.id },
       });
       if (error) throw error;
-      const result = data as { liked: boolean; like_count: number };
-      setLocalLiked(result.liked);
-      setLocalCount(result.like_count);
+      const result = data as { liked: boolean; like_count: number; error?: string };
+      if (result?.error) throw new Error(result.error);
+
+      setOverride({ id: article.id, liked: result.liked, count: result.like_count });
       const ids = readLiked().filter((id) => id !== article.id);
       if (result.liked) ids.push(article.id);
       try {
@@ -151,6 +168,10 @@ export function useArticleLike(article: Article | null | undefined) {
       queryClient.invalidateQueries({ queryKey: ["article", article.slug] });
       queryClient.invalidateQueries({ queryKey: ["articles"] });
       queryClient.invalidateQueries({ queryKey: ["my-news-likes"] });
+    } catch (err) {
+      // Ohne Rückmeldung wirkte ein fehlgeschlagener Klick wie ein toter Knopf.
+      console.error("[news-like]", err);
+      toast.error(t("likeFailed"));
     } finally {
       setPending(false);
     }

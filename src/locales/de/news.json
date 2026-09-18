@@ -33,5 +33,6 @@
   "ctaDefaultLabel": "Court buchen",
   "aiBadge": "KI-unterstützt erstellt",
   "toSource": "Zur Quelle",
-  "like": "Gefällt mir"
+  "like": "Gefällt mir",
+  "likeFailed": "Like konnte nicht gespeichert werden. Bitte versuche es erneut."
 }
