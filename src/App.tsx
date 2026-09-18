@@ -22,7 +22,6 @@ import { ClubLayout } from "./components/club/ClubLayout";
 const Index = lazy(() => import("./pages/Index"));
 const FuerSpieler = lazy(() => import("./pages/FuerSpieler"));
 const FuerVereine = lazy(() => import("./pages/FuerVereine"));
-const AppBooking = lazy(() => import("./pages/AppBooking"));
 const League = lazy(() => import("./pages/League"));
 const Events = lazy(() => import("./pages/Events"));
 const EventDetail = lazy(() => import("./pages/EventDetail"));
@@ -34,7 +33,6 @@ const FaqKontakt = lazy(() => import("./pages/FaqKontakt"));
 const Impressum = lazy(() => import("./pages/Impressum"));
 const Auth = lazy(() => import("./pages/Auth"));
 const Account = lazy(() => import("./pages/Account"));
-const Play = lazy(() => import("./pages/Play"));
 const Booking = lazy(() => import("./pages/Booking"));
 const BookingLocation = lazy(() => import("./pages/BookingLocation"));
 const BookingCheckout = lazy(() => import("./pages/BookingCheckout"));
@@ -134,7 +132,6 @@ const App = () => (
               <Route path="/qr" element={<QrLanding />} />
               <Route path="/fuer-spieler" element={<FuerSpieler />} />
               <Route path="/fuer-vereine" element={<FuerVereine />} />
-              <Route path="/app-booking" element={<AppBooking />} />
               <Route path="/league" element={<League />} />
               <Route element={<RequireFeature feature="events" />}>
                 <Route path="/events" element={<Events />} />
@@ -151,7 +148,6 @@ const App = () => (
               <Route path="/faq-kontakt" element={<FaqKontakt />} />
               <Route path="/impressum" element={<Impressum />} />
               <Route path="/auth" element={<Auth />} />
-              <Route path="/play" element={<Play />} />
               <Route path="/newsletter/bestaetigen" element={<NewsletterConfirm />} />
               <Route path="/newsletter/abmelden" element={<NewsletterUnsubscribe />} />
 
