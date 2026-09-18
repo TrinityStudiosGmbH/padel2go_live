@@ -133,12 +133,8 @@ supabase/
 - Admin: alles unter `/admin/pricing` („Preise & Punkte") in den Reitern Preise / Punkte / Wallets / Übersicht. `/admin/p2g-points` leitet dorthin um.
 
 ## Pending Migrations (not yet run in production)
-- `20260917130000_visibility_and_roles.sql` — feature_booking_state, storage policy for delegated roles, page-table mapping
 - `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed
-- Preise & Punkte, **in dieser Reihenfolge** ausführen. Jede Datei ist eine eigene Transaktion und jeder Zwischenstand ist lauffähig; der SQL-Editor kappt längere Eingaben, deshalb bewusst klein gehalten:
-  1. `20260918120000_pricing_schema.sql` — `court_prices.sport`, Tabelle `location_price_exceptions`, `court_pricing_bands.location_id`
-  2. `20260918120010_pricing_points_function.sql` — `resolve_booking_points`, `pricing_band_at`, Level-Faktor auf 1.0
-  3. `20260918120020_pricing_resolve_rate.sql` — Bänder am Standort, neues `resolve_booking_rate` + Batch
-  4. `20260918120030_pricing_min_price.sql` — `court_min_price_cents`
-  5. `20260918120040_pricing_data_and_rights.sql` — Preise vereinheitlichen, Admin-Rechte, `sync_admin_page_policies()`
-- `20260918120200_drop_expert_levels.sql` — **erst NACH dem Deploy der neuen Web-Version ausführen**
+
+Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
+`20260918120200_drop_expert_levels.sql`) sind am 18.09.2026 in Produktion gelaufen
+und verifiziert.
