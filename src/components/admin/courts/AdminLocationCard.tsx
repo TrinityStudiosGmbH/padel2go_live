@@ -223,18 +223,14 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
               {" · "}
               <span className={tennisCourts > 0 ? "text-[#7FD4FF]" : "text-[hsl(0_0%_40%)]"}>{tennisCourts} Tennis</span>
             </h3>
-            <CourtCountSelector
-              locationId={location.id}
-              currentCourts={courts}
-              maxCourts={2}
-            />
+            <CourtCountSelector locationId={location.id} currentCourts={courts} />
           </div>
           {courts.length === 0 ? (
             <p className="rounded-[11px] border border-dashed border-[hsl(0_0%_14%)] px-[11px] py-[9px] text-[12.5px] text-muted-foreground">
               Noch keine Courts angelegt.
             </p>
           ) : (
-            <div className="grid grid-cols-1 gap-[9px]">
+            <div className="grid max-h-[268px] grid-cols-1 gap-[9px] overflow-y-auto pr-0.5">
               {/* Show active courts first, then inactive */}
               {[...courts]
                 .sort((a, b) => (b.is_active ? 1 : 0) - (a.is_active ? 1 : 0))

@@ -10,6 +10,9 @@ import { invokeEdgeFunction } from "@/lib/edgeFunctionUtils";
 import { CourtSport, courtSport } from "./types";
 import { SportSelect } from "./SportSelect";
 
+/** Obergrenze der Plaetze je Standort. */
+export const MAX_COURTS_PER_LOCATION = 20;
+
 interface CourtCountSelectorProps {
   locationId: string;
   currentCourts: { id: string; name: string; is_active: boolean; sport?: string | null }[];
@@ -19,7 +22,7 @@ interface CourtCountSelectorProps {
 export function CourtCountSelector({
   locationId,
   currentCourts,
-  maxCourts = 2,
+  maxCourts = MAX_COURTS_PER_LOCATION,
 }: CourtCountSelectorProps) {
   const queryClient = useQueryClient();
   // Count only active courts for the UI
@@ -167,7 +170,7 @@ export function CourtCountSelector({
           >
             <Minus className="h-4 w-4" />
           </Button>
-          <span className="w-8 text-center font-medium text-foreground">
+          <span className="w-9 text-center font-medium tabular-nums text-foreground">
             {currentCount}
           </span>
           <Button
