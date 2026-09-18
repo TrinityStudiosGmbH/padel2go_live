@@ -94,8 +94,8 @@ Deno.serve(async (req) => {
     const endTime = new Date(booking.end_time);
     const durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000);
 
-    // Server-recomputed price via resolve_booking_rate (Zeitfenster-Band schlägt
-    // court_prices) — never trust the client-inserted booking.price_cents.
+    // Server-recomputed price via resolve_booking_rate (Standort-Ausnahme und Zeitfenster schlagen
+    // den globalen Standardpreis) — never trust the client-inserted booking.price_cents.
     // Mitglieder-Kondition inklusive; die Buchung zählt beim Monatslimit nicht sich selbst.
     const { data: rateData, error: rateError } = await supabaseAdmin.rpc("resolve_booking_rate", {
       p_court_id: booking.court_id,

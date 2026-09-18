@@ -217,9 +217,8 @@ serve(async (req) => {
 
     const rate = (Array.isArray(rateData) ? rateData[0] : rateData) as {
       price_cents: number | null;
-      points_multiplier: number | string | null;
+      payback_points: number | null;
       price_band_name: string | null;
-      points_band_name: string | null;
       court_sport: string | null;
       base_price_cents: number | null;
       member_club_id: string | null;
@@ -229,9 +228,6 @@ serve(async (req) => {
 
     const priceCents: number | null = rate?.price_cents ?? null;
     const memberDiscountCents = Number(rate?.member_discount_cents ?? 0) || 0;
-    // Kein `|| 1`: ein Band darf bewusst 0 setzen ("hier gibt es keine Punkte").
-    const rawMultiplier = Number(rate?.points_multiplier ?? 1);
-    const bandMultiplier = Number.isFinite(rawMultiplier) ? rawMultiplier : 1;
 
     // Sportart nie allein aus der Rate ableiten: liefert sie keine, wird sie am Court
     // gelesen — sie entscheidet über Payback UND erlaubte Buchungsdauer.
@@ -264,8 +260,7 @@ serve(async (req) => {
       memberScope: rate?.member_scope ?? null,
       memberDiscountCents,
       priceBand: rate?.price_band_name ?? null,
-      pointsBand: rate?.points_band_name ?? null,
-      bandMultiplier,
+      paybackPoints: Number(rate?.payback_points ?? 0) || 0,
       courtSport,
     });
 
@@ -690,66 +685,10 @@ serve(async (req) => {
         logStep("Free path: leftover session cleanup failed", { error: (cleanupErr as Error).message });
       }
 
-      // Award play credits for this booking (authenticated owner only) — mirror the webhook.
-      if (!isGuestBooking) try {
-        const { data: bk } = await supabaseAdmin
-          .from("bookings")
-          .select("start_time, end_time, user_id, play_credits_awarded")
-          .eq("id", booking.id)
-          .single();
-
-        // Same fixed-rate model as the webhook; no payback if a voucher was applied
-        // and keines für Tennis (Produktregel) — play_credits_awarded bleibt dann 0,
-        // womit der Storno-Clawback automatisch stimmt.
-        if (courtSport === "tennis") {
-          logStep("Free path: payback skipped — tennis", { bookingId: booking.id, courtId: booking.court_id });
-        } else if (isQuotaBooking) {
-          // Kontingent-Buchung: kein Geld geflossen, also auch kein Payback —
-          // dieselbe Regel wie bei Club-Portal-Buchungen.
-          logStep("Free path: payback skipped — club quota booking", { bookingId: booking.id });
-        } else if (bk && bk.play_credits_awarded === 0 && bk.user_id && !appliedVoucherId) {
-          const durationMin = Math.round(
-            (new Date(bk.end_time).getTime() - new Date(bk.start_time).getTime()) / 60000,
-          );
-          const { data: settings } = await supabaseAdmin
-            .from("site_settings")
-            .select("payback_points_60min, payback_points_90min, payback_points_120min")
-            .eq("id", "global")
-            .maybeSingle();
-          const rate60 = Number((settings as any)?.payback_points_60min ?? 100) || 0;
-          const rate90 = Number((settings as any)?.payback_points_90min ?? 150) || 0;
-          const rate120 = Number((settings as any)?.payback_points_120min ?? 200) || 0;
-          const base = durationMin >= 120 ? rate120 : durationMin >= 90 ? rate90 : rate60;
-
-          const { data: multData } = await supabaseAdmin.rpc("get_user_level_multiplier", {
-            p_user_id: bk.user_id,
-          });
-          const levelMultiplier = Number(multData ?? 1) || 1;
-          // Band-Faktor zählt mit, sonst weicht die Gutschrift von der Vorschau ab.
-          const creditsToAward = Math.round(base * bandMultiplier * levelMultiplier);
-
-          if (creditsToAward > 0) {
-            // Gutschrift + play_credits_awarded atomar; die RPC verweigert Tennis,
-            // Gaeste, Stornos und Doppelvergabe (siehe 20260812120000_tennis_hardening).
-            const { data: awardedRaw, error: awardError } = await supabaseAdmin.rpc(
-              "award_booking_payback",
-              { p_booking_id: booking.id, p_points: creditsToAward },
-            );
-            if (awardError) {
-              logStep("Free path: failed to award play credits", { bookingId: booking.id, error: awardError.message });
-            } else {
-              const awarded = Number(awardedRaw) || 0;
-              if (awarded > 0) {
-                logStep("Free path: play credits awarded", { bookingId: booking.id, creditsToAward: awarded, durationMin, base, bandMultiplier, pointsBand: rate?.points_band_name ?? null, levelMultiplier });
-              } else {
-                logStep("Free path: payback not awarded (already awarded, cancelled, guest or non-padel)", { bookingId: booking.id });
-              }
-            }
-          }
-        }
-      } catch (creditErr) {
-        logStep("Free path: failed to award play credits", { error: (creditErr as Error).message });
-      }
+      // Kein Payback auf dem kostenlosen Weg. Punkte gibt es nur fuer tatsaechlich
+      // gezahltes Geld; hier ist der Betrag 0, weil Punkte, ein Gutschein oder ein
+      // Vereinskontingent alles gedeckt haben. Die Gutschrift fuer bezahlte Buchungen
+      // passiert ausschliesslich im Stripe-Webhook.
 
       // Record voucher redemption if a partial-discount voucher was also applied.
       if (appliedVoucherId) {

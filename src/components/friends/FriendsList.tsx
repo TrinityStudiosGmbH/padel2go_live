@@ -13,7 +13,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useFriendships, Friend } from "@/hooks/useFriendships";
 import { FriendProfileCard } from "./FriendProfileCard";
-import { getExpertLevel, getExpertLevelEmoji } from "@/lib/expertLevels";
 import { formatDistanceToNow } from "date-fns";
 import { de, enUS } from "date-fns/locale";
 import { cn } from "@/lib/utils";
@@ -36,54 +35,21 @@ function FriendCard({ friend, onOpenProfile }: { friend: Friend; onOpenProfile: 
     }
   };
 
-  // Get expert level from play credits
-  const expertLevel = getExpertLevel(friend.playCredits);
-  const expertEmoji = getExpertLevelEmoji(expertLevel.name);
-
-  // Get gradient classes for border
-  const getBorderGradientClass = (gradient: string) => {
-    // Map gradient strings to actual border classes
-    if (gradient.includes("zinc")) return "border-zinc-400/50";
-    if (gradient.includes("amber") || gradient.includes("orange")) return "border-amber-400/50";
-    if (gradient.includes("blue") || gradient.includes("cyan")) return "border-blue-400/50";
-    if (gradient.includes("lime") || gradient.includes("green")) return "border-lime-400/50";
-    if (gradient.includes("red")) return "border-orange-400/50";
-    if (gradient.includes("purple") || gradient.includes("pink")) return "border-purple-400/50";
-    if (gradient.includes("violet")) return "border-cyan-400/50";
-    if (gradient.includes("yellow")) return "border-yellow-400/50";
-    return "border-border/50";
-  };
-
-  const getAvatarRingClass = (gradient: string) => {
-    if (gradient.includes("zinc")) return "ring-zinc-400/60";
-    if (gradient.includes("amber") || gradient.includes("orange")) return "ring-amber-400/60";
-    if (gradient.includes("blue") || gradient.includes("cyan")) return "ring-blue-400/60";
-    if (gradient.includes("lime") || gradient.includes("green")) return "ring-lime-400/60";
-    if (gradient.includes("red")) return "ring-orange-400/60";
-    if (gradient.includes("purple") || gradient.includes("pink")) return "ring-purple-400/60";
-    if (gradient.includes("violet")) return "ring-cyan-400/60";
-    if (gradient.includes("yellow")) return "ring-yellow-400/60";
-    return "ring-primary/30";
-  };
-
   return (
     <div 
       className={cn(
         "flex items-center gap-4 p-4 rounded-xl border-2 bg-card transition-all duration-200",
         "hover:shadow-lg hover:scale-[1.01] cursor-pointer",
-        getBorderGradientClass(expertLevel.gradient)
+        "border-border/50"
       )}
     >
-      {/* Avatar - Clickable with Expert Level ring */}
+      {/* Avatar */}
       <button 
         onClick={handleCardClick} 
         className="focus:outline-none focus:ring-2 focus:ring-primary/50 rounded-full"
       >
         <Avatar 
-          className={cn(
-            "w-12 h-12 ring-2 cursor-pointer transition-all hover:ring-4",
-            getAvatarRingClass(expertLevel.gradient)
-          )}
+          className="w-12 h-12 ring-2 ring-primary/30 cursor-pointer transition-all hover:ring-4"
         >
           <AvatarImage src={friend.avatarUrl || undefined} alt={friend.displayName || friend.username || t("common.userAlt")} />
           <AvatarFallback className="bg-muted text-foreground font-semibold">
@@ -98,16 +64,11 @@ function FriendCard({ friend, onOpenProfile }: { friend: Friend; onOpenProfile: 
           <h3 className="font-medium text-foreground truncate group-hover:text-primary transition-colors">
             {friend.displayName || friend.username || t("common.unknown")}
           </h3>
-          {/* Expert Level Badge */}
-          <Badge 
-            variant="outline" 
-            className={cn(
-              "text-xs px-1.5 py-0 h-5 shrink-0",
-              expertLevel.textColor,
-              expertLevel.borderColor
-            )}
+          <Badge
+            variant="outline"
+            className="h-5 shrink-0 border-primary/30 px-1.5 py-0 text-xs text-primary"
           >
-            {expertEmoji} {expertLevel.name}
+            {friend.playCredits.toLocaleString("de-DE")} P
           </Badge>
         </div>
         {friend.username && friend.displayName && (

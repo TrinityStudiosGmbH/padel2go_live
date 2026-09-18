@@ -44,25 +44,31 @@
   },
   "paybackNew": {
     "badge": "P2G Points",
-    "titlePrefix": "So funktioniert",
-    "titleHighlight": "Payback.",
+    "titleLine1": "Du spielst Padel",
+    "titleLine2": "und wirst dafür belohnt.",
+    "lead": "Jede bezahlte Buchung bringt dir Punkte. Die sammelst du automatisch und löst sie im Marketplace gegen Equipment ein.",
+    "durationsTitle": "Das bekommst du pro Buchung",
+    "duration": "{{minutes}} Minuten",
+    "pointsSuffix": "Punkte",
     "steps": [
       {
-        "title": "Buchen",
-        "text": "Fixe Points je Buchung — 1 h oder 2 h Court-Zeit."
+        "title": "Spielen",
+        "text": "Court buchen und bezahlen. Die Punkte laufen automatisch auf dein Konto."
       },
       {
-        "title": "Multiplikator",
-        "text": "Dein Tier-Level legt obendrauf — je höher dein Level, desto mehr Payback."
+        "title": "Sammeln",
+        "text": "Deine Punkte bleiben liegen, bis du sie brauchst. Kein Verfall, kein Kleingedrucktes."
       },
       {
         "title": "Einlösen",
-        "text": "Im Marketplace gegen Equipment — als Rabatt oder für den vollen Preis."
+        "text": "Im Marketplace gegen Schläger, Bälle und Ausrüstung — als Rabatt oder für den vollen Preis."
       }
     ],
-    "tierTitlePrefix": "Dein Tier-Level =",
-    "tierTitleHighlight": "dein Multiplikator",
-    "tierMeta": "{{count}} Tiers · EU-weites Ranking"
+    "rateLabel": "Umrechnung",
+    "rateValue": "{{points}} Punkte = 1 €",
+    "cta": "Zum Marketplace",
+    "ctaSecondary": "Court buchen",
+    "fineprint": "Punkte gibt es für tatsächlich bezahlte Buchungen. Gratisstunden und vollständig eingelöste Gutscheine zählen nicht."
   },
   "kiNew": {
     "comingSoon": "Coming Soon",
@@ -70,7 +76,12 @@
     "titlePrefix": "Als Nächstes:",
     "titleHighlight": "KI-Matchanalyse.",
     "description": "Die Court-Kamera erfasst dein Spiel automatisch — 40+ Metriken, Auto-Clips und ein objektives Skill-Rating nach jedem Match.",
-    "tags": ["Match IQ", "Speed & Placement", "Auto-Clips", "Skill-Rating"],
+    "tags": [
+      "Match IQ",
+      "Speed & Placement",
+      "Auto-Clips",
+      "Skill-Rating"
+    ],
     "newsletterDone": "Du stehst auf der Liste — wir melden uns zum Start!",
     "emailPlaceholder": "deine@email.de",
     "notifyCta": "Benachrichtigt werden",
@@ -101,10 +112,18 @@
     "primaryCta": "Court buchen",
     "secondaryCta": "App herunterladen",
     "chips": [
-      { "text": "Kostenlose Registrierung" },
-      { "text": "Buchung in < 30 Sek." },
-      { "text": "EU-weite P2G Liga" },
-      { "text": "Marketplace & Rewards" }
+      {
+        "text": "Kostenlose Registrierung"
+      },
+      {
+        "text": "Buchung in < 30 Sek."
+      },
+      {
+        "text": "EU-weite P2G Liga"
+      },
+      {
+        "text": "Marketplace & Rewards"
+      }
     ]
   },
   "ecosystem": {
@@ -161,7 +180,15 @@
       "city": "München",
       "freeCourts": "3 Courts frei",
       "week": "Deine Woche",
-      "days": ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"],
+      "days": [
+        "Mo",
+        "Di",
+        "Mi",
+        "Do",
+        "Fr",
+        "Sa",
+        "So"
+      ],
       "ctaButton": "Court buchen",
       "notification": {
         "title": "+50 P2G Points!",
@@ -204,10 +231,22 @@
     "titleHighlight": "echter Wert",
     "subtitle": "Von Court-Zeit bis zu exklusivem Equipment.",
     "items": [
-      { "title": "Court-Buchungen", "sub": "Spielzeit einlösen" },
-      { "title": "Equipment", "sub": "Schläger, Bälle, Zubehör" },
-      { "title": "Partner-Rewards", "sub": "Getränke, Snacks, Rabatte" },
-      { "title": "Events", "sub": "Exklusive Turnier-Zugänge" }
+      {
+        "title": "Court-Buchungen",
+        "sub": "Spielzeit einlösen"
+      },
+      {
+        "title": "Equipment",
+        "sub": "Schläger, Bälle, Zubehör"
+      },
+      {
+        "title": "Partner-Rewards",
+        "sub": "Getränke, Snacks, Rabatte"
+      },
+      {
+        "title": "Events",
+        "sub": "Exklusive Turnier-Zugänge"
+      }
     ],
     "bannerPlaceholder": "Marketplace Banner — im Admin-Panel hochladen",
     "bannerAlt": "Marketplace",
@@ -221,17 +260,44 @@
     "description": "Wingfield KI-Kameras erfassen jeden Ball, jeden Schritt, jede Entscheidung — vollautomatisch, ohne Sensoren, ohne manuelle Eingabe. Das Ergebnis: Match IQ Reports, Speed & Placement-Daten, Head-2-Head Stats und ein messbarer Skill-Benchmark direkt in deiner App.",
     "poweredBy": "Powered by",
     "stats": [
-      { "value": "6+", "label": "Schlagtypen analysiert" },
-      { "value": "0–100", "label": "Drill Score pro Übung" },
-      { "value": "Auto", "label": "Scoring & Clipping" }
+      {
+        "value": "6+",
+        "label": "Schlagtypen analysiert"
+      },
+      {
+        "value": "0–100",
+        "label": "Drill Score pro Übung"
+      },
+      {
+        "value": "Auto",
+        "label": "Scoring & Clipping"
+      }
     ],
     "features": [
-      { "title": "Match IQ Report", "desc": "Winners, Fehler & erfolgreiche Strategien nach jedem Match automatisch aufbereitet." },
-      { "title": "Speed & Placement", "desc": "Geschwindigkeit und Platzierung jedes Balls gemessen — sieh, wie viel Druck du aufbaust." },
-      { "title": "Head-2-Head Stats", "desc": "Direktvergleich gegen jeden Gegner: Wo gewinnst du, wo verlierst du Punkte?" },
-      { "title": "Skill Assessment (WSA)", "desc": "KI-Benchmark über Aufschlag, Return, Drive, Drop, Volley und Dink — standardisiert messbar." },
-      { "title": "Auto Clip Generation", "desc": "Deine besten Ballwechsel werden automatisch geschnitten und gespeichert." },
-      { "title": "Drills & Leaderboards", "desc": "Kuratierte Trainings-Sets von Profis, bewertet mit Drill Score 0–100. Community-Rankings inklusive." }
+      {
+        "title": "Match IQ Report",
+        "desc": "Winners, Fehler & erfolgreiche Strategien nach jedem Match automatisch aufbereitet."
+      },
+      {
+        "title": "Speed & Placement",
+        "desc": "Geschwindigkeit und Platzierung jedes Balls gemessen — sieh, wie viel Druck du aufbaust."
+      },
+      {
+        "title": "Head-2-Head Stats",
+        "desc": "Direktvergleich gegen jeden Gegner: Wo gewinnst du, wo verlierst du Punkte?"
+      },
+      {
+        "title": "Skill Assessment (WSA)",
+        "desc": "KI-Benchmark über Aufschlag, Return, Drive, Drop, Volley und Dink — standardisiert messbar."
+      },
+      {
+        "title": "Auto Clip Generation",
+        "desc": "Deine besten Ballwechsel werden automatisch geschnitten und gespeichert."
+      },
+      {
+        "title": "Drills & Leaderboards",
+        "desc": "Kuratierte Trainings-Sets von Profis, bewertet mit Drill Score 0–100. Community-Rankings inklusive."
+      }
     ],
     "howItWorksTitle": "So funktioniert's",
     "howItWorksText": "An unseren Standorten werden Wingfield-Kameras installiert, die dein Spiel vollautomatisch erfassen — kein QR-Code scannen, kein Setup. Die KI analysiert jeden Ballwechsel in Echtzeit, erkennt Schlagtypen, misst Speed & Placement und erstellt nach jedem Match einen vollständigen Match IQ Report. Auf Wunsch bewertet der Wingfield Skill Assessment (WSA) dein Niveau messbar über Aufschlag, Return, Drive, Drop, Volley und Dink.",

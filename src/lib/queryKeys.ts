@@ -37,7 +37,6 @@ export const QUERY_KEYS = {
   p2gFeed: "p2g-points-feed",
   p2gLastGame: "p2g-points-last-game",
   p2gRankings: "p2g-points-rankings",
-  p2gExpertLevels: "p2g-expert-levels",
   p2gSkillLast5: "p2g-skill-last5",
   p2gCreditBreakdown: "p2g-credit-breakdown",
   p2gDailyClaimStatus: "p2g-daily-claim-status",
@@ -57,8 +56,6 @@ export const QUERY_KEYS = {
   notifications: "notifications",
   
   // Court pricing
-  courtPrices: "court-prices",
-  courtPricesWithFallback: "court-prices-with-fallback",
   globalPrices: "global-prices",
   locationMinPrice: "location-min-price",
   

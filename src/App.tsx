@@ -78,7 +78,6 @@ const AdminUtilization = lazy(() => import("./pages/admin/AdminUtilization"));
 const AdminVisuals = lazy(() => import("./pages/admin/AdminVisuals"));
 const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
 const AdminMarketplace = lazy(() => import("./pages/admin/AdminMarketplace"));
-const AdminP2GPoints = lazy(() => import("./pages/admin/AdminP2GPoints"));
 const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications"));
 const AdminFeatures = lazy(() => import("./pages/admin/AdminFeatures"));
 const AdminClubs = lazy(() => import("./pages/admin/AdminClubs"));
@@ -219,7 +218,8 @@ const App = () => (
                 <Route path="/admin/pricing" element={<AdminPricing />} />
                 <Route path="/admin/events" element={<AdminEvents />} />
                 <Route path="/admin/marketplace" element={<AdminMarketplace />} />
-                <Route path="/admin/p2g-points" element={<AdminP2GPoints />} />
+                {/* „Preise & Punkte" hat P2G Points aufgenommen. */}
+                <Route path="/admin/p2g-points" element={<Navigate to="/admin/pricing?tab=points" replace />} />
                 <Route path="/admin/users" element={<AdminUsers />} />
                 <Route path="/admin/roles" element={<AdminRoles />} />
                 <Route path="/admin/notifications" element={<AdminNotifications />} />

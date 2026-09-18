@@ -32,11 +32,6 @@ interface ProfileData {
   skill_level: number;
   games_played: number;
   member_since: string;
-  expert_level: {
-    name: string;
-    gradient: string;
-    emoji: string;
-  };
   match_history: {
     wins: number;
     losses: number;
@@ -74,20 +69,6 @@ export function FriendProfileCard({ username, isOpen, onClose }: FriendProfileCa
 
   const displayName = profile?.display_name || profile?.username || username;
 
-  // Expert level gradient classes
-  const getGradientClasses = (gradient: string) => {
-    const gradientMap: Record<string, string> = {
-      "from-zinc-400 to-zinc-500": "from-zinc-400 to-zinc-500",
-      "from-amber-500 to-orange-500": "from-amber-500 to-orange-500",
-      "from-blue-400 to-cyan-500": "from-blue-400 to-cyan-500",
-      "from-lime-400 to-green-500": "from-lime-400 to-green-500",
-      "from-orange-500 to-red-500": "from-orange-500 to-red-500",
-      "from-purple-500 to-pink-500": "from-purple-500 to-pink-500",
-      "from-cyan-400 to-violet-500": "from-cyan-400 to-violet-500",
-      "from-yellow-400 to-lime-400": "from-yellow-400 to-lime-400",
-    };
-    return gradientMap[gradient] || "from-primary to-primary";
-  };
 
   return (
     <Drawer open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -127,10 +108,7 @@ export function FriendProfileCard({ username, isOpen, onClose }: FriendProfileCa
               {/* Header with Avatar and Name */}
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <div className={cn(
-                    "absolute inset-0 rounded-full bg-gradient-to-br blur-sm opacity-60",
-                    getGradientClasses(profile.expert_level.gradient)
-                  )} />
+                  <div className="absolute inset-0 rounded-full bg-primary/30 opacity-60 blur-sm" />
                   <UserAvatar
                     src={profile.avatar_url}
                     name={displayName || profile.username}
@@ -140,14 +118,8 @@ export function FriendProfileCard({ username, isOpen, onClose }: FriendProfileCa
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-lg truncate">{displayName}</h3>
                   <p className="text-sm text-muted-foreground">@{profile.username}</p>
-                  <Badge 
-                    variant="outline" 
-                    className={cn(
-                      "mt-1 bg-gradient-to-r text-white border-0",
-                      getGradientClasses(profile.expert_level.gradient)
-                    )}
-                  >
-                    {profile.expert_level.emoji} {profile.expert_level.name}
+                  <Badge variant="outline" className="mt-1 border-primary/30 text-primary">
+                    {profile.play_credits.toLocaleString("de-DE")} Punkte
                   </Badge>
                 </div>
               </div>

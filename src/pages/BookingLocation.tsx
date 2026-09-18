@@ -42,6 +42,7 @@ const BookingLocation = () => {
     availableSlots,
     loadingSlots,
     priceCents,
+    paybackPoints,
     hasPrices,
     courtPrices,
     ratesByStart,
@@ -161,6 +162,7 @@ const BookingLocation = () => {
                 user={user}
                 onBook={handleBooking}
                 priceCents={priceCents}
+                paybackPoints={paybackPoints}
                 hasPrices={hasPrices}
                 lobbyEnabled={lobbyEnabled}
                 onLobbyEnabledChange={setLobbyEnabled}

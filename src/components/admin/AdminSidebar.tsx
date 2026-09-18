@@ -14,7 +14,6 @@ import {
   Building2,
   Ticket,
   ShoppingBag,
-  Coins,
   Tag,
   Megaphone,
   Images,
@@ -60,7 +59,6 @@ const NAV_GROUPS = [
     label: "Commerce",
     items: [
       { title: "Marketplace", url: "/admin/marketplace", icon: ShoppingBag },
-      { title: "P2G Points", url: "/admin/p2g-points", icon: Coins },
       { title: "Vouchers", url: "/admin/vouchers", icon: Tag },
     ],
   },

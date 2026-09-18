@@ -17,7 +17,6 @@ import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { useAccountData } from "@/hooks/useAccountData";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import { usePointsValue } from "@/hooks/usePointsValue";
-import { useExpertLevels, levelForPoints, nextLevelForPoints, progressToNext } from "@/hooks/useExpertLevels";
 import { useMarketplaceItems } from "@/hooks/useMarketplaceItems";
 import { useDashboardEvents, useMyEventRegistrations } from "@/hooks/useEventRegistrations";
 import { eur as eurFmt, ptsFmt, maxRedeemablePoints } from "@/lib/marketplace";
@@ -36,7 +35,6 @@ const DashboardHome = () => {
   const { profile, wallet } = useAccountData();
   const { summary } = useP2GPoints();
   const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
-  const { levels } = useExpertLevels();
   const { data: marketItems } = useMarketplaceItems();
   const { data: allEvents } = useDashboardEvents();
   const { data: myRegs } = useMyEventRegistrations();
@@ -55,10 +53,6 @@ const DashboardHome = () => {
   const pointsPerEuro = Math.round(100 / centsPerPoint);
   const userName = (profile?.display_name || user?.email?.split("@")[0] || "Spieler").trim();
 
-  const level = levelForPoints(levels, lifetime);
-  const nextLevel = nextLevelForPoints(levels, lifetime);
-  const progressPct = progressToNext(levels, lifetime);
-  const remaining = nextLevel ? Math.max(0, nextLevel.min_points - lifetime) : 0;
   const euroValue = eurFmt(Math.round(balance * centsPerPoint));
 
   // Upcoming confirmed bookings (list + count).
@@ -152,8 +146,8 @@ const DashboardHome = () => {
               <p className="text-[15.5px] text-muted-foreground">{dateLabel} — bereit für dein nächstes Match?</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <span className="inline-flex items-center gap-2 font-stat text-[12.5px] font-bold text-primary bg-primary/[0.08] border border-primary/30 rounded-full px-3.5 py-1.5">
-                <Medal className="w-3.5 h-3.5" />{level.name}
+              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.08] px-3.5 py-1.5 font-stat text-[12.5px] font-bold text-primary">
+                <Medal className="w-3.5 h-3.5" />{ptsFmt(lifetime)} P gesammelt
               </span>
               {memberSince && <span className="font-stat text-[11.5px] text-muted-foreground/70">{memberSince}</span>}
             </div>
@@ -181,17 +175,6 @@ const DashboardHome = () => {
                   <span className="text-[14.5px] text-muted-foreground">
                     ≈ {euroValue} Rabattwert <span className="text-muted-foreground/60">· Umrechenkurs {ptsFmt(pointsPerEuro)} P = €1,00</span>
                   </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-2.5">
-                    <span className="text-[12.5px] font-semibold text-foreground/70">{level.name}</span>
-                    <span className="font-stat text-[11.5px] text-muted-foreground/70">
-                      {nextLevel ? `Noch ${ptsFmt(remaining)} P bis ${nextLevel.name}` : "Max-Level erreicht"}
-                    </span>
-                  </div>
-                  <div className="h-[9px] rounded-full bg-white/10 border border-border overflow-hidden">
-                    <div className="h-full rounded-full transition-all duration-700" style={{ width: `${progressPct}%`, background: "linear-gradient(90deg,#C7F011,#D8FF29)", boxShadow: "0 0 14px rgba(199,240,17,0.5)" }} />
-                  </div>
                 </div>
                 <div className="flex gap-2.5 flex-wrap mt-auto">
                   <Button variant="lime" size="lg" asChild>

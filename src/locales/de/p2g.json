@@ -4,10 +4,18 @@
       "title": "P2G Points | Padel2Go",
       "description": "Sammle P2G Credits durch Buchungen und Matches. Löse sie gegen exklusive Prämien ein."
     },
-    "rewards": { "title": "P2G Rewards | Padel2Go Dashboard" },
-    "marketplace": { "title": "Marketplace | Padel2Go Dashboard" },
-    "league": { "title": "League | Padel2Go Dashboard" },
-    "events": { "title": "Events | Padel2Go Dashboard" }
+    "rewards": {
+      "title": "P2G Rewards | Padel2Go Dashboard"
+    },
+    "marketplace": {
+      "title": "Marketplace | Padel2Go Dashboard"
+    },
+    "league": {
+      "title": "League | Padel2Go Dashboard"
+    },
+    "events": {
+      "title": "Events | Padel2Go Dashboard"
+    }
   },
   "comingSoon": {
     "p2gPoints": {
@@ -43,10 +51,22 @@
       "errorDescription": "Bitte versuche es erneut."
     },
     "earnMethods": {
-      "play": { "title": "Spiele Padel", "description": "10% vom Buchungspreis" },
-      "inviteFriends": { "title": "Freunde einladen", "description": "25-50 Punkte" },
-      "completeProfile": { "title": "Profil vervollständigen", "description": "+20 Punkte" },
-      "tagInstagram": { "title": "Instagram taggen", "description": "+30 Punkte" }
+      "play": {
+        "title": "Spiele Padel",
+        "description": "10% vom Buchungspreis"
+      },
+      "inviteFriends": {
+        "title": "Freunde einladen",
+        "description": "25-50 Punkte"
+      },
+      "completeProfile": {
+        "title": "Profil vervollständigen",
+        "description": "+20 Punkte"
+      },
+      "tagInstagram": {
+        "title": "Instagram taggen",
+        "description": "+30 Punkte"
+      }
     },
     "pointsAvailable": "Punkte verfügbar",
     "lifetime": "Lifetime: {{count}} Punkte verdient",
@@ -149,10 +169,7 @@
     "title": "League",
     "yourRank": "Dein Rang: #{{rank}}",
     "riseInRanking": "Steige im Ranking auf",
-    "yourExpertLevel": "Dein Expert Level",
     "playCredits": "Play Credits",
-    "remaining": "Noch {{count}} bis {{level}}",
-    "maxLevel": "Max Level erreicht!",
     "stats": {
       "leagueRank": "Liga-Rang",
       "aiMatches": "KI-Matches",
@@ -164,8 +181,6 @@
     "rankings": {
       "germanyTitle": "Top 5 Deutschland",
       "germanyEmpty": "Noch keine Spieler im Ranking",
-      "tierTitle": "Top 5 {{level}}",
-      "tierEmpty": "Noch keine Spieler in deinem Level",
       "ageTitle": "Top 5 Altersgruppe ({{from}}–{{to}})",
       "ageTitleNoAge": "Top 5 Altersgruppe",
       "ageEmpty": "Noch keine Spieler in deiner Altersgruppe",
@@ -250,22 +265,6 @@
     "claiming": "Wird abgeholt...",
     "claim": "Jetzt abholen"
   },
-  "expertLevelInfo": {
-    "trigger": "Level-Info",
-    "headerTitle": "Expert Levels",
-    "headerSubtitle": "8 Stufen von Beginner bis Legend",
-    "your": "DEIN",
-    "footer": "Sammle Play Points durch Matches um aufzusteigen",
-    "pointsPlus": "{{min}}+"
-  },
-  "expertLevelsGrid": {
-    "levelInfo": "Level-Info",
-    "howToRiseTitle": "Wie steige ich auf?",
-    "howToRiseText": "Sammle Play Points durch Buchungen, Matches und Events. Je mehr Punkte du sammelst, desto höher dein Level!",
-    "pointsRangePlus": "{{min}}+ Punkte",
-    "pointsRange": "{{min}} – {{max}} Punkte",
-    "yourLevel": "DEIN LEVEL"
-  },
   "friendsActivityFeed": {
     "title": "Freunde-Aktivität",
     "empty": "Keine Aktivitäten von Freunden in den letzten 7 Tagen.",
@@ -283,23 +282,6 @@
     "formulaLabel": "Formel:",
     "formulaCode": "Score × Skill-Level = Play-Credits",
     "dateFormat": "dd.MM.yyyy"
-  },
-  "levelUpAnimation": {
-    "levelUp": "LEVEL UP!",
-    "fromPrefix": "Von",
-    "fromSuffix": "aufgestiegen",
-    "creditsRange": "{{min}} – {{max}} Credits",
-    "benefits": "Du hast jetzt Zugang zu neuen Vorteilen und exklusiven Rewards!",
-    "cta": "Weiter spielen!"
-  },
-  "marketplaceCreditsHeader": {
-    "playCredits": "Play Credits",
-    "bookingCredits": "Booking Credits",
-    "expertLevel": "Expert Level",
-    "playPoints": "{{current}} / {{target}} Play Points",
-    "progress": "Progress",
-    "availableToRedeem": "Verfügbar zum Einlösen",
-    "creditsBadge": "Credits"
   },
   "matchDetailDrawer": {
     "unknown": "Unbekannt",
@@ -367,35 +349,14 @@
     "dateFormatLong": "dd. MMM yyyy, HH:mm",
     "dateFormatShort": "dd. MMM yyyy"
   },
-  "p2gPointsHeader": {
-    "title": "P2G Points",
-    "subtitle": "Deine zentrale Punktebörse",
-    "howToGetPoints": "Wie bekomme ich Punkte?",
-    "info": "Info",
-    "redeem": "Einlösen",
-    "expertLevel": "Expert Level",
-    "playCredits": "Play Credits",
-    "remaining": "Noch {{count}} bis {{level}}",
-    "maxLevel": "Max Level erreicht!",
-    "skillMultiplier": "Skill Level (Multiplikator)",
-    "avgLast5": "Ø der letzten 5 Spiele",
-    "booking": "Booking",
-    "lastMatch": "Letztes Match",
-    "redeemable": "Einlösbar im Marketplace",
-    "formulaLabel": "Formel:",
-    "formulaMatchScore": "Match-Score",
-    "formulaSkillLevel": "Skill-Level ({{value}})",
-    "formulaPlayCredits": "Play-Credits"
-  },
   "p2gPointsHeaderSimple": {
     "title": "P2G Points",
     "subtitle": "Deine zentrale Punktebörse",
     "redeem": "Einlösen",
-    "expertLevel": "Expert Level",
-    "playCredits": "Play Credits",
-    "pointsProgress": "{{current}} / {{target}} Points",
-    "remaining": "Noch {{count}} bis {{level}}",
-    "maxLevel": "Max Level erreicht!"
+    "playCredits": "Deine Punkte",
+    "discountValue": "Entspricht einem Rabatt von",
+    "rate": "{{points}} Punkte = 1 €",
+    "lifetime": "Insgesamt gesammelt: {{count}} Punkte"
   },
   "quickEarnTiles": {
     "heading": "So verdienst du Credits",
@@ -534,14 +495,38 @@
   },
   "howToEarnSection": {
     "earnWays": {
-      "login": { "action": "App-Login (täglich)", "points": "+5 Punkte" },
-      "booking": { "action": "Court-Buchung", "points": "+50 Punkte" },
-      "match": { "action": "Match gespielt", "points": "+30 Punkte" },
-      "score": { "action": "Score eingegeben", "points": "+10 Punkte" },
-      "invite": { "action": "Freund:in eingeladen", "points": "+100 Punkte" },
-      "event": { "action": "Event-Teilnahme", "points": "+75 Punkte" },
-      "league": { "action": "League-Match", "points": "+60 Punkte" },
-      "circuit": { "action": "Circuit-Turnier", "points": "+150 Punkte" }
+      "login": {
+        "action": "App-Login (täglich)",
+        "points": "+5 Punkte"
+      },
+      "booking": {
+        "action": "Court-Buchung",
+        "points": "+50 Punkte"
+      },
+      "match": {
+        "action": "Match gespielt",
+        "points": "+30 Punkte"
+      },
+      "score": {
+        "action": "Score eingegeben",
+        "points": "+10 Punkte"
+      },
+      "invite": {
+        "action": "Freund:in eingeladen",
+        "points": "+100 Punkte"
+      },
+      "event": {
+        "action": "Event-Teilnahme",
+        "points": "+75 Punkte"
+      },
+      "league": {
+        "action": "League-Match",
+        "points": "+60 Punkte"
+      },
+      "circuit": {
+        "action": "Circuit-Turnier",
+        "points": "+150 Punkte"
+      }
     },
     "headingPrefix": "So sammelst du",
     "headingHighlight": "Credits",
@@ -552,27 +537,53 @@
     "options": {
       "equipment": {
         "category": "Gratis Equipment",
-        "items": ["Padel-Schläger", "Bälle & Grips", "Sporttaschen", "Premium Ausrüstung"]
+        "items": [
+          "Padel-Schläger",
+          "Bälle & Grips",
+          "Sporttaschen",
+          "Premium Ausrüstung"
+        ]
       },
       "vending": {
         "category": "Vending Machine",
-        "items": ["Mit Credits bezahlen", "Drinks & Snacks", "Equipment vor Ort", "Nutrition-Produkte"]
+        "items": [
+          "Mit Credits bezahlen",
+          "Drinks & Snacks",
+          "Equipment vor Ort",
+          "Nutrition-Produkte"
+        ]
       },
       "courtCredits": {
         "category": "Court-Credits",
-        "items": ["Gratis-Stunden", "Rabatt-Gutscheine", "Off-Peak Buchungen"]
+        "items": [
+          "Gratis-Stunden",
+          "Rabatt-Gutscheine",
+          "Off-Peak Buchungen"
+        ]
       },
       "eventTickets": {
         "category": "Event-Tickets",
-        "items": ["League-Finals Tickets", "Circuit-Events", "Community-Nights"]
+        "items": [
+          "League-Finals Tickets",
+          "Circuit-Events",
+          "Community-Nights"
+        ]
       },
       "partnerRewards": {
         "category": "Partner-Rewards",
-        "items": ["Equipment-Gutscheine", "Nutrition-Produkte", "Lifestyle-Rewards"]
+        "items": [
+          "Equipment-Gutscheine",
+          "Nutrition-Produkte",
+          "Lifestyle-Rewards"
+        ]
       },
       "merchandise": {
         "category": "Merchandise",
-        "items": ["P2G Apparel", "Limited Editions", "Co-Branded Items"]
+        "items": [
+          "P2G Apparel",
+          "Limited Editions",
+          "Co-Branded Items"
+        ]
       }
     },
     "highlightLabel": "Highlight",

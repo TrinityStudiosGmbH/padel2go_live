@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import LegalFooterLinks from "@/components/LegalFooterLinks";
 import { useAuth } from "@/hooks/useAuth";
 import { useFriendships } from "@/hooks/useFriendships";
-import { getExpertLevel, getProgressToNextLevel } from "@/lib/expertLevels";
 import { cn } from "@/lib/utils";
 
 interface ProfileData {
@@ -26,11 +25,6 @@ interface ProfileData {
   booked_hours: number;
   booked_count: number;
   member_since: string;
-  expert_level: {
-    name: string;
-    gradient: string;
-    emoji: string;
-  };
   match_history: {
     wins: number;
     losses: number;
@@ -94,25 +88,6 @@ export default function PublicProfile() {
   const isPendingSent = friendshipStatus?.status === "pending" && friendshipStatus.isRequester;
   const isPendingReceived = friendshipStatus?.status === "pending" && !friendshipStatus.isRequester;
 
-  // Expert level from API or calculated locally
-  const expertLevel = profile ? getExpertLevel(profile.play_credits) : null;
-  const progress = profile ? getProgressToNextLevel(profile.play_credits) : null;
-
-  // Gradient classes helper
-  const getGradientClasses = (gradient: string) => {
-    const gradientMap: Record<string, string> = {
-      "from-zinc-400 to-zinc-500": "from-zinc-400 to-zinc-500",
-      "from-amber-500 to-orange-500": "from-amber-500 to-orange-500",
-      "from-blue-400 to-cyan-500": "from-blue-400 to-cyan-500",
-      "from-lime-400 to-green-500": "from-lime-400 to-green-500",
-      "from-orange-500 to-red-500": "from-orange-500 to-red-500",
-      "from-purple-500 to-pink-500": "from-purple-500 to-pink-500",
-      "from-cyan-400 to-violet-500": "from-cyan-400 to-violet-500",
-      "from-yellow-400 to-lime-400": "from-yellow-400 to-lime-400",
-    };
-    return gradientMap[gradient] || "from-primary to-primary";
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background p-6">
@@ -150,7 +125,6 @@ export default function PublicProfile() {
   }
 
   const displayName = profile.display_name || profile.username;
-  const apiGradient = profile.expert_level?.gradient || expertLevel?.gradient || "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -173,10 +147,7 @@ export default function PublicProfile() {
           {/* Avatar & Name */}
           <div className="flex flex-col items-center text-center">
             <div className="relative">
-              <div className={cn(
-                "absolute inset-0 rounded-full bg-gradient-to-br blur-md opacity-60 scale-110",
-                getGradientClasses(apiGradient)
-              )} />
+              <div className="absolute inset-0 scale-110 rounded-full bg-primary/30 opacity-60 blur-md" />
               <UserAvatar
                 src={profile.avatar_url}
                 name={displayName || profile.username}
@@ -186,17 +157,6 @@ export default function PublicProfile() {
             
             <h1 className="text-2xl font-bold mt-4">{displayName}</h1>
             <p className="text-muted-foreground">@{profile.username}</p>
-
-            {/* Expert Level Badge */}
-            <Badge 
-              variant="outline" 
-              className={cn(
-                "mt-3 px-4 py-2 bg-gradient-to-r text-white border-0 text-base",
-                getGradientClasses(apiGradient)
-              )}
-            >
-              {profile.expert_level?.emoji || t("publicProfile.levelFallbackEmoji")} {profile.expert_level?.name || expertLevel?.name}
-            </Badge>
           </div>
 
           {/* Friend Action Button */}
@@ -307,26 +267,6 @@ export default function PublicProfile() {
               </div>
             )}
 
-            {/* Progress to next level */}
-            {progress && progress.nextLevelName && (
-              <div className="mt-6 pt-4 border-t border-border/50">
-                <div className="flex justify-between text-xs text-muted-foreground mb-2">
-                  <span>{t("publicProfile.progressTo", { level: progress.nextLevelName })}</span>
-                  <span>{Math.round(progress.percentage)}%</span>
-                </div>
-                <div className="h-2 bg-muted rounded-full overflow-hidden">
-                  <motion.div
-                    initial={{ width: 0 }}
-                    animate={{ width: `${progress.percentage}%` }}
-                    transition={{ duration: 0.8, ease: "easeOut" }}
-                    className={cn("h-full rounded-full bg-gradient-to-r", getGradientClasses(apiGradient))}
-                  />
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {t("publicProfile.remainingCredits", { remaining: progress.remaining.toLocaleString(numberLocale) })}
-                </p>
-              </div>
-            )}
           </div>
 
           {/* Member Since */}

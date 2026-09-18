@@ -11,9 +11,18 @@
     "descHighlight": "automatisch",
     "descSuffix": "in dein persönliches Ranking ein.",
     "proof": {
-      "open": { "bold": "Open", "rest": "Ranking-System" },
-      "match": { "bold": "Jedes Match", "rest": "zählt" },
-      "levels": { "bold": "8 Expert-Levels", "rest": "zum Aufsteigen" }
+      "open": {
+        "bold": "Open",
+        "rest": "Ranking-System"
+      },
+      "match": {
+        "bold": "Jedes Match",
+        "rest": "zählt"
+      },
+      "levels": {
+        "bold": "Deutschlandweites",
+        "rest": "Ranking"
+      }
     },
     "ctaPrimary": "Jetzt einsteigen & Punkte sammeln",
     "ctaSecondary": "Events entdecken"
@@ -27,12 +36,30 @@
     "introSuffix": "Selbst knappe Niederlagen bringen Punkte – jedes Match zählt!",
     "howTitle": "So sammelst du Punkte",
     "items": [
-      { "action": "Sieg gegen gleichwertigen Gegner", "points": "+25 Punkte" },
-      { "action": "Sieg gegen stärkeren Gegner", "points": "+40 Punkte" },
-      { "action": "Knappe Niederlage (1-2 Punkte)", "points": "+5 Punkte" },
-      { "action": "3-Match-Siegesserie", "points": "+15 Bonus" },
-      { "action": "5-Match-Siegesserie", "points": "+30 Bonus" },
-      { "action": "10-Match-Siegesserie", "points": "+50 Bonus + Badge" }
+      {
+        "action": "Sieg gegen gleichwertigen Gegner",
+        "points": "+25 Punkte"
+      },
+      {
+        "action": "Sieg gegen stärkeren Gegner",
+        "points": "+40 Punkte"
+      },
+      {
+        "action": "Knappe Niederlage (1-2 Punkte)",
+        "points": "+5 Punkte"
+      },
+      {
+        "action": "3-Match-Siegesserie",
+        "points": "+15 Bonus"
+      },
+      {
+        "action": "5-Match-Siegesserie",
+        "points": "+30 Bonus"
+      },
+      {
+        "action": "10-Match-Siegesserie",
+        "points": "+50 Bonus + Badge"
+      }
     ]
   },
   "ranking": {
@@ -47,10 +74,22 @@
   "advantages": {
     "title": "Deine Vorteile in der League",
     "items": [
-      { "title": "Starke Community", "description": "Werde Teil einer aktiven Spieler-Community, die sich gegenseitig pusht und gemeinsam besser wird." },
-      { "title": "Live-Ranking", "description": "Dein dynamisches Ranking zeigt deinen Fortschritt – jedes Match zählt und bringt dich nach vorne." },
-      { "title": "Regional & National", "description": "Vergleiche dich mit Spielern in deiner Region oder deutschlandweit – du entscheidest." },
-      { "title": "Exklusive Events", "description": "Zugang zu League-Special-Events, Saison-Finals und exklusiven Turnieren nur für Liga-Spieler." }
+      {
+        "title": "Starke Community",
+        "description": "Werde Teil einer aktiven Spieler-Community, die sich gegenseitig pusht und gemeinsam besser wird."
+      },
+      {
+        "title": "Live-Ranking",
+        "description": "Dein dynamisches Ranking zeigt deinen Fortschritt – jedes Match zählt und bringt dich nach vorne."
+      },
+      {
+        "title": "Regional & National",
+        "description": "Vergleiche dich mit Spielern in deiner Region oder deutschlandweit – du entscheidest."
+      },
+      {
+        "title": "Exklusive Events",
+        "description": "Zugang zu League-Special-Events, Saison-Finals und exklusiven Turnieren nur für Liga-Spieler."
+      }
     ]
   }
 }

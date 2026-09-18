@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminLayout } from "@/components/admin/AdminLayout";
@@ -36,6 +37,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus,
   Trash2,
@@ -46,6 +48,9 @@ import {
   Info,
   CalendarClock,
   Sparkles,
+  Coins,
+  Wallet,
+  LayoutDashboard,
 } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -55,10 +60,15 @@ import {
   type CourtSport,
 } from "@/components/admin/courts/types";
 import { SportSelect } from "@/components/admin/courts/SportSelect";
+import { StandardPricesCard } from "@/components/admin/pricing/StandardPricesCard";
+import { LocationExceptionsCard } from "@/components/admin/pricing/LocationExceptionsCard";
+import { PointsSettingsCard } from "@/components/admin/pricing/PointsSettingsCard";
+import { P2GWalletsTab } from "@/components/admin/p2g/P2GWalletsTab";
+import { P2GDashboardTab } from "@/components/admin/p2g/P2GDashboardTab";
 
 interface PricingBand {
   id: string;
-  court_id: string | null;
+  location_id: string | null;
   sport: string;
   name: string;
   weekdays: number[];
@@ -67,17 +77,14 @@ interface PricingBand {
   price_cents_60: number | null;
   price_cents_90: number | null;
   price_cents_120: number | null;
-  points_multiplier: number | null;
   priority: number;
   is_active: boolean;
 }
 
-interface CourtRow {
+interface LocationRow {
   id: string;
   name: string;
-  sport?: string | null;
-  is_active: boolean;
-  locations: { name: string } | { name: string }[] | null;
+  city: string | null;
 }
 
 const WEEKDAYS = [
@@ -121,9 +128,6 @@ const timeToMinutes = (value: string): number | null => {
 const formatEuro = (cents: number) =>
   (cents / 100).toLocaleString("de-DE", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-const formatMultiplier = (value: number) =>
-  value.toLocaleString("de-DE", { minimumFractionDigits: 1, maximumFractionDigits: 2 });
-
 const centsToInput = (cents: number | null) => (cents === null ? "" : (cents / 100).toFixed(2).replace(".", ","));
 
 /** Leer → null, sonst Cent-Betrag. "invalid" bei kaputter Eingabe. */
@@ -133,11 +137,6 @@ const parseEuroInput = (raw: string): number | null | "invalid" => {
   const numeric = Number(value.replace(",", "."));
   if (!Number.isFinite(numeric) || numeric < 0) return "invalid";
   return Math.round(numeric * 100);
-};
-
-const courtLocationName = (court: CourtRow) => {
-  const loc = Array.isArray(court.locations) ? court.locations[0] : court.locations;
-  return loc?.name ?? "";
 };
 
 /**
@@ -156,7 +155,7 @@ const bandSport = (band: { sport?: string | null }): CourtSport => courtSport(ba
  * sich also nie. Ohne diese Dimension würden sie als Konflikt gemeldet.
  */
 const bandTier = (band: PricingBand) =>
-  `${bandSport(band)}:${band.court_id ? "court" : "global"}:${band.priority}`;
+  `${bandSport(band)}:${band.location_id ? "location" : "global"}:${band.priority}`;
 
 /**
  * Identisch zur Sortierung in resolve_booking_rate() — dort läuft die Auflösung
@@ -167,7 +166,7 @@ const bandTier = (band: PricingBand) =>
 const compareBands = (a: PricingBand, b: PricingBand) => {
   const sport = bandSport(a).localeCompare(bandSport(b));
   if (sport !== 0) return sport;
-  const scope = Number(!!b.court_id) - Number(!!a.court_id);
+  const scope = Number(!!b.location_id) - Number(!!a.location_id);
   if (scope !== 0) return scope;
   if (b.priority !== a.priority) return b.priority - a.priority;
   if (a.start_minute !== b.start_minute) return a.start_minute - b.start_minute;
@@ -179,13 +178,6 @@ const bandErrorToast = (err: unknown) => {
   const e = err as { message?: string; details?: string; hint?: string; code?: string };
   const raw = [e?.message, e?.details, e?.hint].filter(Boolean).join(" ");
 
-  if (raw.includes("court_pricing_bands_court_sport_fkey")) {
-    toast.error("Sportart passt nicht zum Court", {
-      description:
-        "Ein Court-Band muss die Sportart seines Courts tragen. Bitte den Geltungsbereich prüfen.",
-    });
-    return;
-  }
   if (raw.includes("court_pricing_bands_tennis_60_only")) {
     toast.error("Tennis kennt nur 60 Minuten", {
       description:
@@ -227,14 +219,32 @@ function findConflicts(bands: PricingBand[]): ConflictPair[] {
   return out;
 }
 
+const TABS = [
+  { id: "prices", label: "Preise", icon: CalendarClock },
+  { id: "points", label: "Punkte", icon: Coins },
+  { id: "wallets", label: "Benutzer-Wallets", icon: Wallet },
+  { id: "overview", label: "Übersicht", icon: LayoutDashboard },
+] as const;
+
+type TabId = (typeof TABS)[number]["id"];
+
+const TAB_TRIGGER_CLASSES =
+  "-mb-px gap-2 whitespace-nowrap rounded-none border-b-2 border-transparent bg-transparent px-0.5 pb-[11px] pt-0 text-sm font-bold text-[hsl(0_0%_60%)] shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-primary data-[state=active]:shadow-none";
+
 export default function AdminPricing() {
   const queryClient = useQueryClient();
+  const [searchParams, setSearchParams] = useSearchParams();
+  // Unbekannte Werte in der Adresszeile duerfen keine leere Seite ergeben.
+  const requestedTab = searchParams.get("tab");
+  const activeTab: TabId = TABS.some((tab) => tab.id === requestedTab)
+    ? (requestedTab as TabId)
+    : "prices";
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editBand, setEditBand] = useState<PricingBand | null>(null);
-  const [selectedCourtId, setSelectedCourtId] = useState("");
-  // "global:padel" | "global:tennis" | <court-id>. Globale Bänder gelten seit
-  // Tennis nur noch innerhalb ihrer Sportart — die Vorschau muss das abbilden.
+  const [selectedLocationId, setSelectedLocationId] = useState("");
+  // "global:padel" | "global:tennis" | "<location-id>:<sport>". Bänder gelten
+  // immer nur innerhalb ihrer Sportart — die Vorschau muss das abbilden.
   const [previewScope, setPreviewScope] = useState("global:padel");
 
   const [formName, setFormName] = useState("");
@@ -246,20 +256,18 @@ export default function AdminPricing() {
   const [formPrice60, setFormPrice60] = useState("");
   const [formPrice90, setFormPrice90] = useState("");
   const [formPrice120, setFormPrice120] = useState("");
-  const [formMultiplier, setFormMultiplier] = useState("");
   const [formPriority, setFormPriority] = useState("0");
   const [formIsActive, setFormIsActive] = useState(true);
 
-  // courts.sport fehlt noch in den generierten Typen (types.ts) → Cast
-  const { data: courts = [] } = useQuery({
-    queryKey: ["admin-pricing-courts"],
+  const { data: locations = [] } = useQuery({
+    queryKey: ["admin-pricing-locations"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("courts")
-        .select("id, name, sport, is_active, locations(name)")
+        .from("locations")
+        .select("id, name, city")
         .order("name");
       if (error) throw error;
-      return (data ?? []) as unknown as CourtRow[];
+      return (data ?? []) as unknown as LocationRow[];
     },
   });
 
@@ -269,7 +277,7 @@ export default function AdminPricing() {
       const { data, error } = await (supabase as any)
         .from("court_pricing_bands")
         .select(
-          "id, court_id, sport, name, weekdays, start_minute, end_minute, price_cents_60, price_cents_90, price_cents_120, points_multiplier, priority, is_active"
+          "id, location_id, sport, name, weekdays, start_minute, end_minute, price_cents_60, price_cents_90, price_cents_120, priority, is_active"
         )
         .order("priority", { ascending: false })
         .order("start_minute", { ascending: true });
@@ -277,7 +285,6 @@ export default function AdminPricing() {
       return ((data ?? []) as PricingBand[]).map((b) => ({
         ...b,
         weekdays: (b.weekdays ?? []).map(Number),
-        points_multiplier: b.points_multiplier === null ? null : Number(b.points_multiplier),
       }));
     },
   });
@@ -336,11 +343,11 @@ export default function AdminPricing() {
     onError: (err: Error) => toast.error("Status konnte nicht geändert werden: " + err.message),
   });
 
-  const activeCourtId = selectedCourtId || courts[0]?.id || "";
-  const globalBands = useMemo(() => bands.filter((b) => !b.court_id), [bands]);
-  const courtBands = useMemo(
-    () => bands.filter((b) => b.court_id === activeCourtId),
-    [bands, activeCourtId]
+  const activeLocationId = selectedLocationId || locations[0]?.id || "";
+  const globalBands = useMemo(() => bands.filter((b) => !b.location_id), [bands]);
+  const locationBands = useMemo(
+    () => bands.filter((b) => b.location_id === activeLocationId),
+    [bands, activeLocationId]
   );
 
   const colorOf = useMemo(() => {
@@ -349,24 +356,21 @@ export default function AdminPricing() {
     return (id: string) => map.get(id) ?? BAND_COLORS[0];
   }, [bands]);
 
-  // Ein Court-Scope erbt die Sportart seines Courts, ein globaler Scope wählt sie.
-  const previewSelection = useMemo<{ courtId: string | null; sport: CourtSport }>(() => {
-    if (previewScope.startsWith("global:")) {
-      return {
-        courtId: null,
-        sport: previewScope === "global:tennis" ? "tennis" : "padel",
-      };
-    }
-    const court = courts.find((c) => c.id === previewScope);
-    return { courtId: previewScope, sport: court ? courtSport(court) : "padel" };
-  }, [previewScope, courts]);
+  /** "<scope>:<sport>" — Standort und Sportart sind unabhängig wählbar. */
+  const previewSelection = useMemo<{ locationId: string | null; sport: CourtSport }>(() => {
+    const [scope, sport] = previewScope.split(":");
+    return {
+      locationId: scope === "global" ? null : scope,
+      sport: sport === "tennis" ? "tennis" : "padel",
+    };
+  }, [previewScope]);
 
   const previewBands = useMemo(() => {
-    const { courtId, sport } = previewSelection;
+    const { locationId, sport } = previewSelection;
     return bands.filter(
       (b) =>
         bandSport(b) === sport &&
-        (courtId ? !b.court_id || b.court_id === courtId : !b.court_id)
+        (locationId ? !b.location_id || b.location_id === locationId : !b.location_id)
     );
   }, [bands, previewSelection]);
 
@@ -430,23 +434,20 @@ export default function AdminPricing() {
     setFormPrice60("");
     setFormPrice90("");
     setFormPrice120("");
-    setFormMultiplier("");
     setFormPriority("0");
     setFormIsActive(true);
   };
 
-  const openCreate = (scope: string) => {
+  const openCreate = (scope: string, sport: CourtSport = "padel") => {
     setEditBand(null);
-    // Court-Band: Die Sportart ist durch den Court vorgegeben (FK court_id+sport).
-    const court = courts.find((c) => c.id === scope);
-    resetForm(scope, court ? courtSport(court) : "padel");
+    resetForm(scope, sport);
     setDialogOpen(true);
   };
 
   const openEdit = (band: PricingBand) => {
     setEditBand(band);
     setFormName(band.name);
-    setFormScope(band.court_id ?? "global");
+    setFormScope(band.location_id ?? "global");
     setFormSport(bandSport(band));
     setFormWeekdays([...band.weekdays].sort((a, b) => a - b));
     setFormStart(minutesToTime(band.start_minute));
@@ -454,9 +455,6 @@ export default function AdminPricing() {
     setFormPrice60(centsToInput(band.price_cents_60));
     setFormPrice90(centsToInput(band.price_cents_90));
     setFormPrice120(centsToInput(band.price_cents_120));
-    setFormMultiplier(
-      band.points_multiplier === null ? "" : String(band.points_multiplier).replace(".", ",")
-    );
     setFormPriority(String(band.priority));
     setFormIsActive(band.is_active);
     setDialogOpen(true);
@@ -467,19 +465,11 @@ export default function AdminPricing() {
       prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso].sort((a, b) => a - b)
     );
 
-  const scopeCourt = formScope === "global" ? null : courts.find((c) => c.id === formScope) ?? null;
+  // Ein Standort hat Padel- UND Tennis-Courts, die Sportart wird deshalb immer
+  // eigenständig gewählt — anders als früher beim court-gebundenen Band.
+  const formEffectiveSport: CourtSport = formSport;
 
-  /**
-   * Sportart des Bandes. Bei einem Court-Band folgt sie zwingend dem Court —
-   * der zusammengesetzte Fremdschlüssel (court_id, sport) lässt nichts anderes zu.
-   */
-  const formEffectiveSport: CourtSport = scopeCourt ? courtSport(scopeCourt) : formSport;
-
-  const handleScopeChange = (value: string) => {
-    setFormScope(value);
-    const court = courts.find((c) => c.id === value);
-    if (court) setFormSport(courtSport(court));
-  };
+  const handleScopeChange = (value: string) => setFormScope(value);
 
   const buildPayload = (): Omit<PricingBand, "id"> | null => {
     const name = formName.trim();
@@ -526,16 +516,6 @@ export default function AdminPricing() {
       prices.push(parsed);
     }
 
-    let multiplier: number | null = null;
-    if (formMultiplier.trim()) {
-      const parsed = Number(formMultiplier.trim().replace(",", "."));
-      if (!Number.isFinite(parsed) || parsed < 0 || parsed > 10) {
-        toast.error("Multiplikator muss zwischen 0 und 10 liegen");
-        return null;
-      }
-      multiplier = Math.round(parsed * 100) / 100;
-    }
-
     const priority = Number.parseInt(formPriority || "0", 10);
     if (!Number.isFinite(priority) || priority < -999 || priority > 999) {
       toast.error("Priorität muss eine ganze Zahl zwischen -999 und 999 sein");
@@ -543,7 +523,7 @@ export default function AdminPricing() {
     }
 
     return {
-      court_id: formScope === "global" ? null : formScope,
+      location_id: formScope === "global" ? null : formScope,
       sport: formEffectiveSport,
       name,
       weekdays: [...formWeekdays].sort((a, b) => a - b),
@@ -552,7 +532,6 @@ export default function AdminPricing() {
       price_cents_60: prices[0],
       price_cents_90: isTennis ? null : prices[1],
       price_cents_120: isTennis ? null : prices[2],
-      points_multiplier: multiplier,
       priority,
       is_active: formIsActive,
     };
@@ -565,12 +544,11 @@ export default function AdminPricing() {
     else createMutation.mutate(payload);
   };
 
-  const courtLabel = (courtId: string | null) => {
-    if (!courtId) return "Global";
-    const court = courts.find((c) => c.id === courtId);
-    if (!court) return "Unbekannter Court";
-    const loc = courtLocationName(court);
-    return loc ? `${court.name} · ${loc}` : court.name;
+  const locationLabel = (locationId: string | null) => {
+    if (!locationId) return "Alle Standorte";
+    const location = locations.find((l) => l.id === locationId);
+    if (!location) return "Unbekannter Standort";
+    return location.city ? `${location.name} · ${location.city}` : location.name;
   };
 
   const sportChip = (sport: CourtSport) => (
@@ -581,19 +559,11 @@ export default function AdminPricing() {
     </span>
   );
 
-  /** Court-Option mit Sportart — „Court 1" gibt es als Padel- und als Tennis-Platz. */
-  const courtOption = (court: CourtRow, withIcon = false) => (
-    <SelectItem key={court.id} value={court.id}>
+  const locationOption = (location: LocationRow, value?: string, withIcon = false) => (
+    <SelectItem key={value ?? location.id} value={value ?? location.id}>
       <span className="flex items-center gap-2">
-        {withIcon && (
-          <MapPin
-            className={`h-4 w-4 ${
-              courtSport(court) === "tennis" ? "text-[#7FD4FF]" : "text-primary"
-            }`}
-          />
-        )}
-        {courtLabel(court.id)}
-        {sportChip(courtSport(court))}
+        {withIcon && <MapPin className="h-4 w-4 text-primary" />}
+        {locationLabel(location.id)}
       </span>
     </SelectItem>
   );
@@ -603,7 +573,6 @@ export default function AdminPricing() {
     if (band.price_cents_60 !== null) parts.push(`60 Min ${formatEuro(band.price_cents_60)} €`);
     if (band.price_cents_90 !== null) parts.push(`90 Min ${formatEuro(band.price_cents_90)} €`);
     if (band.price_cents_120 !== null) parts.push(`120 Min ${formatEuro(band.price_cents_120)} €`);
-    if (band.points_multiplier !== null) parts.push(`Punkte x${formatMultiplier(band.points_multiplier)}`);
     return parts.length ? parts.join(" · ") : "Nur Standardpreis";
   };
 
@@ -637,7 +606,7 @@ export default function AdminPricing() {
     <Table className="min-w-[900px]">
       <TableHeader>
         <TableRow className="border-[hsl(0_0%_12%)] hover:bg-transparent">
-          {["Name", "Wochentage", "Zeitfenster", "60 Min", "90 Min", "120 Min", "Punkte", "Prio"].map(
+          {["Name", "Wochentage", "Zeitfenster", "60 Min", "90 Min", "120 Min", "Prio"].map(
             (h) => (
               <TableHead
                 key={h}
@@ -655,13 +624,13 @@ export default function AdminPricing() {
       <TableBody>
         {isLoading ? (
           <TableRow className="border-[hsl(0_0%_12%)] hover:bg-transparent">
-            <TableCell colSpan={9} className="px-0 py-8 text-center text-[13.5px] text-muted-foreground">
+            <TableCell colSpan={8} className="px-0 py-8 text-center text-[13.5px] text-muted-foreground">
               Laden...
             </TableCell>
           </TableRow>
         ) : rows.length === 0 ? (
           <TableRow className="border-[hsl(0_0%_12%)] hover:bg-transparent">
-            <TableCell colSpan={9} className="px-0 py-8 text-center text-[13.5px] text-muted-foreground">
+            <TableCell colSpan={8} className="px-0 py-8 text-center text-[13.5px] text-muted-foreground">
               {emptyText}
             </TableCell>
           </TableRow>
@@ -690,18 +659,6 @@ export default function AdminPricing() {
               <TableCell className="px-0 py-3 pr-3.5">{priceCell(band.price_cents_60)}</TableCell>
               <TableCell className="px-0 py-3 pr-3.5">{priceCell(band.price_cents_90)}</TableCell>
               <TableCell className="px-0 py-3 pr-3.5">{priceCell(band.price_cents_120)}</TableCell>
-              <TableCell className="px-0 py-3 pr-3.5">
-                {band.points_multiplier === null ? (
-                  <span className="whitespace-nowrap font-mono text-[12px] text-[hsl(0_0%_45%)]">x1,0</span>
-                ) : (
-                  <Badge
-                    variant="outline"
-                    className="gap-1 whitespace-nowrap rounded-full border-primary/[0.35] bg-primary/[0.12] px-[9px] py-[3px] font-mono text-[11px] font-bold text-primary"
-                  >
-                    <Sparkles className="h-3 w-3" />x{formatMultiplier(band.points_multiplier)}
-                  </Badge>
-                )}
-              </TableCell>
               <TableCell className="px-0 py-3 pr-3.5">
                 <span className="font-mono text-[12.5px] text-[hsl(0_0%_82%)]">{band.priority}</span>
               </TableCell>
@@ -774,9 +731,53 @@ export default function AdminPricing() {
   return (
     <AdminLayout>
       <div className="flex animate-fade-up flex-col gap-[18px]">
+        <p className="text-sm text-muted-foreground">
+          Preise und Punkte für alle Standorte an einer Stelle
+        </p>
+
+        <Tabs
+          value={activeTab}
+          onValueChange={(value) =>
+            setSearchParams(
+              (prev) => {
+                const next = new URLSearchParams(prev);
+                next.set("tab", value);
+                return next;
+              },
+              { replace: true },
+            )
+          }
+          className="flex flex-col gap-5"
+        >
+          <TabsList className="h-auto w-full justify-start gap-5 overflow-x-auto rounded-none border-b border-[hsl(0_0%_12%)] bg-transparent p-0 sm:gap-[22px]">
+            {TABS.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id} className={TAB_TRIGGER_CLASSES}>
+                <tab.icon className="h-4 w-4" />
+                <span className="whitespace-nowrap">{tab.label}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value="points" className="mt-0">
+            <PointsSettingsCard />
+          </TabsContent>
+
+          <TabsContent value="wallets" className="mt-0">
+            <P2GWalletsTab />
+          </TabsContent>
+
+          <TabsContent value="overview" className="mt-0">
+            <P2GDashboardTab />
+          </TabsContent>
+
+          <TabsContent value="prices" className="mt-0 flex flex-col gap-[18px]">
+        <StandardPricesCard />
+
+        <LocationExceptionsCard />
+
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-sm text-muted-foreground">
-            Zeitfenster-Bänder für Court-Preise und P2G-Punkte verwalten
+            Zeitfenster für abweichende Preise — global oder nur für einen Standort
           </p>
           <Button
             onClick={() => openCreate("global")}
@@ -799,7 +800,7 @@ export default function AdminPricing() {
                   So greifen Bänder
                 </span>
                 <span className="text-xs leading-snug text-muted-foreground">
-                  Court-Band schlägt globales Band, danach entscheidet die höhere Priorität.
+                  Standort-Band schlägt globales Band, danach entscheidet die höhere Priorität.
                 </span>
               </div>
             </div>
@@ -807,20 +808,20 @@ export default function AdminPricing() {
               <div className="flex items-start gap-2.5 rounded-[13px] border border-[hsl(0_0%_12%)] bg-white/[0.03] px-[15px] py-[13px]">
                 <MapPin className="mt-0.5 h-[15px] w-[15px] flex-none text-[hsl(0_0%_58%)]" />
                 <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
-                  Ohne passendes Band gilt der Standardpreis des Courts.
+                  Ohne passendes Band gilt die Standort-Ausnahme, sonst der globale Standardpreis.
                 </span>
               </div>
               <div className="flex items-start gap-2.5 rounded-[13px] border border-[hsl(0_0%_12%)] bg-white/[0.03] px-[15px] py-[13px]">
                 <Globe className="mt-0.5 h-[15px] w-[15px] flex-none text-[hsl(0_0%_58%)]" />
                 <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
-                  Jedes Band gehört genau einer Sportart. „Global" heißt: global innerhalb dieser
-                  Sportart — ein Padel-Band greift nie auf einem Tennis-Court.
+                  Jedes Band gehört genau einer Sportart. „Alle Standorte" heißt: überall innerhalb
+                  dieser Sportart — ein Padel-Band greift nie auf einem Tennis-Court.
                 </span>
               </div>
               <div className="flex items-start gap-2.5 rounded-[13px] border border-[hsl(0_0%_12%)] bg-white/[0.03] px-[15px] py-[13px]">
                 <Sparkles className="mt-0.5 h-[15px] w-[15px] flex-none text-primary" />
                 <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
-                  Punkte-Multiplikator wirkt zusätzlich zum Level-Multiplikator.
+                  Bänder ändern nur den Preis. Die Punkte hängen allein an der Dauer und am Standort.
                 </span>
               </div>
             </div>
@@ -843,7 +844,7 @@ export default function AdminPricing() {
                     </span>
                   </h2>
                   <span className="text-xs leading-snug text-muted-foreground">
-                    Gelten für alle Courts ihrer Sportart.
+                    Gelten an allen Standorten — innerhalb ihrer Sportart.
                   </span>
                 </div>
               </div>
@@ -860,7 +861,7 @@ export default function AdminPricing() {
           </div>
         </Card>
 
-        {/* Court-Bänder */}
+        {/* Standort-Bänder */}
         <Card className="rounded-2xl border-border bg-gradient-card p-5 sm:p-6">
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-center justify-between gap-3.5">
@@ -870,42 +871,42 @@ export default function AdminPricing() {
                 </span>
                 <div className="flex min-w-0 flex-col gap-0.5">
                   <h2 className="font-display text-base font-bold tracking-tight text-foreground">
-                    Court-Bänder{" "}
+                    Standort-Bänder{" "}
                     <span className="font-mono text-sm font-normal text-muted-foreground">
-                      ({courtBands.length})
+                      ({locationBands.length})
                     </span>
                   </h2>
                   <span className="text-xs leading-snug text-muted-foreground">
-                    Gelten nur für den gewählten Court und schlagen globale Bänder.
+                    Gelten nur am gewählten Standort und schlagen globale Bänder.
                   </span>
                 </div>
               </div>
               <div className="flex min-w-0 flex-wrap items-center gap-2.5">
-                <Select value={activeCourtId} onValueChange={setSelectedCourtId}>
+                <Select value={activeLocationId} onValueChange={setSelectedLocationId}>
                   <SelectTrigger className="h-9 w-[min(240px,100%)] rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13px]">
-                    <SelectValue placeholder="Court wählen" />
+                    <SelectValue placeholder="Standort wählen" />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-[hsl(0_0%_15%)] bg-[hsl(0_0%_6%)]">
-                    {courts.map((court) => courtOption(court))}
+                    {locations.map((location) => locationOption(location))}
                   </SelectContent>
                 </Select>
                 <Button
                   variant="outline"
-                  disabled={!activeCourtId}
-                  onClick={() => openCreate(activeCourtId)}
+                  disabled={!activeLocationId}
+                  onClick={() => openCreate(activeLocationId)}
                   className="h-9 gap-[7px] rounded-[10px] border-[hsl(200_100%_75%/0.3)] bg-[hsl(200_100%_75%/0.09)] px-[15px] text-[13px] font-bold text-[#7FD4FF] hover:bg-[hsl(200_100%_75%/0.18)] hover:text-[#7FD4FF]"
                 >
                   <Plus className="h-4 w-4" />
-                  Court-Band
+                  Standort-Band
                 </Button>
               </div>
             </div>
-            {courts.length === 0 ? (
+            {locations.length === 0 ? (
               <p className="py-8 text-center text-[13.5px] text-muted-foreground">
-                Noch keine Courts angelegt
+                Noch keine Standorte angelegt
               </p>
             ) : (
-              bandTable(courtBands, "Für diesen Court sind keine eigenen Bänder angelegt")
+              bandTable(locationBands, "Für diesen Standort sind keine eigenen Bänder angelegt")
             )}
           </div>
         </Card>
@@ -944,7 +945,10 @@ export default function AdminPricing() {
                       {sportChip("tennis")}
                     </span>
                   </SelectItem>
-                  {courts.map((court) => courtOption(court))}
+                  {locations.flatMap((location) => [
+                    locationOption(location, `${location.id}:padel`),
+                    locationOption(location, `${location.id}:tennis`),
+                  ])}
                 </SelectContent>
               </Select>
             </div>
@@ -971,7 +975,7 @@ export default function AdminPricing() {
                         {c.toMinute >= DAY_END ? "24:00" : minutesToTime(c.toMinute)}
                       </span>
                       <span className="whitespace-nowrap font-mono text-[11px] text-[hsl(0_0%_52%)]">
-                        Prio {c.a.priority} · {c.a.court_id ? "Court" : "Global"} ·{" "}
+                        Prio {c.a.priority} · {c.a.location_id ? "Standort" : "Global"} ·{" "}
                         {SPORT_LABEL[bandSport(c.a)]}
                       </span>
                     </div>
@@ -1064,7 +1068,7 @@ export default function AdminPricing() {
                       {band.name}
                     </span>
                     <span className="whitespace-nowrap font-mono text-[11px] text-[hsl(0_0%_60%)]">
-                      {band.court_id ? "Court" : "Global"} · Prio {band.priority} · {bandSummary(band)}
+                      {band.location_id ? "Standort" : "Global"} · Prio {band.priority} · {bandSummary(band)}
                     </span>
                     {shadowed && (
                       <span className="whitespace-nowrap rounded-full border border-[hsl(41_100%_65%/0.3)] bg-[hsl(41_100%_65%/0.1)] px-2 py-[2px] font-mono text-[10px] font-bold uppercase tracking-[0.08em] text-[#FFC44D]">
@@ -1093,6 +1097,9 @@ export default function AdminPricing() {
             </div>
           </div>
         </Card>
+
+          </TabsContent>
+        </Tabs>
 
         {/* Anlegen / Bearbeiten */}
         <Dialog
@@ -1136,10 +1143,10 @@ export default function AdminPricing() {
                   <SelectContent className="rounded-xl border-[hsl(0_0%_15%)] bg-[hsl(0_0%_6%)]">
                     <SelectItem value="global">
                       <span className="flex items-center gap-2">
-                        <Globe className="h-4 w-4 text-primary" /> Global (alle Courts der Sportart)
+                        <Globe className="h-4 w-4 text-primary" /> Alle Standorte
                       </span>
                     </SelectItem>
-                    {courts.map((court) => courtOption(court, true))}
+                    {locations.map((location) => locationOption(location, undefined, true))}
                   </SelectContent>
                 </Select>
               </div>
@@ -1148,21 +1155,10 @@ export default function AdminPricing() {
                 <Label className={labelClass}>
                   Sportart<span className="text-primary"> *</span>
                 </Label>
-                {scopeCourt ? (
-                  <div className="flex items-center gap-2.5 rounded-[10px] border border-[hsl(0_0%_15%)] bg-white/[0.04] px-3 py-2.5">
-                    {sportChip(formEffectiveSport)}
-                    <span className="text-[12px] leading-snug text-[hsl(0_0%_62%)]">
-                      Folgt dem gewählten Court und ist nicht änderbar.
-                    </span>
-                  </div>
-                ) : (
-                  <>
-                    <SportSelect value={formSport} onChange={setFormSport} className="self-start" />
-                    <span className="text-[11.5px] leading-relaxed text-[hsl(0_0%_58%)]">
-                      Das Band gilt nur für Courts dieser Sportart.
-                    </span>
-                  </>
-                )}
+                <SportSelect value={formSport} onChange={setFormSport} className="self-start" />
+                <span className="text-[11.5px] leading-relaxed text-[hsl(0_0%_58%)]">
+                  Das Band gilt nur für Courts dieser Sportart.
+                </span>
               </div>
 
               <div className="flex flex-col gap-[7px]">
@@ -1267,7 +1263,7 @@ export default function AdminPricing() {
                 ))}
               </div>
               <span className="-mt-[9px] text-[11.5px] leading-relaxed text-[hsl(0_0%_58%)]">
-                Leer lassen = Standardpreis des Courts bleibt gültig.
+                Leer lassen = Standort-Ausnahme bzw. globaler Standardpreis bleibt gültig.
                 {formEffectiveSport === "tennis" && (
                   <>
                     {" "}
@@ -1278,20 +1274,6 @@ export default function AdminPricing() {
               </span>
 
               <div className="grid grid-cols-[repeat(auto-fit,minmax(min(160px,100%),1fr))] gap-3">
-                <div className="flex flex-col gap-[7px]">
-                  <Label className={labelClass}>Punkte-Multiplikator</Label>
-                  <div className="flex items-center gap-2">
-                    <span className="flex-none font-mono text-sm text-muted-foreground">x</span>
-                    <Input
-                      inputMode="decimal"
-                      value={formMultiplier}
-                      onChange={(e) => setFormMultiplier(e.target.value)}
-                      placeholder="1,0"
-                      className={`${inputClass} min-w-0 flex-1`}
-                    />
-                  </div>
-                  <span className="text-[11.5px] text-[hsl(0_0%_58%)]">Leer = x1,0. Erlaubt 0–10.</span>
-                </div>
                 <div className="flex flex-col gap-[7px]">
                   <Label className={labelClass}>Priorität</Label>
                   <Input
@@ -1311,7 +1293,7 @@ export default function AdminPricing() {
                 <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <Label className="text-[13.5px] font-bold text-foreground">Aktiv</Label>
                   <span className="text-xs text-muted-foreground">
-                    Nur aktive Bänder wirken auf Preis und Punkte.
+                    Nur aktive Bänder wirken auf den Preis.
                   </span>
                 </div>
                 <Switch checked={formIsActive} onCheckedChange={setFormIsActive} />

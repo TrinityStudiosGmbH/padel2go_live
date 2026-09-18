@@ -19,10 +19,6 @@ import { MyBookings } from "@/components/booking/MyBookings";
 import { AccountProfileForm } from "@/components/account";
 import { AccountOrdersTab } from "@/components/account/AccountOrdersTab";
 import { AccountSecurityTab } from "@/components/account/AccountSecurityTab";
-import { LevelUpAnimation, ExpertLevelsGrid } from "@/components/p2g";
-import { EXPERT_LEVELS, getExpertLevelEmoji } from "@/lib/expertLevels";
-import { useExpertLevels, levelForPoints, nextLevelForPoints, progressToNext } from "@/hooks/useExpertLevels";
-import { useLevelUpDetection } from "@/hooks/useLevelUpDetection";
 import { usePointsValue } from "@/hooks/usePointsValue";
 
 const Account = () => {
@@ -41,31 +37,13 @@ const Account = () => {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
-  // Expert level from the admin-configurable DB levels, derived from lifetime (total
-  // earned) credits. We only ever DISPLAY the level/badge — never the raw number.
-  const { levels } = useExpertLevels();
   const playCredits = wallet?.play_credits ?? 0;
-  const levelPoints = (wallet as any)?.lifetime_credits || wallet?.play_credits || 0;
-  const dbLevel = levelForPoints(levels, levelPoints);
-  const nextLevel = nextLevelForPoints(levels, levelPoints);
-  const progressPct = progressToNext(levels, levelPoints);
-  const multiplier = Number(dbLevel.multiplier ?? 1);
-  const libLevel = EXPERT_LEVELS.find((l) => l.name === dbLevel.name) ?? EXPERT_LEVELS[0];
-  const levelGradient = dbLevel.gradient ?? libLevel.gradient;
-  const levelEmoji = dbLevel.emoji ?? getExpertLevelEmoji(dbLevel.name);
-  const levelRemaining = nextLevel ? Math.max(0, nextLevel.min_points - levelPoints) : 0;
 
   // Combined, redeemable P2G points total + its euro worth.
   const redeemableCredits = (wallet?.play_credits ?? 0) + (wallet?.reward_credits ?? 0);
   const euroWorth = ((redeemableCredits * centsPerPoint) / 100).toLocaleString(numberLocale, {
     style: "currency",
     currency: "EUR",
-  });
-
-  // Level up detection
-  const { showLevelUp, newLevel, previousLevel, closeLevelUp } = useLevelUpDetection({
-    lifetimeCredits: levelPoints,
-    enabled: !loading && !!wallet,
   });
 
   // Redirect if not authenticated
@@ -244,15 +222,12 @@ const Account = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl font-bold text-white">{t("page.title")}</h1>
-                  {/* Expert Level Badge */}
-                  <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r ${levelGradient} shadow-lg`}>
-                    <span className="text-lg">{levelEmoji}</span>
-                    <span className="text-sm font-semibold text-white">{dbLevel.name}</span>
-                  </div>
-                  {/* Payback multiplier */}
-                  <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/15 border border-white/25">
+                  {/* Punktestand — das Einzige, was hier zaehlt. */}
+                  <div className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5">
                     <Coins className="w-3.5 h-3.5 text-white" />
-                    <span className="text-sm font-semibold text-white">×{multiplier} Payback</span>
+                    <span className="font-stat text-sm font-semibold text-white">
+                      {playCredits.toLocaleString(numberLocale)} Punkte
+                    </span>
                   </div>
                 </div>
                 <Button variant="ghost" onClick={handleLogout} className="text-white/80 hover:text-white hover:bg-white/10">
@@ -260,22 +235,6 @@ const Account = () => {
                 </Button>
               </div>
 
-              {/* Progress to next expert level (level progress only, no raw credits) */}
-              {nextLevel && (
-                <div className="mt-4">
-                  <div className="flex justify-end text-xs text-white/70 mb-1">
-                    <span>{t("page.progressRemaining", { remaining: levelRemaining.toLocaleString(numberLocale), level: nextLevel.name })}</span>
-                  </div>
-                  <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                    <motion.div
-                      className={`h-full bg-gradient-to-r ${levelGradient}`}
-                      initial={{ width: 0 }}
-                      animate={{ width: `${progressPct}%` }}
-                      transition={{ duration: 1, ease: "easeOut" }}
-                    />
-                  </div>
-                </div>
-              )}
             </motion.div>
           </div>
         </div>
@@ -359,9 +318,6 @@ const Account = () => {
                   </div>
                 </div>
               </motion.div>
-
-              {/* Expert Levels — display level/badge only, computed from play credits */}
-              <ExpertLevelsGrid currentPoints={levelPoints} />
             </TabsContent>
           </Tabs>
         </div>
@@ -369,16 +325,6 @@ const Account = () => {
       </main>
 
       <Footer />
-
-      {/* Level Up Animation */}
-      {newLevel && (
-        <LevelUpAnimation
-          isOpen={showLevelUp}
-          onClose={closeLevelUp}
-          newLevel={newLevel}
-          previousLevel={previousLevel ?? undefined}
-        />
-      )}
     </>
   );
 };

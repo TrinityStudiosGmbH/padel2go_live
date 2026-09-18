@@ -956,46 +956,6 @@ serve(async (req) => {
       );
     }
 
-    // GET /expert-levels - Get all expert level definitions from config table
-    if (action === "expert-levels" && req.method === "GET") {
-      logStep("Expert levels request");
-
-      const { data: levels, error: levelsError } = await adminClient
-        .from("expert_levels_config")
-        .select("id, name, min_points, max_points, sort_order, gradient, emoji, description")
-        .order("sort_order", { ascending: true });
-
-      if (levelsError) {
-        logStep("Expert levels query error", { error: levelsError.message });
-        return new Response(
-          JSON.stringify({ error: levelsError.message }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      // Format for frontend display
-      const formattedLevels = (levels || []).map((level) => ({
-        id: level.id,
-        name: level.name,
-        min_points: level.min_points,
-        max_points: level.max_points, // null = Infinity
-        gradient: level.gradient,
-        emoji: level.emoji,
-        description: level.description,
-        range_display: level.max_points 
-          ? `${level.min_points.toLocaleString()} - ${level.max_points.toLocaleString()}`
-          : `${level.min_points.toLocaleString()}+`,
-      }));
-
-      return new Response(
-        JSON.stringify({
-          levels: formattedLevels,
-          count: formattedLevels.length,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // GET /daily-claim-status - Check if user can claim today
     if (action === "daily-claim-status" && req.method === "GET") {
       const berlinDate = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Europe/Berlin" });
@@ -1094,7 +1054,7 @@ serve(async (req) => {
       
       const currentUserAge = currentProfile?.age || null;
       
-      // Get current user's wallet for tier filtering and global rank
+      // Punktestand des Nutzers fuer den Gesamtrang
       const { data: currentWallet } = await adminClient
         .from("wallets")
         .select("play_credits")
@@ -1102,29 +1062,6 @@ serve(async (req) => {
         .maybeSingle();
       
       const currentPlayCredits = currentWallet?.play_credits || 0;
-      
-      // Get expert level tiers from config table
-      const { data: expertLevelTiers } = await adminClient
-        .from("expert_levels_config")
-        .select("name, min_points, max_points")
-        .order("sort_order", { ascending: true });
-      
-      const tiers = expertLevelTiers || [
-        { name: "Beginner", min_points: 0, max_points: 999 },
-        { name: "Amateur", min_points: 1000, max_points: 2999 },
-        { name: "Intermediate", min_points: 3000, max_points: 5999 },
-        { name: "Advanced", min_points: 6000, max_points: 9999 },
-        { name: "Expert", min_points: 10000, max_points: 14999 },
-        { name: "Master", min_points: 15000, max_points: 24999 },
-        { name: "Grand Master", min_points: 25000, max_points: 49999 },
-        { name: "Padel Legend", min_points: 50000, max_points: null },
-      ];
-      
-      const currentTier = tiers.find(
-        t => currentPlayCredits >= t.min_points && (t.max_points === null || currentPlayCredits <= t.max_points)
-      ) || tiers[0];
-      
-      logStep("Current user tier", { tier: currentTier.name, playCredits: currentPlayCredits });
       
       // SECURITY FIX: Only fetch top N wallets for global ranking, not all users
       const { data: topWallets, error: walletsError } = await adminClient
@@ -1141,16 +1078,6 @@ serve(async (req) => {
         });
       }
       
-      // Fetch wallets in same tier (limited)
-      const tierMaxQuery = currentTier.max_points === null ? 999999999 : currentTier.max_points;
-      const { data: tierWallets } = await adminClient
-        .from("wallets")
-        .select("user_id, play_credits")
-        .gte("play_credits", currentTier.min_points)
-        .lte("play_credits", tierMaxQuery)
-        .order("play_credits", { ascending: false })
-        .limit(RANKING_LIMIT);
-      
       // Get global rank by counting users with more play_credits
       const { count: usersAhead } = await adminClient
         .from("wallets")
@@ -1162,7 +1089,6 @@ serve(async (req) => {
       // Collect unique user IDs we need profiles for (only users in rankings)
       const neededUserIds = new Set<string>();
       topWallets?.forEach(w => neededUserIds.add(w.user_id));
-      tierWallets?.forEach(w => neededUserIds.add(w.user_id));
       neededUserIds.add(user.id); // Always include current user
       
       // SECURITY FIX: Only fetch profiles for users in rankings, not all users
@@ -1188,10 +1114,6 @@ serve(async (req) => {
       
       // Top Germany (limited to RANKING_LIMIT)
       const topGermany = (topWallets || [])
-        .map((w, idx) => buildRankingEntry(w, idx + 1));
-      
-      // Top in same Expert Level tier
-      const topInTier = (tierWallets || [])
         .map((w, idx) => buildRankingEntry(w, idx + 1));
       
       // Age group ranking - only if user has age set
@@ -1239,21 +1161,18 @@ serve(async (req) => {
         }
       }
       
-      logStep("Rankings built", { 
-        topGermanyCount: topGermany.length, 
-        topInTierCount: topInTier.length,
+      logStep("Rankings built", {
+        topGermanyCount: topGermany.length,
         topInAgeGroupCount: topInAgeGroup.length,
-        globalRank 
+        globalRank,
       });
       
       return new Response(
         JSON.stringify({
-          current_tier: currentTier.name,
           // SECURITY: Don't expose current user's exact age, just whether age group is available
           has_age_group: currentUserAge !== null,
           global_rank: globalRank,
           top_germany: topGermany,
-          top_in_tier: topInTier,
           top_in_age_group: topInAgeGroup,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }

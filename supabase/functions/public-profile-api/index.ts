@@ -5,26 +5,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Expert levels config (matching src/lib/expertLevels.ts)
-const EXPERT_LEVELS = [
-  { name: "Beginner", minPoints: 0, maxPoints: 2999, gradient: "from-zinc-400 to-zinc-500", emoji: "🌱" },
-  { name: "Rookie", minPoints: 3000, maxPoints: 5999, gradient: "from-amber-500 to-orange-500", emoji: "🎾" },
-  { name: "Player", minPoints: 6000, maxPoints: 9999, gradient: "from-blue-400 to-cyan-500", emoji: "⚡" },
-  { name: "Expert", minPoints: 10000, maxPoints: 14999, gradient: "from-lime-400 to-green-500", emoji: "🔥" },
-  { name: "Pro", minPoints: 15000, maxPoints: 24999, gradient: "from-orange-500 to-red-500", emoji: "💎" },
-  { name: "Master", minPoints: 25000, maxPoints: 49999, gradient: "from-purple-500 to-pink-500", emoji: "👑" },
-  { name: "Champion", minPoints: 50000, maxPoints: 79999, gradient: "from-cyan-400 to-violet-500", emoji: "🏆" },
-  { name: "Padel Legend", minPoints: 80000, maxPoints: Infinity, gradient: "from-yellow-400 to-lime-400", emoji: "🌟" },
-];
-
-function getExpertLevel(playCredits: number) {
-  for (let i = EXPERT_LEVELS.length - 1; i >= 0; i--) {
-    if (playCredits >= EXPERT_LEVELS[i].minPoints) {
-      return EXPERT_LEVELS[i];
-    }
-  }
-  return EXPERT_LEVELS[0];
-}
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -138,7 +118,6 @@ Deno.serve(async (req) => {
       const last5 = matches?.slice(0, 5).map(m => m.result) || [];
 
       const playCredits = wallet?.play_credits || 0;
-      const expertLevel = getExpertLevel(playCredits);
 
       const responseData = {
         user_id: profile.user_id,
@@ -152,11 +131,6 @@ Deno.serve(async (req) => {
         booked_hours: Math.round(bookedHours * 10) / 10,
         booked_count: pastBookings?.length || 0,
         member_since: profile.created_at,
-        expert_level: {
-          name: expertLevel.name,
-          gradient: expertLevel.gradient,
-          emoji: expertLevel.emoji,
-        },
         match_history: {
           wins,
           losses,

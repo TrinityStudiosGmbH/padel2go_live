@@ -44,25 +44,31 @@
   },
   "paybackNew": {
     "badge": "P2G Points",
-    "titlePrefix": "How",
-    "titleHighlight": "payback works.",
+    "titleLine1": "You play padel",
+    "titleLine2": "and get rewarded for it.",
+    "lead": "Every paid booking earns you points. They add up automatically and you spend them in the marketplace on gear.",
+    "durationsTitle": "What every booking earns you",
+    "duration": "{{minutes}} minutes",
+    "pointsSuffix": "points",
     "steps": [
       {
-        "title": "Book",
-        "text": "Fixed points per booking — 1 h or 2 h of court time."
+        "title": "Play",
+        "text": "Book a court and pay. The points land in your account automatically."
       },
       {
-        "title": "Multiplier",
-        "text": "Your tier level adds on top — the higher your level, the more payback."
+        "title": "Collect",
+        "text": "Your points sit there until you need them. No expiry, no small print."
       },
       {
         "title": "Redeem",
-        "text": "In the marketplace for equipment — as a discount or for the full price."
+        "text": "Spend them in the marketplace on rackets, balls and gear — as a discount or for the full price."
       }
     ],
-    "tierTitlePrefix": "Your tier level =",
-    "tierTitleHighlight": "your multiplier",
-    "tierMeta": "{{count}} tiers · EU-wide ranking"
+    "rateLabel": "Exchange rate",
+    "rateValue": "{{points}} points = €1",
+    "cta": "Go to marketplace",
+    "ctaSecondary": "Book a court",
+    "fineprint": "Points are earned on bookings you actually pay for. Free hours and fully redeemed vouchers do not count."
   },
   "kiNew": {
     "comingSoon": "Coming Soon",
@@ -70,7 +76,12 @@
     "titlePrefix": "Coming next:",
     "titleHighlight": "AI match analysis.",
     "description": "The court camera captures your game automatically — 40+ metrics, auto clips and an objective skill rating after every match.",
-    "tags": ["Match IQ", "Speed & placement", "Auto clips", "Skill rating"],
+    "tags": [
+      "Match IQ",
+      "Speed & placement",
+      "Auto clips",
+      "Skill rating"
+    ],
     "newsletterDone": "You're on the list — we'll reach out at launch!",
     "emailPlaceholder": "your@email.com",
     "notifyCta": "Get notified",
@@ -101,10 +112,18 @@
     "primaryCta": "Book a court",
     "secondaryCta": "Download the app",
     "chips": [
-      { "text": "Free registration" },
-      { "text": "Booking in < 30 sec." },
-      { "text": "EU-wide P2G league" },
-      { "text": "Marketplace & rewards" }
+      {
+        "text": "Free registration"
+      },
+      {
+        "text": "Booking in < 30 sec."
+      },
+      {
+        "text": "EU-wide P2G league"
+      },
+      {
+        "text": "Marketplace & rewards"
+      }
     ]
   },
   "ecosystem": {
@@ -161,7 +180,15 @@
       "city": "Munich",
       "freeCourts": "3 courts free",
       "week": "Your week",
-      "days": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "days": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
       "ctaButton": "Book a court",
       "notification": {
         "title": "+50 P2G Points!",
@@ -204,10 +231,22 @@
     "titleHighlight": "real value",
     "subtitle": "From court time to exclusive equipment.",
     "items": [
-      { "title": "Court bookings", "sub": "Redeem court time" },
-      { "title": "Equipment", "sub": "Rackets, balls, accessories" },
-      { "title": "Partner rewards", "sub": "Drinks, snacks, discounts" },
-      { "title": "Events", "sub": "Exclusive tournament access" }
+      {
+        "title": "Court bookings",
+        "sub": "Redeem court time"
+      },
+      {
+        "title": "Equipment",
+        "sub": "Rackets, balls, accessories"
+      },
+      {
+        "title": "Partner rewards",
+        "sub": "Drinks, snacks, discounts"
+      },
+      {
+        "title": "Events",
+        "sub": "Exclusive tournament access"
+      }
     ],
     "bannerPlaceholder": "Marketplace banner — upload in the admin panel",
     "bannerAlt": "Marketplace",
@@ -221,17 +260,44 @@
     "description": "Wingfield AI cameras capture every ball, every step, every decision — fully automatic, without sensors, without manual input. The result: Match IQ reports, speed & placement data, head-to-head stats and a measurable skill benchmark straight in your app.",
     "poweredBy": "Powered by",
     "stats": [
-      { "value": "6+", "label": "Shot types analysed" },
-      { "value": "0–100", "label": "Drill score per exercise" },
-      { "value": "Auto", "label": "Scoring & clipping" }
+      {
+        "value": "6+",
+        "label": "Shot types analysed"
+      },
+      {
+        "value": "0–100",
+        "label": "Drill score per exercise"
+      },
+      {
+        "value": "Auto",
+        "label": "Scoring & clipping"
+      }
     ],
     "features": [
-      { "title": "Match IQ Report", "desc": "Winners, errors & successful strategies, automatically broken down after every match." },
-      { "title": "Speed & placement", "desc": "Speed and placement of every ball measured — see just how much pressure you build." },
-      { "title": "Head-to-head stats", "desc": "Direct comparison against every opponent: where do you win, where do you lose points?" },
-      { "title": "Skill Assessment (WSA)", "desc": "AI benchmark across serve, return, drive, drop, volley and dink — measurably standardised." },
-      { "title": "Auto clip generation", "desc": "Your best rallies are automatically cut and saved." },
-      { "title": "Drills & leaderboards", "desc": "Curated training sets from pros, scored with a drill score of 0–100. Community rankings included." }
+      {
+        "title": "Match IQ Report",
+        "desc": "Winners, errors & successful strategies, automatically broken down after every match."
+      },
+      {
+        "title": "Speed & placement",
+        "desc": "Speed and placement of every ball measured — see just how much pressure you build."
+      },
+      {
+        "title": "Head-to-head stats",
+        "desc": "Direct comparison against every opponent: where do you win, where do you lose points?"
+      },
+      {
+        "title": "Skill Assessment (WSA)",
+        "desc": "AI benchmark across serve, return, drive, drop, volley and dink — measurably standardised."
+      },
+      {
+        "title": "Auto clip generation",
+        "desc": "Your best rallies are automatically cut and saved."
+      },
+      {
+        "title": "Drills & leaderboards",
+        "desc": "Curated training sets from pros, scored with a drill score of 0–100. Community rankings included."
+      }
     ],
     "howItWorksTitle": "How it works",
     "howItWorksText": "At our locations, Wingfield cameras are installed that capture your game fully automatically — no QR code to scan, no setup. The AI analyses every rally in real time, recognises shot types, measures speed & placement and produces a complete Match IQ report after every match. On request, the Wingfield Skill Assessment (WSA) rates your level measurably across serve, return, drive, drop, volley and dink.",

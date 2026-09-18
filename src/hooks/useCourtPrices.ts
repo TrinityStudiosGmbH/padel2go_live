@@ -2,189 +2,83 @@ import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { QUERY_KEYS, createQueryKey } from "@/lib/queryKeys";
+import { QUERY_KEYS } from "@/lib/queryKeys";
 import { useAuth } from "@/hooks/useAuth";
 import type { CourtSport } from "@/components/booking/types";
 
+/** Eine Zeile der globalen Standardpreise. */
 export interface CourtPrice {
   id: string;
-  court_id: string | null;
   duration_minutes: number;
   price_cents: number;
+  sport: CourtSport;
 }
 
-// Noch nicht in queryKeys.ts gepflegt — bewusst lokal gehalten.
+/** Ausnahme eines Standorts — leeres Feld bedeutet "globaler Wert gilt". */
+export interface LocationPriceException {
+  id: string;
+  location_id: string;
+  sport: CourtSport;
+  price_60_cents: number | null;
+  price_90_cents: number | null;
+  price_120_cents: number | null;
+  payback_points_60: number | null;
+  note: string | null;
+}
+
 const BOOKING_RATES_QUERY_KEY = "booking-rates";
 const COURT_MIN_PRICE_QUERY_KEY = "court-min-price";
+const PRICE_EXCEPTIONS_QUERY_KEY = "location-price-exceptions";
+const COURT_BASE_PRICES_QUERY_KEY = "court-base-prices";
+
+/** Alle Preisabfragen auf einmal auffrischen — Preise hängen jetzt global zusammen. */
+function invalidatePricing(queryClient: ReturnType<typeof useQueryClient>) {
+  for (const key of [
+    [QUERY_KEYS.globalPrices],
+    [PRICE_EXCEPTIONS_QUERY_KEY],
+    [COURT_BASE_PRICES_QUERY_KEY],
+    [BOOKING_RATES_QUERY_KEY],
+    [COURT_MIN_PRICE_QUERY_KEY],
+    [QUERY_KEYS.locationMinPrice],
+  ]) {
+    queryClient.invalidateQueries({ queryKey: key });
+  }
+}
 
 /**
- * Fetch global fallback prices (court_id = null)
- *
- * Altlast: `court_prices.court_id` ist seit Migration 20251219134814 NOT NULL —
- * diese Abfrage kann nie treffen. Die "global"-Rolle übernehmen jetzt Bänder
- * mit `court_id IS NULL` (siehe useResolvedBookingRates / useCourtMinPrice).
+ * Die globalen Standardpreise. Sie gelten für alle Standorte; Abweichungen
+ * stehen in `location_price_exceptions`.
  */
 export function useGlobalPrices() {
   return useQuery({
     queryKey: [QUERY_KEYS.globalPrices],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("court_prices")
-        .select("*")
-        .is("court_id", null)
+        .select("id, duration_minutes, price_cents, sport")
+        .order("sport")
         .order("duration_minutes");
 
       if (error) throw error;
-      return data as CourtPrice[];
+      return (data ?? []) as CourtPrice[];
     },
-    staleTime: 10 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch prices for a specific court (court-specific only)
- */
-export function useCourtSpecificPrices(courtId: string | null) {
-  return useQuery({
-    queryKey: createQueryKey(QUERY_KEYS.courtPrices, courtId),
-    queryFn: async () => {
-      if (!courtId) return [];
-      const { data, error } = await supabase
-        .from("court_prices")
-        .select("*")
-        .eq("court_id", courtId)
-        .order("duration_minutes");
-
-      if (error) throw error;
-      return data as CourtPrice[];
-    },
-    enabled: !!courtId,
     staleTime: 5 * 60 * 1000,
   });
 }
 
-/**
- * Fetch prices for a court with fallback to global prices
- */
-export function useCourtPricesWithFallback(courtId: string | null) {
-  return useQuery({
-    queryKey: createQueryKey(QUERY_KEYS.courtPricesWithFallback, courtId),
-    queryFn: async () => {
-      if (!courtId) return [];
-
-      // First try court-specific prices
-      const { data: courtPrices, error: courtError } = await supabase
-        .from("court_prices")
-        .select("*")
-        .eq("court_id", courtId)
-        .order("duration_minutes");
-
-      if (courtError) throw courtError;
-
-      if (courtPrices && courtPrices.length > 0) {
-        return courtPrices as CourtPrice[];
-      }
-
-      // Fallback to global prices
-      const { data: globalPrices, error: globalError } = await supabase
-        .from("court_prices")
-        .select("*")
-        .is("court_id", null)
-        .order("duration_minutes");
-
-      if (globalError) throw globalError;
-      return (globalPrices || []) as CourtPrice[];
-    },
-    enabled: !!courtId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Fetch the minimum price (60 min) for a location across all courts
- * Falls back to global price if no court-specific prices exist
- */
-export function useLocationMinPrice(locationId: string | null) {
-  return useQuery({
-    queryKey: createQueryKey(QUERY_KEYS.locationMinPrice, locationId),
-    queryFn: async () => {
-      if (!locationId) return null;
-
-      // Get all courts for this location
-      const { data: courts, error: courtsError } = await supabase
-        .from("courts")
-        .select("id")
-        .eq("location_id", locationId)
-        .eq("is_active", true);
-
-      if (courtsError) throw courtsError;
-
-      const courtIds = courts?.map(c => c.id) || [];
-
-      if (courtIds.length > 0) {
-        // Try to find court-specific prices for 60 min
-        const { data: courtPrices, error: pricesError } = await supabase
-          .from("court_prices")
-          .select("price_cents")
-          .in("court_id", courtIds)
-          .eq("duration_minutes", 60)
-          .order("price_cents", { ascending: true })
-          .limit(1);
-
-        if (pricesError) throw pricesError;
-
-        if (courtPrices && courtPrices.length > 0) {
-          return courtPrices[0].price_cents;
-        }
-      }
-
-      // Fallback to global 60 min price
-      const { data: globalPrice, error: globalError } = await supabase
-        .from("court_prices")
-        .select("price_cents")
-        .is("court_id", null)
-        .eq("duration_minutes", 60)
-        .maybeSingle();
-
-      if (globalError) throw globalError;
-      return globalPrice?.price_cents ?? null;
-    },
-    enabled: !!locationId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Upsert prices for a court (all 3 durations)
- */
-export function useUpsertCourtPrices() {
+export function useUpsertGlobalPrices() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (prices: Array<{ court_id: string; duration_minutes: number; price_cents: number }>) => {
-      // Delete existing prices for this court first, then insert new ones
-      const courtId = prices[0]?.court_id;
-      if (!courtId) throw new Error("No court_id provided");
-
-      const { error: deleteError } = await supabase
+    mutationFn: async (rows: Array<{ sport: CourtSport; duration_minutes: number; price_cents: number }>) => {
+      const { error } = await (supabase as any)
         .from("court_prices")
-        .delete()
-        .eq("court_id", courtId);
-
-      if (deleteError) throw deleteError;
-
-      const { error: insertError } = await supabase
-        .from("court_prices")
-        .insert(prices);
-
-      if (insertError) throw insertError;
+        .upsert(rows, { onConflict: "sport,duration_minutes" });
+      if (error) throw error;
     },
-    onSuccess: (_, variables) => {
-      const courtId = variables[0]?.court_id;
-      queryClient.invalidateQueries({ queryKey: createQueryKey(QUERY_KEYS.courtPrices, courtId) });
-      queryClient.invalidateQueries({ queryKey: createQueryKey(QUERY_KEYS.courtPricesWithFallback, courtId) });
-      queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.locationMinPrice] });
-      toast.success("Preise gespeichert");
+    onSuccess: () => {
+      invalidatePricing(queryClient);
+      toast.success("Standardpreise gespeichert");
     },
     onError: (error: Error) => {
       toast.error("Fehler beim Speichern", { description: error.message });
@@ -192,30 +86,146 @@ export function useUpsertCourtPrices() {
   });
 }
 
-/**
- * Get price for a specific duration from a list of court prices
- */
-export function getPriceFromList(prices: CourtPrice[] | undefined, durationMinutes: number): number | null {
-  if (!prices || prices.length === 0) {
-    return null; // No prices configured
-  }
-  const price = prices.find(p => p.duration_minutes === durationMinutes);
-  return price?.price_cents ?? null;
+export function useLocationPriceExceptions() {
+  return useQuery({
+    queryKey: [PRICE_EXCEPTIONS_QUERY_KEY],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("location_price_exceptions")
+        .select("id, location_id, sport, price_60_cents, price_90_cents, price_120_cents, payback_points_60, note")
+        .order("created_at");
+
+      if (error) throw error;
+      return (data ?? []) as LocationPriceException[];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useUpsertLocationPriceException() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...row }: Omit<LocationPriceException, "id"> & { id?: string }) => {
+      // Bewusst kein upsert: beim Bearbeiten darf die Sportart wechseln, dann
+      // trifft der Konflikt-Schluessel (location_id, sport) keine Zeile mehr und
+      // Postgres wuerde stattdessen einfuegen und am Primaerschluessel scheitern.
+      const query = id
+        ? (supabase as any).from("location_price_exceptions").update(row).eq("id", id)
+        : (supabase as any).from("location_price_exceptions").insert(row);
+      const { error } = await query;
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidatePricing(queryClient);
+      toast.success("Ausnahme gespeichert");
+    },
+    onError: (error: Error) => {
+      toast.error("Fehler beim Speichern", { description: error.message });
+    },
+  });
+}
+
+export function useDeleteLocationPriceException() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await (supabase as any)
+        .from("location_price_exceptions")
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      invalidatePricing(queryClient);
+      toast.success("Ausnahme gelöscht — es gilt wieder der Standardpreis");
+    },
+    onError: (error: Error) => {
+      toast.error("Fehler beim Löschen", { description: error.message });
+    },
+  });
 }
 
 /**
- * Preis + Punkte-Faktor eines Slots, aufgelöst durch die Datenbank
- * (Zeitfenster-Band schlägt court_prices, sonst heutiges Verhalten).
+ * Preise eines Courts ohne Zeitfenster: Standort-Ausnahme, sonst globaler
+ * Standardpreis. Genau die Kette, die auch `resolve_booking_rate` unterhalb der
+ * Bänder geht — vorher fiel die Buchungsseite auf globale Werte zurück, die die
+ * Kasse nicht kannte, und die Buchung scheiterte erst beim Bezahlen.
  */
+export function useCourtBasePrices(courtId: string | null) {
+  return useQuery({
+    queryKey: [COURT_BASE_PRICES_QUERY_KEY, courtId],
+    queryFn: async (): Promise<CourtPrice[]> => {
+      if (!courtId) return [];
+
+      const { data: court, error: courtError } = await (supabase as any)
+        .from("courts")
+        .select("location_id, sport")
+        .eq("id", courtId)
+        .maybeSingle();
+      if (courtError) throw courtError;
+      if (!court) return [];
+
+      const sport = (court.sport ?? "padel") as CourtSport;
+      const durations = sport === "tennis" ? [60] : [60, 90, 120];
+
+      const [{ data: globals, error: globalError }, { data: exception }] = await Promise.all([
+        (supabase as any)
+          .from("court_prices")
+          .select("id, duration_minutes, price_cents, sport")
+          .eq("sport", sport),
+        (supabase as any)
+          .from("location_price_exceptions")
+          .select("price_60_cents, price_90_cents, price_120_cents")
+          .eq("location_id", court.location_id)
+          .eq("sport", sport)
+          .maybeSingle(),
+      ]);
+      if (globalError) throw globalError;
+
+      const exceptionFor = (duration: number): number | null => {
+        if (!exception) return null;
+        if (duration === 60) return exception.price_60_cents ?? null;
+        if (duration === 90) return exception.price_90_cents ?? null;
+        if (duration === 120) return exception.price_120_cents ?? null;
+        return null;
+      };
+
+      return durations
+        .map((duration) => {
+          const global = ((globals ?? []) as CourtPrice[]).find((p) => p.duration_minutes === duration);
+          const price = exceptionFor(duration) ?? global?.price_cents ?? null;
+          if (price === null) return null;
+          return {
+            id: `${courtId}-${duration}`,
+            duration_minutes: duration,
+            price_cents: price,
+            sport,
+          } satisfies CourtPrice;
+        })
+        .filter((p): p is CourtPrice => p !== null);
+    },
+    enabled: !!courtId,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+/** Preis einer Dauer aus einer Preisliste. */
+export function getPriceFromList(prices: CourtPrice[] | undefined, durationMinutes: number): number | null {
+  if (!prices || prices.length === 0) return null;
+  return prices.find((p) => p.duration_minutes === durationMinutes)?.price_cents ?? null;
+}
+
+/** Preis + Punkte eines Slots, aufgelöst durch die Datenbank. */
 export interface ResolvedBookingRate {
   /** Startzeitpunkt wie von der DB zurückgegeben (ISO). */
   startTime: string;
   /** Der zu zahlende Preis — bei Vereinsmitgliedern bereits die Mitglieder-Kondition. */
   priceCents: number | null;
-  /** 1 = kein Punkte-Band aktiv. */
-  pointsMultiplier: number;
+  /** Punkte für diese Buchung: feste Zahl je Dauer, 0 bei Tennis. */
+  paybackPoints: number;
   priceBandName: string | null;
-  pointsBandName: string | null;
   /** Externenpreis vor Mitglieder-Kondition. Gleich priceCents, wenn kein Vorteil greift. */
   basePriceCents: number | null;
   /** 'home' = Court des eigenen Vereins, 'away' = fremder Court, null = kein Mitglied. */
@@ -229,9 +239,8 @@ export interface ResolvedBookingRate {
 interface RawBookingRateRow {
   start_time: string;
   price_cents: number | null;
-  points_multiplier: number | string | null;
+  payback_points: number | null;
   price_band_name: string | null;
-  points_band_name: string | null;
   base_price_cents: number | null;
   member_scope: string | null;
   member_discount_cents: number | null;
@@ -248,8 +257,8 @@ function localDateKey(value: string | Date): string {
 }
 
 /**
- * Löst Preis + Punkte-Faktor für ALLE Slots eines Tages in EINEM Request auf
- * (RPC `resolve_booking_rates_batch`). Die Bandlogik bleibt in der Datenbank,
+ * Löst Preis + Punkte für ALLE Slots eines Tages in EINEM Request auf
+ * (RPC `resolve_booking_rates_batch`). Die Logik bleibt in der Datenbank,
  * damit Anzeige und Checkout nicht auseinanderlaufen.
  */
 export function useResolvedBookingRates({
@@ -282,14 +291,8 @@ export function useResolvedBookingRates({
       return ((data ?? []) as RawBookingRateRow[]).map((row) => ({
         startTime: row.start_time,
         priceCents: row.price_cents ?? null,
-        // Kein `|| 1`: ein Band mit Multiplikator 0 (= keine Punkte) ist erlaubt und
-        // wuerde davon faelschlich zu x1. Gleiche Pruefung wie in den Edge Functions.
-        pointsMultiplier: (() => {
-          const raw = Number(row.points_multiplier ?? 1);
-          return Number.isFinite(raw) && raw >= 0 ? raw : 1;
-        })(),
+        paybackPoints: Number(row.payback_points ?? 0) || 0,
         priceBandName: row.price_band_name,
-        pointsBandName: row.points_band_name,
         basePriceCents: row.base_price_cents ?? row.price_cents ?? null,
         memberScope: (row.member_scope as "home" | "away" | null) ?? null,
         memberDiscountCents: Number(row.member_discount_cents ?? 0) || 0,
@@ -332,38 +335,10 @@ export function getRateForStart(
   return ratesByStart.get(new Date(start).getTime());
 }
 
-/** "2" bzw. "1,5" — de-DE, ohne überflüssige Nachkommastellen. */
-export function formatPointsMultiplier(multiplier: number): string {
-  return new Intl.NumberFormat("de-DE", { maximumFractionDigits: 2 }).format(multiplier);
-}
-
 /**
- * Günstigster Preis eines Courts über alle Dauern UND aktiven Bänder
- * (RPC `court_min_price_cents`) — hält die "ab X €"-Anzeige ehrlich.
- */
-export function useCourtMinPrice(courtId: string | null) {
-  return useQuery({
-    queryKey: [COURT_MIN_PRICE_QUERY_KEY, courtId],
-    queryFn: async (): Promise<number | null> => {
-      const { data, error } = await (supabase as any).rpc("court_min_price_cents", {
-        p_court_id: courtId,
-      });
-
-      if (error) throw error;
-      return (data as number | null) ?? null;
-    },
-    enabled: !!courtId,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-/**
- * Günstigster Preis über die Courts EINER Sportart an einem Standort, inkl. Bänder.
- * Liefert die RPC nichts, greift das bisherige Verhalten (günstigster
- * 60-Minuten-Preis aus court_prices) statt einer leeren Anzeige.
- *
- * Die Sportart ist entscheidend: ohne Filter würde ein günstiger Tennis-Court
- * als Padel-"ab X €" auf der Standortkarte landen.
+ * Günstigster Preis über die Courts EINER Sportart an einem Standort, inkl.
+ * Zeitfenster und Standort-Ausnahme. Die Sportart ist entscheidend: ohne Filter
+ * würde ein günstiger Tennis-Court als Padel-"ab X €" auf der Karte landen.
  */
 export async function fetchLocationMinPriceCents(
   courtIds: string[],
@@ -371,14 +346,12 @@ export async function fetchLocationMinPriceCents(
 ): Promise<number | null> {
   if (courtIds.length === 0) return null;
 
-  // `sport` fehlt noch in den generierten Typen -> Client-Cast wie anderswo im Repo.
   const { data: sportCourts, error: sportError } = await (supabase as any)
     .from("courts")
     .select("id")
     .in("id", courtIds)
     .eq("sport", sport);
 
-  // Fehler (z. B. Spalte noch nicht vorhanden): lieber der bisherige Preis als gar keiner.
   const scopedIds = sportError
     ? courtIds
     : ((sportCourts ?? []) as { id: string }[]).map((court) => court.id);
@@ -395,18 +368,15 @@ export async function fetchLocationMinPriceCents(
     }),
   );
 
-  const bandAware = results.filter((p): p is number => p !== null);
-  if (bandAware.length > 0) {
-    return Math.min(...bandAware);
-  }
+  const resolved = results.filter((p): p is number => p !== null);
+  if (resolved.length > 0) return Math.min(...resolved);
 
-  const { data: courtPrices } = await supabase
+  const { data: globalPrice } = await (supabase as any)
     .from("court_prices")
     .select("price_cents")
-    .in("court_id", scopedIds)
+    .eq("sport", sport)
     .eq("duration_minutes", 60)
-    .order("price_cents", { ascending: true })
-    .limit(1);
+    .maybeSingle();
 
-  return courtPrices?.[0]?.price_cents ?? null;
+  return globalPrice?.price_cents ?? null;
 }

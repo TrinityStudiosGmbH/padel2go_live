@@ -7,7 +7,6 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useAccountData } from "@/hooks/useAccountData";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
-import { ExpertLevelInfoPopover } from "@/components/p2g";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -35,11 +34,6 @@ import {
   Gamepad2,
   User
 } from "lucide-react";
-import { 
-  getExpertLevel, 
-  getProgressToNextLevel, 
-  getExpertLevelEmoji
-} from "@/lib/expertLevels";
 import { format } from "date-fns";
 import { de, enUS } from "date-fns/locale";
 import { motion } from "framer-motion";
@@ -73,9 +67,6 @@ function RankingTable({ title, icon, rankings, emptyMessage }: RankingTableProps
         {rankings.length > 0 ? (
           <div className="space-y-2">
             {rankings.map((player, index) => {
-              const level = getExpertLevel(player.play_credits);
-              const emoji = getExpertLevelEmoji(level.name);
-              
               return (
                 <motion.div
                   key={`${title}-rank-${player.rank}`}
@@ -83,8 +74,8 @@ function RankingTable({ title, icon, rankings, emptyMessage }: RankingTableProps
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: index * 0.1 }}
                   className={`flex items-center justify-between p-3 rounded-lg transition-all ${
-                    player.isCurrentUser 
-                      ? `bg-gradient-to-r ${level.bgGradient} ${level.borderColor} border` 
+                    player.isCurrentUser
+                      ? "border border-primary/35 bg-primary/[0.08]"
                       : "bg-background/50 border border-border/30"
                   }`}
                 >
@@ -111,9 +102,7 @@ function RankingTable({ title, icon, rankings, emptyMessage }: RankingTableProps
                             <span className="ml-2 text-xs text-primary">{t("leaguePage.rankings.you")}</span>
                           )}
                         </span>
-                        <span className="text-lg">{emoji}</span>
                       </div>
-                      <span className={`text-xs ${level.textColor}`}>{level.name}</span>
                     </div>
                   </div>
                   
@@ -149,10 +138,6 @@ const DashboardLeague = () => {
   const skillLevel = skillStats?.skill_level || 0;
   const userAge = profile?.age || null;
 
-  // Get Expert Level based on play_credits
-  const expertLevel = getExpertLevel(playCredits);
-  const progress = getProgressToNextLevel(playCredits);
-  const levelEmoji = getExpertLevelEmoji(expertLevel.name);
 
   const isLoading = isAccountLoading || isSkillsLoading || isRankingsLoading || isWLStatsLoading;
 
@@ -161,11 +146,6 @@ const DashboardLeague = () => {
 
   // Use API rankings data, mapping is_current_user to isCurrentUser for display
   const rankingsGermany: DisplayRankingEntry[] = (rankings?.top_germany || []).map(r => ({
-    ...r,
-    isCurrentUser: r.is_current_user
-  }));
-
-  const rankingsInTier: DisplayRankingEntry[] = (rankings?.top_in_tier || []).map(r => ({
     ...r,
     isCurrentUser: r.is_current_user
   }));
@@ -186,8 +166,8 @@ const DashboardLeague = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3">
-              <div className={`p-2 rounded-xl bg-gradient-to-br ${expertLevel.gradient} shadow-lg`}>
-                <Trophy className="h-6 w-6 text-white" />
+              <div className="rounded-xl border border-primary/20 bg-gradient-to-br from-primary/20 to-primary/5 p-2">
+                <Trophy className="h-6 w-6 text-primary" />
               </div>
               {t("leaguePage.title")}
             </h1>
@@ -203,82 +183,35 @@ const DashboardLeague = () => {
           </div>
         ) : (
           <>
-            {/* Main Stats Card - Expert Level Header (same as P2GPointsHeader) */}
+            {/* Punktestand und Ranglisten-Kennzahlen */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.4 }}
             >
-              <Card className={`overflow-hidden border ${expertLevel.borderColor} relative`}>
-                {/* Tier-based gradient background */}
-                <div className={`absolute inset-0 bg-gradient-to-br ${expertLevel.bgGradient}`} />
-                <div className={`absolute top-0 right-0 w-64 h-64 bg-gradient-to-br ${expertLevel.gradient} opacity-10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2`} />
-                <div className={`absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-br ${expertLevel.gradient} opacity-5 rounded-full blur-3xl translate-y-1/2 -translate-x-1/2`} />
+              <Card className="relative overflow-hidden border border-primary/25">
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.07] to-transparent" />
+                <div className="absolute right-0 top-0 h-64 w-64 -translate-y-1/2 translate-x-1/2 rounded-full bg-primary/20 opacity-20 blur-3xl" />
                 
                 <CardContent className="p-6 relative">
                   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                     
-                    {/* Expert Level Badge + Progress - LEFT SIDE */}
+                    {/* Punktestand — LINKE SEITE */}
                     <motion.div 
                       initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
                       transition={{ delay: 0.1 }}
                       className="lg:col-span-7 space-y-4"
                     >
-                      {/* Large Expert Level Badge */}
-                      <div className="flex items-center gap-4">
-                        <div className={`p-4 rounded-2xl bg-gradient-to-br ${expertLevel.gradient} shadow-lg`}>
-                          <Trophy className="h-10 w-10 text-white" />
-                        </div>
-                        <div>
+                      <div className="rounded-xl border border-border/50 bg-background/50 p-4 backdrop-blur-sm">
+                        <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">{t("leaguePage.yourExpertLevel")}</span>
-                            <ExpertLevelInfoPopover currentPlayCredits={playCredits} />
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-3xl">{levelEmoji}</span>
-                            <span className={`text-3xl font-bold bg-gradient-to-r ${expertLevel.gradient} bg-clip-text text-transparent`}>
-                              {expertLevel.name}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Play Credits Progress Bar */}
-                      <div className="p-4 rounded-xl bg-background/50 backdrop-blur-sm border border-border/50">
-                        <div className="flex items-center justify-between mb-3">
-                          <div className="flex items-center gap-2">
-                            <Zap className="h-5 w-5 text-green-500" />
+                            <Zap className="h-5 w-5 text-primary" />
                             <span className="font-semibold">{t("leaguePage.playCredits")}</span>
                           </div>
-                          <span className="text-2xl font-bold text-green-500">
+                          <span className="font-stat text-3xl font-bold text-primary">
                             <AnimatedCounter value={playCredits} />
                           </span>
-                        </div>
-                        
-                        {/* Progress Bar to Next Level */}
-                        <div className="space-y-2">
-                          <Progress 
-                            value={progress.percentage} 
-                            className="h-4 bg-muted/50"
-                          />
-                          <div className="flex justify-between text-sm">
-                            <span className="text-muted-foreground">
-                              {playCredits.toLocaleString()} / {progress.target.toLocaleString()}
-                            </span>
-                            {progress.nextLevelName && (
-                              <span className={`font-medium flex items-center gap-1 ${expertLevel.textColor}`}>
-                                <Target className="h-3.5 w-3.5" />
-                                {t("leaguePage.remaining", { count: progress.remaining.toLocaleString(), level: progress.nextLevelName })}
-                              </span>
-                            )}
-                            {!progress.nextLevelName && (
-                              <span className="font-medium text-yellow-400 flex items-center gap-1">
-                                <Sparkles className="h-3.5 w-3.5" />
-                                {t("leaguePage.maxLevel")}
-                              </span>
-                            )}
-                          </div>
                         </div>
                       </div>
                     </motion.div>
@@ -342,21 +275,13 @@ const DashboardLeague = () => {
             </motion.div>
 
             {/* Three Ranking Tables */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               {/* Top 5 Germany */}
               <RankingTable
                 title={t("leaguePage.rankings.germanyTitle")}
                 icon={<Globe className="h-5 w-5 text-blue-500" />}
                 rankings={rankingsGermany}
                 emptyMessage={t("leaguePage.rankings.germanyEmpty")}
-              />
-
-              {/* Top 5 in Expert Level */}
-              <RankingTable
-                title={t("leaguePage.rankings.tierTitle", { level: expertLevel.name })}
-                icon={<UserCircle className="h-5 w-5 text-primary" />}
-                rankings={rankingsInTier}
-                emptyMessage={t("leaguePage.rankings.tierEmpty")}
               />
 
               {/* Top 5 in Age Group */}

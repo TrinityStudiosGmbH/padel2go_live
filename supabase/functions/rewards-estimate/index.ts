@@ -25,8 +25,6 @@ interface EstimateResponse {
   total_points: number;
   breakdown: RewardBreakdown[];
   disclaimers: string[];
-  multiplier?: number;
-  level_name?: string;
 }
 
 const logStep = (step: string, details?: Record<string, unknown>) => {
@@ -79,47 +77,22 @@ serve(async (req) => {
     }
     const durationBucket = durationMin >= 120 ? 120 : durationMin >= 90 ? 90 : 60;
 
-    // ── Admin-configurable fixed payback per booking length (60 / 90 / 120 min) ──
-    const { data: settings } = await supabaseAdmin
-      .from("site_settings")
-      .select("payback_points_60min, payback_points_90min, payback_points_120min")
-      .eq("id", "global")
-      .maybeSingle();
-    const rate60 = Number((settings as any)?.payback_points_60min ?? 100) || 0;
-    const rate90 = Number((settings as any)?.payback_points_90min ?? 150) || 0;
-    const rate120 = Number((settings as any)?.payback_points_120min ?? 200) || 0;
-    const base = durationMin >= 120 ? rate120 : durationMin >= 90 ? rate90 : rate60;
-
-    // ── Time-window band factor, resolved for the booking START time ──────
-    // Same resolution as the payback credit in stripe-webhook, so the preview
-    // can never differ from what is credited after payment.
-    let bandMultiplier = 1;
-    let pointsBandName: string | null = null;
+    // ── Feste Punktzahl je Dauer, aufgeloest von der Datenbank ────────────
+    // Exakt dieselbe Funktion, die der Stripe-Webhook nach der Zahlung aufruft.
+    // Damit kann die Vorschau nie etwas anderes versprechen als spaeter ankommt.
+    let total_points = 0;
     let courtSport: string | null = null;
-    if (courtId && startTime) {
-      try {
-        const { data: rateRows, error: rateError } = await supabaseAdmin.rpc("resolve_booking_rate", {
-          p_court_id: courtId,
-          p_start: startTime,
-          p_duration_minutes: durationBucket,
-        });
-        if (rateError) {
-          logStep("Band lookup failed — continuing with x1.0", { error: rateError.message });
-        } else {
-          const rate = Array.isArray(rateRows) ? (rateRows as any[])[0] : (rateRows as any);
-          const rawMult = Number(rate?.points_multiplier);
-          if (Number.isFinite(rawMult) && rawMult >= 0) bandMultiplier = rawMult;
-          pointsBandName = (rate?.points_band_name as string | null) ?? null;
-          courtSport = (rate?.court_sport as string | null) ?? null;
-        }
-      } catch (rateErr) {
-        logStep("Band lookup failed — continuing with x1.0", { error: (rateErr as Error).message });
+    if (courtId) {
+      const { data: pointsData, error: pointsError } = await supabaseAdmin.rpc(
+        "resolve_booking_points",
+        { p_court_id: courtId, p_duration_minutes: durationBucket },
+      );
+      if (pointsError) {
+        logStep("Points lookup failed — showing none", { error: pointsError.message });
+      } else {
+        total_points = Number(pointsData ?? 0) || 0;
       }
-    }
 
-    // Sportart nie am Band-Lookup hängen lassen: schlägt die RPC fehl, wird sie
-    // direkt am Court gelesen — sonst verspräche die Vorschau Tennis Punkte.
-    if (courtId && !courtSport) {
       const { data: courtRow } = await supabaseAdmin
         .from("courts")
         .select("sport")
@@ -128,32 +101,6 @@ serve(async (req) => {
       courtSport = ((courtRow as any)?.sport as string | null) ?? null;
     }
     const isTennis = courtSport === "tennis";
-
-    // ── Expert-level multiplier (based on user's lifetime credits) ────────
-    const { data: multData } = await supabaseAdmin.rpc("get_user_level_multiplier", {
-      p_user_id: user.id,
-    });
-    const multiplier = Number(multData ?? 1) || 1;
-
-    // Current level name (for display)
-    const { data: wallet } = await supabaseAdmin
-      .from("wallets")
-      .select("lifetime_credits")
-      .eq("user_id", user.id)
-      .maybeSingle();
-    const lifetime = Number((wallet as any)?.lifetime_credits ?? 0);
-    const { data: lvl } = await supabaseAdmin
-      .from("expert_levels_config")
-      .select("name")
-      .lte("min_points", lifetime)
-      .or(`max_points.is.null,max_points.gte.${lifetime}`)
-      .order("min_points", { ascending: false })
-      .limit(1)
-      .maybeSingle();
-    const levelName = (lvl as any)?.name as string | undefined;
-
-    // Tennis sammelt keine P2G-Punkte (Produktregel) — nicht als Band-Faktor 0 darstellen.
-    const total_points = isTennis ? 0 : Math.round(base * bandMultiplier * multiplier);
 
     const breakdown: RewardBreakdown[] = [];
     if (isTennis) {
@@ -164,33 +111,12 @@ serve(async (req) => {
         description: "Tennis-Buchungen sammeln keine P2G-Punkte",
       });
     } else {
-      // Deltas are derived from the running subtotal so the rows always add up to total_points.
-      const withBand = Math.round(base * bandMultiplier);
-      const bandDelta = withBand - base;
-      const levelDelta = total_points - withBand;
-
       breakdown.push({
         key: "BOOKING_PAYBACK",
         title: "Buchungs-Payback",
-        points: base,
+        points: total_points,
         description: `${durationBucket} Min Buchung`,
       });
-      if (bandDelta !== 0) {
-        breakdown.push({
-          key: "TIME_BAND",
-          title: `Zeitfenster-Bonus ×${bandMultiplier}${pointsBandName ? ` (${pointsBandName})` : ""}`,
-          points: bandDelta,
-          description: "Bonus für dieses Zeitfenster",
-        });
-      }
-      if (multiplier !== 1 && levelDelta !== 0) {
-        breakdown.push({
-          key: "LEVEL_MULTIPLIER",
-          title: `Level-Bonus ×${multiplier}${levelName ? ` (${levelName})` : ""}`,
-          points: levelDelta,
-          description: "Dein Expert-Level-Multiplikator",
-        });
-      }
     }
 
     const disclaimers: string[] = [];
@@ -204,10 +130,8 @@ serve(async (req) => {
       total_points,
       breakdown,
       disclaimers,
-      multiplier,
-      level_name: levelName,
     };
-    logStep("Estimate complete", { total_points, base, bandMultiplier, pointsBandName, multiplier, levelName, courtSport });
+    logStep("Estimate complete", { total_points, durationBucket, courtSport });
 
     return new Response(JSON.stringify(response), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },

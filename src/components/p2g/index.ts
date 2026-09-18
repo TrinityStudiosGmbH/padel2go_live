@@ -1,6 +1,4 @@
-export { P2GPointsHeader } from "./P2GPointsHeader";
 export { P2GPointsHeaderSimple } from "./P2GPointsHeaderSimple";
-export { ExpertLevelInfoPopover } from "./ExpertLevelInfoPopover";
 export { SkillLast5Section } from "./SkillLast5Section";
 export { RewardCatalogDrawer } from "./RewardCatalogDrawer";
 export { RewardCard } from "./RewardCard";
@@ -13,7 +11,4 @@ export { FriendsActivityFeed } from "./FriendsActivityFeed";
 export { ReferralShareCard } from "./ReferralShareCard";
 export { MyGamesSection } from "./MyGamesSection";
 export { MatchDetailDrawer } from "./MatchDetailDrawer";
-export { LevelUpAnimation } from "./LevelUpAnimation";
 export { DailyClaimButton } from "./DailyClaimButton";
-export { MarketplaceCreditsHeader } from "./MarketplaceCreditsHeader";
-export { ExpertLevelsGrid } from "./ExpertLevelsGrid";

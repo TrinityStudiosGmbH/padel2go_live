@@ -5,7 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 import { setHours, setMinutes, addMinutes } from "date-fns";
 import { useBookingSlots } from "@/hooks/useBookingSlots";
-import { useCourtPricesWithFallback, getPriceFromList, useResolvedBookingRates, getRateForStart } from "@/hooks/useCourtPrices";
+import { useCourtBasePrices, getPriceFromList, useResolvedBookingRates, getRateForStart } from "@/hooks/useCourtPrices";
 import { invokeEdgeFunction } from "@/lib/edgeFunctionUtils";
 import type { Court, CourtSport, TimeSlot } from "@/components/booking/types";
 import { DEFAULT_COURT_SPORT, TENNIS_DURATION_MINUTES, courtSport } from "@/components/booking/types";
@@ -31,8 +31,8 @@ export function useBookingLocation(slug: string | undefined) {
   const [showGuestModal, setShowGuestModal] = useState(false);
   const [guestBookingInProgress, setGuestBookingInProgress] = useState(false);
 
-  // Fetch court prices with fallback to global prices
-  const { data: courtPrices, isLoading: pricesLoading } = useCourtPricesWithFallback(selectedCourt);
+  // Standardpreis des Courts: Standort-Ausnahme, sonst globaler Preis.
+  const { data: courtPrices, isLoading: pricesLoading } = useCourtBasePrices(selectedCourt);
 
   const { availableSlots, loadingSlots, refetchSlots } = useBookingSlots({
     location,
@@ -42,9 +42,10 @@ export function useBookingLocation(slug: string | undefined) {
     selectedDuration,
   });
   
-  // Calculate price from court-specific prices
-  const priceCents = getPriceFromList(courtPrices, selectedDuration);
-  const hasPrices = priceCents !== null;
+  // Preis ohne Zeitfenster. Der endgueltige Preis eines Slots kommt weiter unten
+  // aus der Datenbank und kann davon abweichen.
+  const basePriceCents = getPriceFromList(courtPrices, selectedDuration);
+  const hasPrices = basePriceCents !== null;
 
   // Identische Umrechnung wie in handleBooking — Anzeige und Buchung müssen
   // denselben Zeitpunkt meinen, sonst greift ein anderes Zeitfenster-Band.
@@ -62,6 +63,21 @@ export function useBookingLocation(slug: string | undefined) {
     startTimes: slotStartTimes,
     durationMinutes: selectedDuration,
   });
+
+  // Der Preis des GEWAEHLTEN Slots. Vorher zeigte die Zusammenfassung den rohen
+  // Standardpreis und ignorierte damit Zeitfenster und Vereinskondition, obwohl
+  // die Dauer-Knoepfe direkt darueber den richtigen Preis anzeigten.
+  const selectedSlotStart = useMemo(() => {
+    if (!selectedSlot) return null;
+    const [hours, minutes] = selectedSlot.time.split(':').map(Number);
+    return setMinutes(setHours(selectedDate, hours), minutes);
+  }, [selectedSlot, selectedDate]);
+
+  const selectedRate = selectedSlotStart ? getRateForStart(ratesByStart, selectedSlotStart) : undefined;
+  const priceCents = selectedRate?.priceCents ?? basePriceCents;
+  // Punkte nur ankuendigen, wenn auch bezahlt wird. Bei 0 EUR (z. B. Tennis am
+  // Heimstandort oder Freikontingent) vergibt der Webhook keine.
+  const paybackPoints = (priceCents ?? 0) > 0 ? selectedRate?.paybackPoints ?? 0 : 0;
 
   const fetchLocation = useCallback(async () => {
     if (!slug) return;
@@ -323,6 +339,7 @@ export function useBookingLocation(slug: string | undefined) {
     availableSlots,
     loadingSlots,
     priceCents,
+    paybackPoints,
     hasPrices,
     courtPrices,
     ratesByStart,

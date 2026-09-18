@@ -26,7 +26,6 @@ import {
   Radio,
   Building2
 } from "lucide-react";
-import { getExpertLevel as getExpertLevelFromConfig, getExpertLevelEmoji } from "@/lib/expertLevels";
 import leagueHero from "@/assets/league-hero.jpg";
 import leagueP2gLogo from "@/assets/league-p2g-logo.png";
 
@@ -39,16 +38,6 @@ import leagueP2gLogo from "@/assets/league-p2g-logo.png";
 
 // League Punktesystem – icons only; copy comes from i18n
 const leaguePointIcons = [Trophy, TrendingUp, Target, Flame, Crown, Sparkles];
-
-// Use centralized expert level config
-const getExpertLevel = (points: number) => {
-  const level = getExpertLevelFromConfig(points);
-  return {
-    name: level.name,
-    color: `bg-gradient-to-r ${level.gradient}`,
-    textColor: level.name === "Padel Legend" ? "text-gray-900" : "text-white",
-  };
-};
 
 // League Vorteile – icons only; copy comes from i18n
 const leagueAdvantageIcons = [Users, TrendingUp, Globe, Star];
@@ -250,7 +239,6 @@ const League = () => {
                       { rank: 4, name: "BerlinBaller", points: 2050, trend: "-5" },
                       { rank: 5, name: t("ranking.you"), points: 890, trend: "+67", isUser: true },
                     ].map((player) => {
-                      const level = getExpertLevel(player.points);
                       return (
                         <div 
                           key={player.rank} 
@@ -267,10 +255,6 @@ const League = () => {
                           <div className="flex-1 min-w-0">
                             <span className={`font-medium ${player.isUser ? 'text-primary' : ''}`}>
                               {player.name}
-                            </span>
-                            {/* Expert Level Badge */}
-                            <span className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold ${level.color} ${level.textColor}`}>
-                              {level.name}
                             </span>
                           </div>
                           <span className={`text-xs ${player.trend.startsWith('+') ? 'text-green-500' : 'text-red-500'}`}>

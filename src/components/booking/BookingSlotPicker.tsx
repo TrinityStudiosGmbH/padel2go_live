@@ -9,7 +9,6 @@ import { SLOT_DURATIONS } from "@/types/constants";
 import {
   getPriceFromList,
   getRateForStart,
-  formatPointsMultiplier,
   type CourtPrice,
   type ResolvedBookingRate,
 } from "@/hooks/useCourtPrices";
@@ -379,8 +378,6 @@ export function BookingSlotPicker({
               <div className="grid grid-cols-[repeat(auto-fill,minmax(80px,1fr))] gap-2">
                 {availableSlots.map((slot, index) => {
                   const on = selectedSlot?.time === slot.time;
-                  const rate = getRateForStart(ratesByStart, slotStart(selectedDate, slot.time));
-                  const pointsBonus = rate && rate.pointsMultiplier > 1 ? rate.pointsMultiplier : null;
                   return (
                     <button
                       key={index}
@@ -396,17 +393,6 @@ export function BookingSlotPicker({
                       }`}
                     >
                       <span>{slot.time}</span>
-                      {pointsBonus !== null && (
-                        <span
-                          className={`no-underline font-stat text-[10px] font-bold leading-none whitespace-nowrap rounded-full px-1.5 py-[3px] ${
-                            on
-                              ? "bg-black/85 text-primary"
-                              : "bg-primary/[0.12] text-primary border border-primary/30"
-                          }`}
-                        >
-                          ×{formatPointsMultiplier(pointsBonus)} Punkte
-                        </span>
-                      )}
                     </button>
                   );
                 })}

@@ -27,6 +27,8 @@ interface BookingSummaryProps {
   user: any;
   onBook: () => void;
   priceCents: number | null;
+  /** Punkte, die diese Buchung einbringt. 0 = keine (Tennis oder Gratisbuchung). */
+  paybackPoints?: number;
   hasPrices?: boolean;
   // Lobby settings
   lobbyEnabled?: boolean;
@@ -49,6 +51,7 @@ export function BookingSummary({
   user,
   onBook,
   priceCents,
+  paybackPoints = 0,
   hasPrices = true,
   lobbyEnabled = false,
   onLobbyEnabledChange,
@@ -203,6 +206,14 @@ export function BookingSummary({
               <span className="text-[11px] text-[hsl(0_0%_50%)]">inkl. MwSt.</span>
             </span>
           </div>
+          {paybackPoints > 0 && (
+            <div className="flex items-center justify-between rounded-[10px] border border-primary/25 bg-primary/[0.06] px-3 py-2">
+              <span className="text-[12.5px] text-[hsl(0_0%_62%)]">Du sammelst</span>
+              <span className="font-stat text-[13px] font-bold text-primary">
+                +{paybackPoints.toLocaleString("de-DE")} Punkte
+              </span>
+            </div>
+          )}
         </div>
       )}
 

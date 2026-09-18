@@ -133,27 +133,12 @@ export interface RankingEntry {
 }
 
 export interface RankingsResponse {
-  current_tier: string;
   has_age_group: boolean;
   global_rank: number | null;
   top_germany: RankingEntry[];
-  top_in_tier: RankingEntry[];
   top_in_age_group: RankingEntry[];
 }
 
-// New interfaces for Phase 2
-export interface ExpertLevelConfig {
-  id: number;
-  name: string;
-  min_points: number;
-  max_points: number | null;
-  sort_order: number;
-  gradient: string | null;
-  emoji: string | null;
-  description: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
 
 export interface SkillLast5Match {
   match_id: string;
@@ -286,20 +271,6 @@ export function useP2GPoints() {
       return data;
     },
     enabled: !!user,
-  });
-
-  // Fetch expert levels from DB
-  const expertLevelsQuery = useQuery({
-    queryKey: [QUERY_KEYS.p2gExpertLevels],
-    queryFn: async (): Promise<ExpertLevelConfig[]> => {
-      const { data, error } = await supabase.functions.invoke("p2g-points-api/expert-levels", {
-        method: "GET",
-      });
-      if (error) throw error;
-      return data.levels || [];
-    },
-    enabled: !!user,
-    staleTime: 1000 * 60 * 60, // Cache for 1 hour - levels don't change often
   });
 
   // Fetch last 5 matches with skill details
@@ -444,10 +415,6 @@ export function useP2GPoints() {
     // Rankings
     rankings: rankingsQuery.data,
     isRankingsLoading: rankingsQuery.isLoading,
-    
-    // Expert Levels (from DB)
-    expertLevels: expertLevelsQuery.data,
-    isExpertLevelsLoading: expertLevelsQuery.isLoading,
     
     // Skill Last 5
     skillLast5: skillLast5Query.data,

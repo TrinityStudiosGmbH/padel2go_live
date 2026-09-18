@@ -17,8 +17,6 @@ import {
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLaunchDate } from "@/hooks/useLaunchDate";
-import { useExpertLevels } from "@/hooks/useExpertLevels";
-import { getExpertLevelEmoji } from "@/lib/expertLevels";
 import leagueHero from "@/assets/league-hero.jpg";
 import skypadelOutdoor from "@/assets/courts/skypadel-outdoor.jpg";
 import eventsHero from "@/assets/events-hero.jpg";
@@ -34,22 +32,28 @@ const reveal = (delay = 0) => ({
 const FuerSpieler = () => {
   const { t } = useTranslation("spieler");
   const { launchDate } = useLaunchDate();
-  const { levels } = useExpertLevels();
 
   const { data: rates } = useQuery({
     queryKey: ["payback-rates-public"],
     queryFn: async () => {
       const { data } = await (supabase as any)
         .from("site_settings")
-        .select("payback_points_60min, payback_points_120min")
+        .select("payback_points_60min, credits_per_euro")
         .eq("id", "global")
         .maybeSingle();
       return data;
     },
   });
+  // Punkte haengen allein an der Dauer: 60 Minuten = Grundwert, 90 = x1.5, 120 = x2.
   const p1 = Number((rates as any)?.payback_points_60min ?? 100) || 100;
-  const p2 = Number((rates as any)?.payback_points_120min ?? 200) || 200;
-  const maxMult = levels.length ? Math.max(...levels.map((l) => Number(l.multiplier) || 1)) : 2;
+  const pointsPerEuro = Number((rates as any)?.credits_per_euro ?? 100) || 100;
+  const p2 = Math.round(p1 * 1.5);
+  const p3 = p1 * 2;
+  const durationRows = [
+    { minutes: 60, points: p1 },
+    { minutes: 90, points: p2 },
+    { minutes: 120, points: p3 },
+  ];
 
   const [nlMail, setNlMail] = useState("");
   const [nlDone, setNlDone] = useState(false);
@@ -73,15 +77,10 @@ const FuerSpieler = () => {
   ];
 
   const steps = [
-    { icon: CalendarCheck, chip: `+${p1} / +${p2} P`, title: t("paybackNew.steps.0.title"), text: t("paybackNew.steps.0.text") },
-    { icon: Gem, chip: `bis ×${maxMult}`, title: t("paybackNew.steps.1.title"), text: t("paybackNew.steps.1.text") },
-    { icon: ShoppingBag, chip: "bis 100 %", title: t("paybackNew.steps.2.title"), text: t("paybackNew.steps.2.text") },
+    { icon: CalendarCheck, title: t("paybackNew.steps.0.title"), text: t("paybackNew.steps.0.text") },
+    { icon: Gem, title: t("paybackNew.steps.1.title"), text: t("paybackNew.steps.1.text") },
+    { icon: ShoppingBag, title: t("paybackNew.steps.2.title"), text: t("paybackNew.steps.2.text") },
   ];
-
-  const tierRange = (l: (typeof levels)[number]) => {
-    const from = l.min_points.toLocaleString("de-DE");
-    return l.max_points == null ? `${from}+ P` : `${from} – ${l.max_points.toLocaleString("de-DE")} P`;
-  };
 
   return (
     <>
@@ -164,59 +163,113 @@ const FuerSpieler = () => {
 
         <div className="mx-auto max-w-[1100px] h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(199,240,17,0.45) 50%, transparent)" }} />
 
-        {/* ③ So funktioniert Payback */}
-        <section id="payback" className="py-[clamp(72px,10vw,116px)] px-5" style={{ background: "radial-gradient(ellipse at 50% 0%, rgba(199,240,17,0.06), transparent 55%), #000" }}>
-          <div className="mx-auto max-w-[1100px] flex flex-col">
-            <motion.div {...reveal()} className="flex flex-col items-center gap-3.5 text-center mb-11">
+        {/* ③ Du spielst Padel und wirst dafuer belohnt */}
+        <section
+          id="payback"
+          className="relative overflow-hidden px-5 py-[clamp(80px,11vw,132px)]"
+          style={{ background: "radial-gradient(ellipse at 50% -10%, rgba(199,240,17,0.13), transparent 60%), #000" }}
+        >
+          {/* Zwei weiche Lichtquellen, die der Sektion Tiefe geben */}
+          <div className="pointer-events-none absolute -left-32 top-1/3 h-[420px] w-[420px] rounded-full bg-primary/20 opacity-[0.18] blur-[130px]" />
+          <div className="pointer-events-none absolute -right-24 bottom-0 h-[360px] w-[360px] rounded-full bg-primary/30 opacity-[0.12] blur-[120px]" />
+
+          <div className="relative mx-auto flex max-w-[1100px] flex-col">
+            <motion.div {...reveal()} className="flex flex-col items-center gap-4 text-center">
               <span className="inline-flex items-center gap-2 rounded-full border border-primary/25 bg-primary/[0.08] px-3 py-1 text-xs font-semibold text-primary">
-                <Coins className="w-3.5 h-3.5" />{t("paybackNew.badge")}
+                <Coins className="h-3.5 w-3.5" />
+                {t("paybackNew.badge")}
               </span>
-              <h2 className="font-display font-extrabold text-[clamp(30px,4.6vw,52px)] leading-tight tracking-tight">
-                {t("paybackNew.titlePrefix")} <span className="text-gradient-lime">{t("paybackNew.titleHighlight")}</span>
+              <h2 className="font-display text-[clamp(32px,5.4vw,64px)] font-extrabold leading-[1.05] tracking-tight">
+                {t("paybackNew.titleLine1")}
+                <br />
+                <span className="text-gradient-lime">{t("paybackNew.titleLine2")}</span>
               </h2>
+              <p className="max-w-[620px] text-[clamp(15px,1.7vw,18px)] leading-relaxed text-muted-foreground">
+                {t("paybackNew.lead")}
+              </p>
             </motion.div>
 
-            <motion.div {...reveal()} className="grid md:grid-cols-[1fr_40px_1fr_40px_1fr] gap-4 items-start">
-              {steps.map((s, i) => (
-                <Fragment key={s.title}>
-                  <div className="flex flex-col items-center gap-2.5 text-center rounded-[18px] border border-border/50 p-[26px_20px]" style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 3%))" }}>
-                    <span className="w-12 h-12 rounded-[13px] bg-gradient-to-br from-primary/[0.18] to-primary/[0.04] border border-primary/35 flex items-center justify-center text-primary">
-                      <s.icon className="w-[22px] h-[22px]" />
+            {/* Die Zahlen, um die es geht */}
+            <motion.div
+              {...reveal(0.08)}
+              className="mt-[clamp(40px,6vw,64px)] overflow-hidden rounded-[24px] border border-primary/25"
+              style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 3%))" }}
+            >
+              <div className="border-b border-primary/15 px-6 py-4 text-center">
+                <span className="font-stat text-[11px] uppercase tracking-[0.16em] text-muted-foreground/80">
+                  {t("paybackNew.durationsTitle")}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 divide-y divide-white/[0.07] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                {durationRows.map((row) => (
+                  <div key={row.minutes} className="flex flex-col items-center gap-1.5 px-6 py-[clamp(24px,4vw,38px)]">
+                    <span className="font-stat text-[11px] uppercase tracking-[0.14em] text-muted-foreground/70">
+                      {t("paybackNew.duration", { minutes: row.minutes })}
                     </span>
-                    <span className="font-stat font-bold text-[28px] text-primary">{s.chip}</span>
-                    <h3 className="font-display font-bold text-[18px]">{s.title}</h3>
-                    <p className="text-sm leading-snug text-muted-foreground">{s.text}</p>
+                    <span className="font-stat text-[clamp(38px,6vw,56px)] font-extrabold leading-none text-primary">
+                      +{row.points.toLocaleString("de-DE")}
+                    </span>
+                    <span className="font-stat text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      {t("paybackNew.pointsSuffix")}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 border-t border-primary/15 px-6 py-3.5 text-center">
+                <span className="font-stat text-[11px] uppercase tracking-[0.14em] text-muted-foreground/70">
+                  {t("paybackNew.rateLabel")}
+                </span>
+                <span className="font-stat text-sm font-bold text-foreground">
+                  {t("paybackNew.rateValue", { points: pointsPerEuro.toLocaleString("de-DE") })}
+                </span>
+              </div>
+            </motion.div>
+
+            {/* Drei Schritte */}
+            <motion.div {...reveal(0.12)} className="mt-[clamp(32px,5vw,52px)] grid items-start gap-4 md:grid-cols-[1fr_40px_1fr_40px_1fr]">
+              {steps.map((step, i) => (
+                <Fragment key={step.title}>
+                  <div
+                    className="flex h-full flex-col items-center gap-2.5 rounded-[18px] border border-border/50 p-[26px_20px] text-center"
+                    style={{ background: "linear-gradient(145deg, hsl(0 0% 8%), hsl(0 0% 3%))" }}
+                  >
+                    <span className="flex h-12 w-12 items-center justify-center rounded-[13px] border border-primary/35 bg-gradient-to-br from-primary/[0.18] to-primary/[0.04] text-primary">
+                      <step.icon className="h-[22px] w-[22px]" />
+                    </span>
+                    <span className="font-stat text-[11px] uppercase tracking-[0.16em] text-primary/70">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <h3 className="font-display text-[18px] font-bold">{step.title}</h3>
+                    <p className="text-sm leading-snug text-muted-foreground">{step.text}</p>
                   </div>
                   {i < steps.length - 1 && (
-                    <div className="hidden md:flex items-center justify-center self-center text-primary/55">
-                      <ArrowRight className="w-5 h-5" />
+                    <div className="hidden items-center justify-center self-center text-primary/55 md:flex">
+                      <ArrowRight className="h-5 w-5" />
                     </div>
                   )}
                 </Fragment>
               ))}
             </motion.div>
 
-            {/* Tier-Levels (aus Expert-Levels, Backend) */}
-            {levels.length > 0 && (
-              <>
-                <motion.div {...reveal()} className="flex items-baseline justify-between gap-4 flex-wrap mt-[52px] mb-5">
-                  <h3 className="font-display font-bold text-[clamp(19px,2.6vw,24px)] tracking-tight">
-                    {t("paybackNew.tierTitlePrefix")} <span className="text-primary">{t("paybackNew.tierTitleHighlight")}</span>
-                  </h3>
-                  <span className="font-stat text-xs tracking-[0.12em] uppercase text-muted-foreground/70">{t("paybackNew.tierMeta", { count: levels.length })}</span>
-                </motion.div>
-                <motion.div {...reveal()} className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                  {levels.map((l) => (
-                    <div key={l.name} className="flex flex-col items-center gap-1.5 text-center rounded-2xl p-[18px_10px_14px] border border-primary/25 bg-gradient-to-br from-primary/[0.1] to-primary/[0.02]">
-                      <span className="text-2xl leading-none">{l.emoji || getExpertLevelEmoji(l.name)}</span>
-                      <span className="font-display font-bold text-[15px]">{l.name}</span>
-                      <span className="font-stat text-[11px] text-muted-foreground">{tierRange(l)}</span>
-                      <span className="font-stat text-xs font-bold text-primary bg-primary/10 border border-primary/30 rounded-full px-2.5 py-0.5 mt-0.5">×{Number(l.multiplier) || 1}</span>
-                    </div>
-                  ))}
-                </motion.div>
-              </>
-            )}
+            <motion.div {...reveal(0.16)} className="mt-[clamp(32px,5vw,48px)] flex flex-col items-center gap-4">
+              <div className="flex flex-wrap items-center justify-center gap-3">
+                <Button variant="lime" size="lg" asChild className="gap-2">
+                  <NavLink to="/marketplace">
+                    <ShoppingBag className="h-4 w-4" />
+                    {t("paybackNew.cta")}
+                  </NavLink>
+                </Button>
+                <Button variant="outline" size="lg" asChild className="gap-2">
+                  <NavLink to="/booking">
+                    <CalendarCheck className="h-4 w-4" />
+                    {t("paybackNew.ctaSecondary")}
+                  </NavLink>
+                </Button>
+              </div>
+              <p className="max-w-[560px] text-center text-xs leading-relaxed text-muted-foreground/70">
+                {t("paybackNew.fineprint")}
+              </p>
+            </motion.div>
           </div>
         </section>
 

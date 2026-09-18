@@ -165,7 +165,7 @@ serve(async (req) => {
       }
     }
 
-    // ── Fetch price via resolve_booking_rate (Band schlägt court_prices) ──────
+    // ── Preis via resolve_booking_rate: Standort-Ausnahme bzw. Zeitfenster vor Standardpreis ──
     const { data: rateData, error: rateError } = await supabaseAdmin.rpc("resolve_booking_rate", {
       p_court_id: court_id,
       p_start: start_time,

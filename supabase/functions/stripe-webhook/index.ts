@@ -766,112 +766,64 @@ serve(async (req) => {
             if (!isGuestWebhook) try {
               const { data: bk } = await supabaseAdmin
                 .from("bookings")
-                .select("court_id, start_time, end_time, user_id, status, play_credits_awarded, payment_mode, reserved_voucher_id")
+                .select("court_id, start_time, end_time, user_id, status, play_credits_awarded")
                 .eq("id", bookingId)
                 .single();
 
-              // No payback when a voucher was used — the voucher discount excludes payback.
-              const usedVoucher =
-                !!session.metadata?.voucher_id ||
-                !!(bk as any)?.reserved_voucher_id ||
-                (bk as any)?.payment_mode === "voucher";
+              // Punkte gibt es nur fuer tatsaechlich gezahltes Geld. amount_total ist der
+              // Endbetrag nach Gutschein und nach eingeloesten Punkten — deckt ein Gutschein
+              // alles ab oder ist es eine Freistunde, steht hier 0 und es gibt keine Punkte.
+              const amountPaidCents = Number(session.amount_total ?? 0) || 0;
 
               // Nie auf einer stornierten Buchung vergeben — nach dem Storno-Clawback steht
-              // play_credits_awarded wieder auf 0, ein verspäteter Webhook-Retry darf das
+              // play_credits_awarded wieder auf 0, ein verspaeteter Webhook-Retry darf das
               // Payback dann nicht erneut gutschreiben.
-              if (bk && bk.play_credits_awarded === 0 && bk.user_id && !usedVoucher && (bk as any).status !== "cancelled") {
-                // ── P2G Payback = round(fixedRate(duration) * band * expert-level multiplier) ──
-                // Fixed points per booking length (60 vs 120 min), admin-configurable in
-                // site_settings; the band factor comes from the time-window pricing bands,
-                // the level multiplier from the user's expert level.
+              if (bk && bk.play_credits_awarded === 0 && bk.user_id && amountPaidCents > 0 && (bk as any).status !== "cancelled") {
+                // ── P2G Payback = feste Punktzahl je Dauer ──
+                // 60 Minuten = Grundwert, 90 = x1.5, 120 = x2.0. Der Grundwert steht global
+                // in site_settings und kann je Standort ueberschrieben werden. Die Datenbank
+                // ist die einzige Quelle, damit Checkout-Vorschau und Gutschrift nie
+                // auseinanderlaufen. Tennis liefert dort 0.
                 const durationMin = Math.round(
                   (new Date(bk.end_time).getTime() - new Date(bk.start_time).getTime()) / 60000,
                 );
-                const durationBucket = durationMin >= 120 ? 120 : durationMin >= 90 ? 90 : 60;
 
-                const { data: settings } = await supabaseAdmin
-                  .from("site_settings")
-                  .select("payback_points_60min, payback_points_90min, payback_points_120min")
-                  .eq("id", "global")
-                  .maybeSingle();
-                const rate60 = Number((settings as any)?.payback_points_60min ?? 100) || 0;
-                const rate90 = Number((settings as any)?.payback_points_90min ?? 150) || 0;
-                const rate120 = Number((settings as any)?.payback_points_120min ?? 200) || 0;
-                const base = durationMin >= 120 ? rate120 : durationMin >= 90 ? rate90 : rate60;
-
-                // Band is resolved for the booking's START time, never for the payment time —
-                // paying a 7am slot in the evening must still earn the 7am rate.
-                let bandMultiplier = 1;
-                let pointsBandName: string | null = null;
-                let courtSport: string | null = null;
-                try {
-                  const { data: rateRows, error: rateError } = await supabaseAdmin.rpc("resolve_booking_rate", {
-                    p_court_id: (bk as any).court_id,
-                    p_start: bk.start_time,
-                    p_duration_minutes: durationBucket,
-                  });
-                  if (rateError) {
-                    logStep("Payback: band lookup failed — continuing with x1.0", { bookingId, error: rateError.message });
-                  } else {
-                    const rate = Array.isArray(rateRows) ? (rateRows as any[])[0] : (rateRows as any);
-                    const rawMult = Number(rate?.points_multiplier);
-                    if (Number.isFinite(rawMult) && rawMult >= 0) bandMultiplier = rawMult;
-                    pointsBandName = (rate?.points_band_name as string | null) ?? null;
-                    courtSport = (rate?.court_sport as string | null) ?? null;
-                  }
-                } catch (rateErr) {
-                  logStep("Payback: band lookup failed — continuing with x1.0", { bookingId, error: (rateErr as Error).message });
-                }
-
-                // Die Sportart darf nicht am Band-Lookup hängen: fällt die RPC aus, wird sie
-                // direkt am Court gelesen. Sonst bekäme Tennis bei einem RPC-Fehler Punkte.
-                if (!courtSport) {
-                  const { data: courtRow } = await supabaseAdmin
-                    .from("courts")
-                    .select("sport")
-                    .eq("id", (bk as any).court_id)
-                    .maybeSingle();
-                  courtSport = ((courtRow as any)?.sport as string | null) ?? null;
-                }
-
-                if (courtSport === "tennis") {
-                  // Tennis sammelt keine P2G-Punkte (Produktregel) — play_credits_awarded
-                  // bleibt 0, damit der Storno-Clawback automatisch stimmt.
-                  logStep("Payback skipped — tennis", { bookingId, courtId: (bk as any).court_id });
+                let creditsToAward = 0;
+                const { data: pointsData, error: pointsError } = await supabaseAdmin.rpc(
+                  "resolve_booking_points",
+                  { p_court_id: (bk as any).court_id, p_duration_minutes: durationMin },
+                );
+                if (pointsError) {
+                  // Lieber keine Punkte als falsche — der Clawback rechnet auf dieser Spalte.
+                  logStep("Payback: points lookup failed — awarding none", { bookingId, error: pointsError.message });
                 } else {
-                  const { data: multData } = await supabaseAdmin.rpc("get_user_level_multiplier", {
-                    p_user_id: bk.user_id,
-                  });
-                  const levelMultiplier = Number(multData ?? 1) || 1;
+                  creditsToAward = Number(pointsData ?? 0) || 0;
+                }
 
-                  const creditsToAward = Math.round(base * bandMultiplier * levelMultiplier);
+                if (creditsToAward > 0) {
+                  // Gutschrift + play_credits_awarded in EINER Transaktion unter Row-Lock.
+                  // Vorher lief erst die Wallet-Gutschrift und danach das UPDATE: schlug
+                  // das UPDATE fehl, schrieb ein Stripe-Retry ERNEUT gut, und der
+                  // Storno-Clawback konnte es nie zurueckholen (er liest genau die Spalte).
+                  // Die RPC verweigert ausserdem Tennis, Gaeste, Stornos und Doppelvergabe.
+                  const { data: awardedRaw, error: awardError } = await supabaseAdmin.rpc(
+                    "award_booking_payback",
+                    { p_booking_id: bookingId, p_points: creditsToAward },
+                  );
 
-                  if (creditsToAward > 0) {
-                    // Award atomically (signed delta) so a concurrent reserve/refund can't clobber it.
-                    // Gutschrift + play_credits_awarded in EINER Transaktion unter Row-Lock.
-                    // Vorher lief erst die Wallet-Gutschrift und danach das UPDATE: schlug
-                    // das UPDATE fehl, schrieb ein Stripe-Retry ERNEUT gut, und der
-                    // Storno-Clawback konnte es nie zurueckholen (er liest genau die Spalte).
-                    // Die RPC verweigert ausserdem Tennis, Gaeste, Stornos und Doppelvergabe.
-                    const { data: awardedRaw, error: awardError } = await supabaseAdmin.rpc(
-                      "award_booking_payback",
-                      { p_booking_id: bookingId, p_points: creditsToAward },
-                    );
-
-                    if (awardError) {
-                      logStep("Failed to award payback credits", { bookingId, error: awardError.message });
+                  if (awardError) {
+                    logStep("Failed to award payback credits", { bookingId, error: awardError.message });
+                  } else {
+                    const awarded = Number(awardedRaw) || 0;
+                    if (awarded > 0) {
+                      logStep("Payback credits awarded", { bookingId, creditsToAward: awarded, durationMin, amountPaidCents });
                     } else {
-                      const awarded = Number(awardedRaw) || 0;
-                      if (awarded > 0) {
-                        logStep("Payback credits awarded", { bookingId, creditsToAward: awarded, durationMin, base, bandMultiplier, pointsBandName, levelMultiplier });
-                      } else {
-                        logStep("Payback not awarded (already awarded, cancelled, guest or non-padel)", { bookingId });
-                      }
+                      logStep("Payback not awarded (already awarded, cancelled, guest or non-padel)", { bookingId });
                     }
                   }
                 }
-              } else if (usedVoucher) {
-                logStep("Payback skipped — voucher used", { bookingId });
+              } else if (bk && amountPaidCents <= 0) {
+                logStep("Payback skipped — nothing paid (voucher, points or free allocation)", { bookingId });
               }
             } catch (creditErr) {
               logStep("Failed to award play credits", { error: (creditErr as Error).message });

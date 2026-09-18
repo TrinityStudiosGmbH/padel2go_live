@@ -20,10 +20,9 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { MapPin, Edit, Building2, Trash2, Trophy, Brain, ShoppingCart, Euro, AlertTriangle } from "lucide-react";
+import { MapPin, Edit, Building2, Trash2, Trophy, Brain, ShoppingCart, AlertTriangle } from "lucide-react";
 import { COURT_FEATURES } from "@/lib/courtFeatures";
 import { useState } from "react";
-import { CourtPriceDialog } from "./CourtPriceDialog";
 import { useQueryClient } from "@tanstack/react-query";
 import { Location, SPORT_CHIP_CLASSES, SPORT_LABEL, courtSport } from "./types";
 import { QUERY_KEYS } from "@/lib/queryKeys";
@@ -49,7 +48,6 @@ interface AdminLocationCardProps {
 
 export function AdminLocationCard({ location }: AdminLocationCardProps) {
   const queryClient = useQueryClient();
-  const [priceDialogCourt, setPriceDialogCourt] = useState<{ id: string; name: string } | null>(null);
   const {
     toggleCourtMutation,
     toggleLocationOnline,
@@ -261,14 +259,6 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
                     </span>
                   )}
                   <div className="flex flex-shrink-0 items-center gap-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 rounded-lg border border-primary/30 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary"
-                      onClick={() => setPriceDialogCourt({ id: court.id, name: court.name })}
-                    >
-                      <Euro className="h-3.5 w-3.5" />
-                    </Button>
                     <Label
                       htmlFor={`court-active-${court.id}`}
                       className="hidden font-mono text-[10px] uppercase tracking-[0.1em] text-[hsl(0_0%_58%)] sm:inline"
@@ -355,16 +345,6 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
           </AlertDialog>
         </div>
       </div>
-
-      {/* Court Price Dialog */}
-      {priceDialogCourt && (
-        <CourtPriceDialog
-          court={priceDialogCourt}
-          locationName={location.name}
-          open={!!priceDialogCourt}
-          onOpenChange={(open) => !open && setPriceDialogCourt(null)}
-        />
-      )}
     </Card>
   );
 }

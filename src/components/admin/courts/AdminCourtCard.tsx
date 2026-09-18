@@ -21,7 +21,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 import { toast } from "sonner";
-import { useCourtSpecificPrices, getPriceFromList } from "@/hooks/useCourtPrices";
 import { invokeEdgeFunction } from "@/lib/edgeFunctionUtils";
 import { SPORT_LABEL, SPORT_PILL_CLASSES, courtSport } from "./types";
 
@@ -47,10 +46,7 @@ export function AdminCourtCard({ court, location, index = 0 }: AdminCourtCardPro
   const queryClient = useQueryClient();
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const { toggleCourtMutation } = useLocationMutations();
-  const { data: prices } = useCourtSpecificPrices(court.id);
 
-  const price60 = getPriceFromList(prices, 60);
-  const hasPrices = prices && prices.length >= 3;
   const sport = courtSport(court);
   // Tennis-Courts zeigen die Tennis-Ansicht des Standorts, sonst das Hauptbild.
   const headerImageUrl =
@@ -128,16 +124,6 @@ export function AdminCourtCard({ court, location, index = 0 }: AdminCourtCardPro
     </span>
   );
 
-  const pricePill = hasPrices && price60 ? (
-    <span className="whitespace-nowrap rounded-full border border-white/20 bg-black/65 px-2.5 py-1 font-mono text-[11px] font-bold text-foreground backdrop-blur-md">
-      ab {(price60 / 100).toFixed(0)}€
-    </span>
-  ) : (
-    <span className="whitespace-nowrap rounded-full border border-[hsl(41_100%_65%/0.45)] bg-black/65 px-2.5 py-1 font-mono text-[11px] font-bold text-[#FFC44D] backdrop-blur-md">
-      Preise fehlen
-    </span>
-  );
-
   return (
     <>
       <motion.div
@@ -160,7 +146,6 @@ export function AdminCourtCard({ court, location, index = 0 }: AdminCourtCardPro
                   {statusPill}
                   {sportPill}
                 </div>
-                {pricePill}
               </div>
             </div>
           ) : (
@@ -171,7 +156,6 @@ export function AdminCourtCard({ court, location, index = 0 }: AdminCourtCardPro
                   {statusPill}
                   {sportPill}
                 </div>
-                {pricePill}
               </div>
             </div>
           )}

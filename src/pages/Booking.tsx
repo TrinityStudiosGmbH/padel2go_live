@@ -44,11 +44,13 @@ const Booking = () => {
 
       if (error) throw error;
 
-      // Fetch global fallback price for 60 min
-      const { data: globalPrice } = await supabase
+      // Globaler Standardpreis als Rueckfall fuer die "ab X EUR"-Anzeige.
+      // Die Sportart MUSS mit: seit der Vereinheitlichung gibt es je Sportart
+      // eine eigene 60-Minuten-Zeile, ohne Filter kaeme hier keine eindeutige.
+      const { data: globalPrice } = await (supabase as any)
         .from("court_prices")
         .select("price_cents")
-        .is("court_id", null)
+        .eq("sport", "padel")
         .eq("duration_minutes", 60)
         .maybeSingle();
 

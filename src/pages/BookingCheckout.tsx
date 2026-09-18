@@ -468,8 +468,12 @@ const BookingCheckout = () => {
                       </div>
                     )}
 
-                    {/* Rewards estimate (logged-in) */}
-                    {!isGuest && !isVoucherApplied && rewardsEstimate && rewardsEstimate.total_points > 0 && (
+                    {/* Punkte-Vorschau. Nur wenn am Ende wirklich Geld fliesst —
+                        bei 0 EUR (Gutschein, Freikontingent, voll mit Punkten
+                        bezahlt) gibt es keine Punkte, und die Vorschau darf
+                        nichts versprechen, was danach nicht ankommt. */}
+                    {!isGuest && !isVoucherApplied && !isFullyFree && !isQuotaBooking &&
+                      rewardsEstimate && rewardsEstimate.total_points > 0 && (
                       <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
