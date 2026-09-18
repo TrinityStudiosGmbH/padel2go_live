@@ -177,7 +177,7 @@ export default function AdminCourts() {
                 ))}
               </div>
             ) : locations && locations.length > 0 ? (
-              <div className="grid grid-cols-[repeat(auto-fit,minmax(min(370px,100%),1fr))] items-start gap-[18px]">
+              <div className="grid auto-rows-fr grid-cols-[repeat(auto-fit,minmax(min(370px,100%),1fr))] items-stretch gap-[18px]">
                 {locations.map((location) => (
                   <AdminLocationCard key={location.id} location={location} />
                 ))}

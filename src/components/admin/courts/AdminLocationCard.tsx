@@ -31,6 +31,18 @@ import { LocationForm } from "./LocationForm";
 import { CourtCountSelector } from "./CourtCountSelector";
 import { useLocationMutations } from "./useLocationMutations";
 
+const CHIP_BASE =
+  "inline-flex items-center whitespace-nowrap rounded-[7px] border px-[9px] py-1 text-[11px] font-semibold";
+const CHIP_OFF = "border-[hsl(0_0%_11%)] bg-white/[0.015] text-[hsl(0_0%_36%)]";
+const CHIP_ON_NEUTRAL = "border-[hsl(0_0%_16%)] bg-white/5 text-[hsl(0_0%_78%)]";
+
+/** Plattform-Merkmale in fester Reihenfolge — dieselben auf jeder Karte. */
+const PLATFORM_FEATURES = [
+  { key: "rewards_enabled", label: "Rewards", icon: Trophy, onClass: "border-primary/30 bg-primary/10 text-primary" },
+  { key: "ai_analysis_enabled", label: "KI", icon: Brain, onClass: "border-[hsl(200_100%_75%/0.3)] bg-[hsl(200_100%_75%/0.1)] text-[#7FD4FF]" },
+  { key: "vending_enabled", label: "Automat", icon: ShoppingCart, onClass: "border-[hsl(263_100%_82%/0.3)] bg-[hsl(263_100%_82%/0.1)] text-[#C7A6FF]" },
+] as const satisfies ReadonlyArray<{ key: keyof Location; label: string; icon: typeof Trophy; onClass: string }>;
+
 interface AdminLocationCardProps {
   location: Location;
 }
@@ -50,9 +62,9 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
   const padelCourts = courts.length - tennisCourts;
 
   return (
-    <Card className="overflow-hidden rounded-2xl border-border bg-gradient-card">
+    <Card className="flex h-full flex-col overflow-hidden rounded-2xl border-border bg-gradient-card">
       {/* Bild-Header */}
-      <div className="relative h-[150px]">
+      <div className="relative h-[150px] flex-none">
         {location.main_image_url ? (
           <img
             src={location.main_image_url}
@@ -78,11 +90,13 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
             <span className="h-[5px] w-[5px] rounded-full bg-current" />
             {location.is_online ? "Online" : "Offline"}
           </span>
-          {location.is_24_7 && (
-            <span className="whitespace-nowrap rounded-full border border-white/20 bg-black/65 px-2.5 py-[5px] font-mono text-[10px] tracking-[0.1em] text-foreground backdrop-blur-md">
-              24/7
-            </span>
-          )}
+          <span
+            className={`whitespace-nowrap rounded-full border bg-black/65 px-2.5 py-[5px] font-mono text-[10px] tracking-[0.1em] backdrop-blur-md ${
+              location.is_24_7 ? "border-white/20 text-foreground" : "border-white/10 text-[hsl(0_0%_55%)]"
+            }`}
+          >
+            {location.is_24_7 ? "24/7" : "Feste Zeiten"}
+          </span>
         </div>
 
         {/* Name + Adresse */}
@@ -101,33 +115,35 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-col gap-[15px] px-[18px] pb-[18px] pt-4">
-        {/* Feature-Chips */}
+      <div className="flex flex-1 flex-col gap-[15px] px-[18px] pb-[18px] pt-4">
+        {/* Merkmale — bewusst auf JEDER Karte dieselbe Liste in derselben
+            Reihenfolge, Inaktives nur gedimmt. So zeigen alle Karten dieselben
+            Infos, sind vergleichbar und bleiben gleich hoch. */}
         <div className="flex flex-wrap gap-1.5">
-          {location.rewards_enabled && (
-            <span className="inline-flex items-center whitespace-nowrap rounded-[7px] border border-primary/30 bg-primary/10 px-[9px] py-1 text-[11px] font-semibold text-primary">
-              <Trophy className="mr-1 h-3 w-3" /> Rewards
-            </span>
-          )}
-          {location.ai_analysis_enabled && (
-            <span className="inline-flex items-center whitespace-nowrap rounded-[7px] border border-[hsl(200_100%_75%/0.3)] bg-[hsl(200_100%_75%/0.1)] px-[9px] py-1 text-[11px] font-semibold text-[#7FD4FF]">
-              <Brain className="mr-1 h-3 w-3" /> KI
-            </span>
-          )}
-          {location.vending_enabled && (
-            <span className="inline-flex items-center whitespace-nowrap rounded-[7px] border border-[hsl(263_100%_82%/0.3)] bg-[hsl(263_100%_82%/0.1)] px-[9px] py-1 text-[11px] font-semibold text-[#C7A6FF]">
-              <ShoppingCart className="mr-1 h-3 w-3" /> Automat
-            </span>
-          )}
-          {/* Dynamic Court Features from features_json */}
-          {COURT_FEATURES.filter(f => (location.features_json as Record<string, boolean>)?.[f.key] === true).map(({ key, label, icon: Icon }) => (
-            <span
-              key={key}
-              className="inline-flex items-center whitespace-nowrap rounded-[7px] border border-[hsl(0_0%_16%)] bg-white/5 px-[9px] py-1 text-[11px] font-semibold text-[hsl(0_0%_78%)]"
-            >
-              <Icon className="mr-1 h-3 w-3" /> {label}
-            </span>
-          ))}
+          {PLATFORM_FEATURES.map(({ key, label, icon: Icon, onClass }) => {
+            const on = !!location[key];
+            return (
+              <span
+                key={key}
+                title={on ? `${label}: aktiv` : `${label}: inaktiv`}
+                className={`${CHIP_BASE} ${on ? onClass : CHIP_OFF}`}
+              >
+                <Icon className="mr-1 h-3 w-3" /> {label}
+              </span>
+            );
+          })}
+          {COURT_FEATURES.map(({ key, label, icon: Icon }) => {
+            const on = (location.features_json as Record<string, boolean> | null)?.[key] === true;
+            return (
+              <span
+                key={key}
+                title={on ? `${label}: vorhanden` : `${label}: nicht vorhanden`}
+                className={`${CHIP_BASE} ${on ? CHIP_ON_NEUTRAL : CHIP_OFF}`}
+              >
+                <Icon className="mr-1 h-3 w-3" /> {label}
+              </span>
+            );
+          })}
         </div>
 
         {/* Feature Toggles */}
@@ -202,14 +218,10 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
           <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
             <h3 className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-[hsl(0_0%_65%)]">
               Courts ({courts.length})
-              {tennisCourts > 0 && (
-                <>
-                  {" · "}
-                  <span className="text-primary">{padelCourts} Padel</span>
-                  {" · "}
-                  <span className="text-[#7FD4FF]">{tennisCourts} Tennis</span>
-                </>
-              )}
+              {" · "}
+              <span className={padelCourts > 0 ? "text-primary" : "text-[hsl(0_0%_40%)]"}>{padelCourts} Padel</span>
+              {" · "}
+              <span className={tennisCourts > 0 ? "text-[#7FD4FF]" : "text-[hsl(0_0%_40%)]"}>{tennisCourts} Tennis</span>
             </h3>
             <CourtCountSelector
               locationId={location.id}
@@ -217,7 +229,11 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
               maxCourts={2}
             />
           </div>
-          {courts.length > 0 && (
+          {courts.length === 0 ? (
+            <p className="rounded-[11px] border border-dashed border-[hsl(0_0%_14%)] px-[11px] py-[9px] text-[12.5px] text-muted-foreground">
+              Noch keine Courts angelegt.
+            </p>
+          ) : (
             <div className="grid grid-cols-1 gap-[9px]">
               {/* Show active courts first, then inactive */}
               {[...courts]
@@ -277,8 +293,8 @@ export function AdminLocationCard({ location }: AdminLocationCardProps) {
           )}
         </div>
 
-        {/* Aktionen */}
-        <div className="flex gap-[9px]">
+        {/* Aktionen — durch mt-auto auf jeder Karte auf gleicher Hoehe */}
+        <div className="mt-auto flex gap-[9px] pt-1">
           <Dialog>
             <DialogTrigger asChild>
               <Button
