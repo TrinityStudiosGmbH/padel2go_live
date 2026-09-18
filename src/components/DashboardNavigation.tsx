@@ -60,12 +60,16 @@ const DashboardNavigation = () => {
   };
 
   return (
-    <nav
+    // Gleiche schwebende Leiste wie im ausgeloggten Bereich. Der aeussere Rahmen
+    // haelt exakt die bisherige Hoehe frei (64px mobil / 80px ab md).
+    <div
       style={{ top: "var(--p2g-banner-h, 0px)" }}
-      className="fixed left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl"
+      className="pointer-events-none fixed inset-x-0 z-50 pt-3 md:pt-4"
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20 gap-2">
+        <nav className="p2g-nav-shell">
+          <div className="px-4 md:px-5">
+        <div className="flex items-center justify-between h-[50px] md:h-[62px] gap-2">
           {/* Logo */}
           <NavLink to="/dashboard/home" className="flex items-center shrink-0 will-change-transform">
             <img
@@ -162,7 +166,7 @@ const DashboardNavigation = () => {
             </button>
           </div>
         </div>
-      </div>
+          </div>
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -171,9 +175,9 @@ const DashboardNavigation = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-background/95 backdrop-blur-xl border-b border-border/50 overflow-hidden"
+            className="lg:hidden overflow-hidden rounded-b-[20px] border-t border-white/[0.07] bg-[hsl(0_0%_4%)]"
           >
-            <div className="container mx-auto px-4 py-4 flex flex-col gap-1">
+            <div className="px-4 py-4 flex flex-col gap-1">
               {dashboardItems.map((item) => (
                 <NavLink
                   key={item.name}
@@ -189,7 +193,9 @@ const DashboardNavigation = () => {
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+        </nav>
+      </div>
+    </div>
   );
 };
 

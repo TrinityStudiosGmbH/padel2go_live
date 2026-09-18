@@ -271,6 +271,28 @@
   .max-h-screen { max-height: 100dvh; }
 }
 
+/* Schwebende Kopfleiste, oeffentlich wie eingeloggt. Zwei Hintergrundschichten:
+   ein heller Verlauf fuer den Glanz, darunter getoentes Schwarz, damit die
+   Schrift auch ueber hellen Bildern lesbar bleibt. Bewusst ohne overflow:hidden,
+   sonst schneidet die Leiste ihr eigenes Konto-Menue ab. */
+.p2g-nav-shell {
+  pointer-events: auto;
+  border-radius: 20px;
+  border: 1px solid hsl(0 0% 100% / 0.09);
+  background:
+    linear-gradient(180deg, hsl(0 0% 100% / 0.08), hsl(0 0% 100% / 0.02)),
+    hsl(0 0% 0% / 0.62);
+  box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.85);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+}
+
+/* Ohne Backdrop-Filter (aeltere Browser) wuerde die Leiste durchsichtig wirken
+   und der Text auf dem Seiteninhalt kleben. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .p2g-nav-shell { background: hsl(0 0% 4% / 0.97); }
+}
+
 /* Feste Leisten am unteren Rand duerfen nicht unter dem Home-Indikator liegen. */
 .pb-safe { padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px)); }
 .pb-safe-6 { padding-bottom: calc(1.5rem + env(safe-area-inset-bottom, 0px)); }

@@ -57,12 +57,18 @@ const PublicNavigation = () => {
   };
 
   return (
-    <nav
+    // Schwebende Leiste: der aeussere Rahmen haelt exakt die Hoehe, die die
+    // Seiten bisher freihalten (64px mobil / 80px ab md), damit kein Inhalt
+    // darunter verrutscht. pointer-events-none laesst Klicks neben der Leiste
+    // durch, sonst waere der Streifen links und rechts eine unsichtbare Sperre.
+    <div
       style={{ top: "var(--p2g-banner-h, 0px)" }}
-      className="fixed left-0 right-0 z-50 border-b border-border/50 bg-background/80 backdrop-blur-xl"
+      className="pointer-events-none fixed inset-x-0 z-50 pt-3 md:pt-4"
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <nav className="p2g-nav-shell">
+          <div className="px-4 md:px-5">
+        <div className="flex items-center justify-between h-[50px] md:h-[62px]">
           {/* Logo */}
           <NavLink to="/" className="flex items-center shrink-0">
             <img 
@@ -153,15 +159,18 @@ const PublicNavigation = () => {
             <LanguageSwitch variant="navigation" />
           </div>
 
-          {/* Mobile Menu Button */}
-          <button
-            className="lg:hidden p-2 text-foreground rounded-full hover:bg-primary/10 transition-colors"
-            onClick={() => setIsOpen(!isOpen)}
-          >
-            {isOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
+          {/* Sprachumschalter + Menue — auf kleinen Schirmen Teil der Kopfleiste */}
+          <div className="flex items-center gap-1.5 lg:hidden">
+            <LanguageSwitch variant="navigation" />
+            <button
+              className="p-2 text-foreground rounded-full hover:bg-primary/10 transition-colors"
+              onClick={() => setIsOpen(!isOpen)}
+            >
+              {isOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
-      </div>
+          </div>
 
       {/* Mobile Menu */}
       <AnimatePresence>
@@ -170,9 +179,9 @@ const PublicNavigation = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden bg-background/95 backdrop-blur-xl border-b border-border/50 overflow-hidden"
+            className="lg:hidden overflow-hidden rounded-b-[20px] border-t border-white/[0.07] bg-[hsl(0_0%_4%)]"
           >
-            <div className="container mx-auto px-4 py-4 flex flex-col gap-1">
+            <div className="px-4 py-4 flex flex-col gap-1">
               {navItems.map((item) => (
                 <NavLink
                   key={item.label}
@@ -217,15 +226,14 @@ const PublicNavigation = () => {
                     <NavLink to="/booking" onClick={() => setIsOpen(false)}>{t("nav.bookCourt")}</NavLink>
                   </Button>
                 )}
-                <div className="flex justify-center pt-2">
-                  <LanguageSwitch variant="navigation" />
-                </div>
               </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-    </nav>
+        </nav>
+      </div>
+    </div>
   );
 };
 
