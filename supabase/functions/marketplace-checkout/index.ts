@@ -309,6 +309,77 @@ serve(async (req) => {
         }
       }
 
+      // Keine offene Sitzung mehr — die Haltefrist ist abgelaufen und der
+      // Aufraeumer hat Ware und Punkte freigegeben, die Bestellung aber offen
+      // gelassen. Jetzt legen wir eine FRISCHE Sitzung fuer dieselbe Bestellung
+      // an, zum vollen Preis (der Punkterabatt ging mit der Freigabe zurueck).
+      if (openOrder) {
+        // Ware neu reservieren. Ist sie inzwischen weg, sagen wir das ehrlich,
+        // statt den Kunden zahlen zu lassen und nicht liefern zu koennen.
+        if (tracksStock) {
+          const { data: ok, error: stockErr } = await supabaseAdmin.rpc(
+            "marketplace_decrement_stock",
+            { p_item_id: itemId, p_quantity: quantity, p_order_id: openOrder.id },
+          );
+          if (stockErr || ok !== true) {
+            logStep("Wiederaufnahme: Artikel nicht mehr verfuegbar", { orderId: openOrder.id });
+            return json({ error: "Dieser Artikel ist inzwischen ausverkauft." }, 409);
+          }
+        }
+
+        let renewKey = Deno.env.get("STRIPE_SECRET_KEY");
+        if (!renewKey) {
+          const { data: ic } = await supabaseAdmin
+            .from("site_integration_configs").select("config").eq("service", "stripe").maybeSingle();
+          renewKey = (ic?.config as Record<string, string> | undefined)?.secret_key;
+        }
+        if (!renewKey) return json({ error: "Zahlungsanbieter ist nicht konfiguriert" }, 500);
+
+        const renewAmount = Math.max(50, priceCents);
+        try {
+          const renewed = await new Stripe(renewKey, { apiVersion: "2025-08-27.basil" })
+            .checkout.sessions.create({
+              customer_email: effectiveEmail,
+              payment_method_types: ["card", "paypal"],
+              expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
+              line_items: [{
+                price_data: {
+                  currency: "eur",
+                  product_data: { name: item.name, description: item.partner_name || undefined },
+                  unit_amount: renewAmount,
+                },
+                quantity: 1,
+              }],
+              mode: "payment",
+              success_url: `${origin}/marketplace/success?session_id={CHECKOUT_SESSION_ID}`,
+              cancel_url: `${origin}/marketplace?checkout=cancelled`,
+              metadata: { type: "marketplace_purchase", redemption_id: openOrder.id },
+            }, {
+              // Enthaelt die vorherige Sitzung: ein wiederholter Aufruf desselben
+              // Anlaufs bekommt dieselbe Sitzung, ein spaeterer Anlauf eine neue.
+              idempotencyKey: `mp_sess_${openOrder.id}_${openOrder.stripe_session_id ?? "first"}`,
+            });
+
+          await supabaseAdmin
+            .from("marketplace_redemptions")
+            .update({
+              stripe_session_id: renewed.id,
+              amount_cents: renewAmount,
+              hold_expires_at: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+            })
+            .eq("id", openOrder.id);
+
+          logStep("Neue Sitzung fuer offene Bestellung angelegt", { orderId: openOrder.id });
+          return json({ url: renewed.url, renewed: true }, 200);
+        } catch (renewErr) {
+          logStep("Neue Sitzung fehlgeschlagen", { orderId: openOrder.id, error: (renewErr as Error).message });
+          if (tracksStock) {
+            await supabaseAdmin.rpc("expire_marketplace_hold", { p_order_id: openOrder.id });
+          }
+          return json({ error: "Die Zahlung konnte nicht gestartet werden. Bitte später erneut versuchen." }, 502);
+        }
+      }
+
       return json({
         error: "Für diesen Artikel läuft bereits ein Bezahlvorgang. Du findest ihn unter Konto → Bestellungen.",
       }, 409);
@@ -554,7 +625,7 @@ serve(async (req) => {
         // Siehe create-checkout-session: schuetzt gegen eine zweite Sitzung,
         // wenn die Verbindung nach dem Anlegen abbricht und der Client den
         // Aufruf wiederholt. Die Bestellung ist neu, deshalb genuegt ihre ID.
-        idempotencyKey: `mp_sess_${orderId}`,
+        idempotencyKey: `mp_sess_${orderId}_first`,
       });
     } catch (stripeErr) {
       logStep("Stripe session creation failed — rolling back", { error: (stripeErr as Error).message });
