@@ -32,18 +32,26 @@ export const BRAND = {
 export const FONT_BODY = "'DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
 export const FONT_DISPLAY = "'Bricolage Grotesque','DM Sans','Helvetica Neue',Helvetica,Arial,sans-serif";
 
-/** Resolve the Resend API key: env var first, site_integration_configs (service='resend') fallback. */
+/**
+ * Der Resend-Schluessel, den ALLE Mailwege benutzen.
+ *
+ * Reihenfolge bewusst so: zuerst der im Admin unter Integrationen hinterlegte
+ * Schluessel, erst danach die Umgebungsvariable. Vorher war es umgekehrt —
+ * dadurch lag zwar ein Schluessel im Admin, verschickt wurde aber mit einem
+ * ganz anderen aus den Supabase-Secrets, und das Feld im Admin hatte keinerlei
+ * Wirkung. Die Umgebungsvariable bleibt als Notnagel, falls das Feld leer ist.
+ */
 export async function resolveResendKey(supabaseAdmin: any): Promise<string | null> {
-  let key = Deno.env.get("RESEND_API_KEY");
-  if (!key) {
-    const { data } = await supabaseAdmin
-      .from("site_integration_configs")
-      .select("config, service")
-      .eq("service", "resend")
-      .maybeSingle();
-    key = (data?.config as Record<string, string> | undefined)?.api_key;
-  }
-  return key ?? null;
+  const { data } = await supabaseAdmin
+    .from("site_integration_configs")
+    .select("config")
+    .eq("service", "resend")
+    .maybeSingle();
+
+  const fromAdmin = (data?.config as Record<string, string> | undefined)?.api_key?.trim();
+  if (fromAdmin) return fromAdmin;
+
+  return Deno.env.get("RESEND_API_KEY") ?? null;
 }
 
 export const escapeHtml = (s: unknown): string =>

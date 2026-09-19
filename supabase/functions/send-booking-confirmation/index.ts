@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml } from "../_shared/email.ts";
+import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml, resolveResendKey } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 import { buildBookingIcs, googleCalendarUrl, signBookingIcsToken, bookingIcsUrl } from "../_shared/bookingIcs.ts";
 
@@ -56,18 +56,21 @@ serve(async (req) => {
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Resolve Resend API key: env var takes precedence, DB config is fallback
-    let resendApiKey = Deno.env.get("RESEND_API_KEY");
+    // Schluessel kommt aus derselben Quelle wie bei allen anderen Mailwegen:
+    // Admin -> Integrationen, Umgebungsvariable nur als Notnagel.
+    const resendApiKey = await resolveResendKey(supabase);
+    if (!resendApiKey) throw new Error("Resend-API-Key ist nicht konfiguriert (Admin -> Integrationen)");
+
     let appUrl = Deno.env.get("APP_URL");
-    if (!resendApiKey || !appUrl) {
-      const { data: ic } = await supabase.from("site_integration_configs").select("config, service").in("service", ["resend", "app"]);
-      for (const row of ic ?? []) {
-        const cfg = (row.config as Record<string, string>) ?? {};
-        if (row.service === "resend" && !resendApiKey) resendApiKey = cfg.api_key;
-        if (row.service === "app" && !appUrl) appUrl = cfg.url;
-      }
+    if (!appUrl) {
+      const { data: ic } = await supabase
+        .from("site_integration_configs")
+        .select("config")
+        .eq("service", "app")
+        .maybeSingle();
+      appUrl = (ic?.config as Record<string, string> | undefined)?.url;
     }
-    if (!resendApiKey) throw new Error("RESEND_API_KEY is not configured");
+
     const resend = new Resend(resendApiKey);
 
     const { booking_id, user_id, guest_email, guest_name, payment_type, amount_cents }: ConfirmationRequest = await req.json();

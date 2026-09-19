@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { Resend } from "npm:resend@4.0.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml, blockMessage } from "../_shared/email.ts";
+import { DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml, blockMessage, resolveResendKey } from "../_shared/email.ts";
 
 // Resend is initialized lazily inside the handler so we can fall back to DB config
 
@@ -76,13 +76,10 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Resolve Resend API key: env var takes precedence, DB config is fallback
-    let resendApiKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendApiKey) {
-      const { data: ic } = await supabaseAdmin.from("site_integration_configs").select("config").eq("service", "resend").single();
-      resendApiKey = (ic?.config as Record<string, string>)?.api_key;
-    }
-    if (!resendApiKey) throw new Error("RESEND_API_KEY is not configured");
+    // Schluessel kommt aus derselben Quelle wie bei allen anderen Mailwegen:
+    // Admin -> Integrationen, Umgebungsvariable nur als Notnagel.
+    const resendApiKey = await resolveResendKey(supabaseAdmin);
+    if (!resendApiKey) throw new Error("Resend-API-Key ist nicht konfiguriert (Admin -> Integrationen)");
     const resend = new Resend(resendApiKey);
 
     // Check rate limit
