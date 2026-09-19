@@ -108,9 +108,12 @@ Deno.serve(async (req) => {
         stripeRefundId = alreadyActive.id;
       } else {
         try {
+          // Schluessel am Zahlungsvorgang, nicht an der Bestellung — siehe
+          // cancel-booking. Haelt wiederholte Erstattungen ab, ohne eine zweite
+          // Zahlung auf dieselbe Bestellung unerstattbar zu machen.
           const created = await stripe.refunds.create(
             { payment_intent: paymentIntentId },
-            { idempotencyKey: `mp_refund_${orderId}` },
+            { idempotencyKey: `mp_refund_${paymentIntentId}` },
           );
           refundAmountCents = created.amount;
           stripeRefundId = created.id;

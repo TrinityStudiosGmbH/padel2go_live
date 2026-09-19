@@ -157,10 +157,12 @@ serve(async (req) => {
 
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
       try {
-        // Idempotency key: a retried cancel can never create a second refund.
+        // Schluessel am Zahlungsvorgang, nicht an der Buchung: ein wiederholter
+        // Storno erzeugt weiterhin keine zweite Erstattung, aber zwei Zahlungen
+        // auf dieselbe Buchung bleiben einzeln erstattbar.
         await stripe.refunds.create(
           { payment_intent: payment.stripe_payment_intent_id },
-          { idempotencyKey: `bk_refund_${bookingId}` },
+          { idempotencyKey: `bk_refund_${payment.stripe_payment_intent_id}` },
         );
         refundIssued = true;
         logStep("Stripe refund issued", { bookingId, paymentIntentId: payment.stripe_payment_intent_id });

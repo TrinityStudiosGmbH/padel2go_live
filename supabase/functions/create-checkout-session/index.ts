@@ -780,6 +780,32 @@ serve(async (req) => {
     // Build description
     const description = `${courtName} • ${durationMinutes} Minuten • ${startTime.toLocaleDateString('de-DE')} ${startTime.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })} Uhr`;
 
+    // Der Anspruch oben gilt nur 30 Sekunden. Danach darf ein zweiter Versuch
+    // ihn uebernehmen — und wuerde bisher eine ZWEITE Stripe-Sitzung anlegen,
+    // waehrend die erste in einem anderen Tab noch offen ist. Beide waeren
+    // bezahlbar. Deshalb hier noch einmal nachsehen und eine offene Sitzung
+    // wiederverwenden, statt eine neue danebenzustellen.
+    const { data: priorSessionRow } = await supabaseAdmin
+      .from("payments")
+      .select("stripe_checkout_session_id")
+      .eq("booking_id", booking.id)
+      .maybeSingle();
+    const priorSessionId = priorSessionRow?.stripe_checkout_session_id ?? null;
+
+    if (priorSessionId) {
+      try {
+        const prior = await stripe.checkout.sessions.retrieve(priorSessionId);
+        if (prior.status === "open" && prior.url) {
+          logStep("Offene Sitzung wiederverwendet statt neuer", { bookingId: booking.id, sessionId: prior.id });
+          return new Response(JSON.stringify({ url: prior.url }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200,
+          });
+        }
+      } catch (priorErr) {
+        logStep("Vorherige Sitzung nicht abrufbar — lege eine neue an", { error: (priorErr as Error).message });
+      }
+    }
+
     // Session expires in 30 minutes — keeps the court slot hold short
     const sessionExpiresAt = Math.floor(Date.now() / 1000) + 30 * 60;
 
@@ -825,6 +851,17 @@ serve(async (req) => {
           ...(appliedVoucherId ? { voucher_id: appliedVoucherId } : {}),
           ...(appliedPlay + appliedReward > 0 ? { points_used: (appliedPlay + appliedReward).toString() } : {}),
         },
+      },
+      {
+        // Bricht die Verbindung ab, nachdem Stripe die Sitzung angelegt hat, aber
+        // bevor die Antwort ankommt, wiederholt der Client den Aufruf. Ohne
+        // Schluessel entstuende eine zweite Sitzung — beide bezahlbar. Mit
+        // Schluessel gibt Stripe exakt dieselbe Sitzung zurueck.
+        //
+        // Der Schluessel enthaelt die vorherige Sitzung: solange derselbe Versuch
+        // wiederholt wird, bleibt er gleich; sobald wir bewusst einen neuen
+        // Versuch starten (alte Sitzung abgelaufen), aendert er sich.
+        idempotencyKey: `bk_sess_${booking.id}_${priorSessionId ?? "first"}`,
       });
     } catch (stripeErr) {
       logStep("Stripe session creation failed — releasing reserves", { error: (stripeErr as Error).message });

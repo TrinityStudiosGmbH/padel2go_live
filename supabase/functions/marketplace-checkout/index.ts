@@ -549,6 +549,12 @@ serve(async (req) => {
           type: "marketplace_purchase",
           redemption_id: orderId,
         },
+      },
+      {
+        // Siehe create-checkout-session: schuetzt gegen eine zweite Sitzung,
+        // wenn die Verbindung nach dem Anlegen abbricht und der Client den
+        // Aufruf wiederholt. Die Bestellung ist neu, deshalb genuegt ihre ID.
+        idempotencyKey: `mp_sess_${orderId}`,
       });
     } catch (stripeErr) {
       logStep("Stripe session creation failed — rolling back", { error: (stripeErr as Error).message });

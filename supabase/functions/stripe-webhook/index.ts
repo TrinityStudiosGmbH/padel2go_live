@@ -211,10 +211,16 @@ serve(async (req) => {
               let refundOk = false;
               if (paymentIntentId) {
                 try {
-                  // Idempotency key: a retried webhook can never create a second refund.
+                  // Schluessel am ZAHLUNGSVORGANG, nicht an der Bestellung. Eine
+                  // Wiederholung desselben Webhooks erzeugt damit weiterhin keine
+                  // zweite Erstattung. Ein bestellungsweiter Schluessel waere aber
+                  // falsch: zahlt jemand versehentlich zweimal auf dieselbe
+                  // Bestellung, muessen BEIDE Vorgaenge einzeln erstattbar sein —
+                  // sonst haette Stripe die zweite Erstattung als Dublette
+                  // verworfen und das Geld waere beim Kunden nie angekommen.
                   await stripe.refunds.create(
                     { payment_intent: paymentIntentId },
-                    { idempotencyKey: `mp_refund_${redemptionId}` },
+                    { idempotencyKey: `mp_refund_${paymentIntentId}` },
                   );
                   refundOk = true;
                   logStep("Marketplace: auto-refund issued for released paid order", { redemptionId, paymentIntentId });
@@ -693,10 +699,13 @@ serve(async (req) => {
               let refundOk = false;
               if (paymentIntentId) {
                 try {
-                  // Idempotency key: a retried webhook can never create a second refund.
+                  // Schluessel am ZAHLUNGSVORGANG, nicht an der Buchung — siehe
+                  // die gleiche Stelle im Marketplace-Zweig. Zahlt jemand
+                  // versehentlich zweimal auf dieselbe Buchung, muss jede Zahlung
+                  // einzeln erstattbar bleiben.
                   await stripe.refunds.create(
                     { payment_intent: paymentIntentId },
-                    { idempotencyKey: `bk_refund_${bookingId}` },
+                    { idempotencyKey: `bk_refund_${paymentIntentId}` },
                   );
                   refundOk = true;
                   logStep("Booking: auto-refund issued for cancelled paid booking", { bookingId, paymentIntentId });
