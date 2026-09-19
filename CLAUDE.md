@@ -129,11 +129,14 @@ supabase/
 - Auflösung in `resolve_booking_rate()`: Standort-Band → Standort-Ausnahme → globales Band → globaler Standardpreis. Darüber liegt unverändert die Vereinskondition (`resolve_member_pricing`).
 - **Punkte**: feste Zahl je 60 Minuten (`site_settings.payback_points_60min`, je Standort überschreibbar), 90 Min = ×1,5, 120 Min = ×2,0, Tennis = 0. Einzige Quelle ist `resolve_booking_points()` — sie speist sowohl die Checkout-Vorschau (`rewards-estimate`) als auch die Gutschrift (`stripe-webhook`).
 - Punkte gibt es **nur für tatsächlich gezahltes Geld**: der Webhook prüft `session.amount_total > 0`, der 0-Euro-Weg vergibt nichts.
+- **Punkte einlösen** (Marketplace): der maximale Rabatt je Produkt wird **nicht** gepflegt, sondern gerechnet — `site_settings.credits_payment_max_percent` (Anteil am Warenwert) und `credits_per_euro` (Kurs). 170 € bei 50 % und 100 Punkten/€ = 8.500 Punkte. Einzige Quelle im Frontend: `productPointsCap()` in `src/lib/marketplace.ts`, serverseitig gespiegelt in `marketplace-checkout`. Der Schalter dafür ist `feature_credits_payment_enabled`; steht er auf aus, verschwindet die gesamte Punkte-Oberfläche im Shop.
 - **Expert Levels sind entfernt.** Kein Level-Multiplikator, keine Stufen im Frontend, kein `expert-levels`-Endpunkt.
 - Admin: alles unter `/admin/pricing` („Preise & Punkte") in den Reitern Preise / Punkte / Wallets / Übersicht. `/admin/p2g-points` leitet dorthin um.
 
 ## Pending Migrations (not yet run in production)
 - `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed
+- `20260919140000_integration_config_merge.sql` — am 19.09.2026 gelaufen und verifiziert
+- `20260920100000_drop_item_credit_cost.sql` — NACH dem Deploy ausführen. Zwischen Deploy und Migration kein neues Produkt anlegen (die Spalte ist noch NOT NULL, das neue Bundle schreibt sie nicht mehr)
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
 `20260918120200_drop_expert_levels.sql`) sind am 18.09.2026 in Produktion gelaufen
