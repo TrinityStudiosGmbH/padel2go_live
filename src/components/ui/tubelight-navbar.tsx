@@ -133,12 +133,13 @@ export function TubelightNavBar({ items, className }: TubelightNavBarProps) {
             onFocus={() => setHovered(item.name)}
             onBlur={() => setHovered(null)}
             aria-current={isActive ? "page" : undefined}
+            // Die Schrift bleibt immer weiss. Die Section-Farbe steckt nur in
+            // der Pille dahinter — Akzentschrift auf Akzentpille war unlesbar.
             className={cn(
               "relative z-10 cursor-pointer rounded-full px-4 py-2 text-sm font-medium",
               "transition-colors duration-150",
               isActive ? "text-foreground" : "text-muted-foreground hover:text-foreground"
             )}
-            style={isActive && item.color ? { color: item.color } : undefined}
           >
             {item.name}
           </Link>
