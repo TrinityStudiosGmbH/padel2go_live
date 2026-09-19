@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { NavLink } from "@/components/NavLink";
 import { UserAvatar } from "@/components/UserAvatar";
+import { LiquidGlassFilter, useGlassScrolled } from "@/components/LiquidGlass";
 import { TubelightNavBar } from "@/components/ui/tubelight-navbar";
 import { NotificationCenter } from "@/components/notifications";
 import { useAuth } from "@/hooks/useAuth";
@@ -59,6 +60,8 @@ const DashboardNavigation = () => {
     await signOut();
   };
 
+  const scrolled = useGlassScrolled();
+
   return (
     // Gleiche schwebende Leiste wie im ausgeloggten Bereich. Der aeussere Rahmen
     // haelt exakt die bisherige Hoehe frei (64px mobil / 80px ab md).
@@ -66,8 +69,9 @@ const DashboardNavigation = () => {
       style={{ top: "var(--p2g-banner-h, 0px)" }}
       className="pointer-events-none fixed inset-x-0 z-50 pt-3 md:pt-4"
     >
+      <LiquidGlassFilter />
       <div className="container mx-auto px-4">
-        <nav className="p2g-nav-shell">
+        <nav className="p2g-nav-shell" data-scrolled={scrolled}>
           <div className="px-4 md:px-5">
         <div className="flex items-center justify-between h-[52px] md:h-16 gap-2">
           {/* Logo */}
@@ -175,7 +179,7 @@ const DashboardNavigation = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden overflow-hidden rounded-b-[24px] border-t border-white/[0.08] bg-[hsl(0_0%_5%/0.97)]"
+            className="p2g-nav-menu lg:hidden overflow-hidden"
           >
             <div className="px-4 py-4 flex flex-col gap-1">
               {dashboardItems.map((item) => (

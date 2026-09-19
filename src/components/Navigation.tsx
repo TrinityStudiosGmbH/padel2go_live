@@ -11,6 +11,7 @@ import { useAdminAuth } from "@/hooks/useAdminAuth";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import DashboardNavigation from "@/components/DashboardNavigation";
 import LanguageSwitch from "@/components/LanguageSwitch";
+import { LiquidGlassFilter, useGlassScrolled } from "@/components/LiquidGlass";
 import wordmark from "@/assets/padel2go-wordmark-light.png";
 
 const Navigation = () => {
@@ -56,6 +57,8 @@ const PublicNavigation = () => {
     setActiveDropdown(null);
   };
 
+  const scrolled = useGlassScrolled();
+
   return (
     // Schwebende Leiste: der aeussere Rahmen haelt exakt die Hoehe, die die
     // Seiten bisher freihalten (64px mobil / 80px ab md), damit kein Inhalt
@@ -65,8 +68,9 @@ const PublicNavigation = () => {
       style={{ top: "var(--p2g-banner-h, 0px)" }}
       className="pointer-events-none fixed inset-x-0 z-50 pt-3 md:pt-4"
     >
+      <LiquidGlassFilter />
       <div className="container mx-auto px-4">
-        <nav className="p2g-nav-shell">
+        <nav className="p2g-nav-shell" data-scrolled={scrolled}>
           <div className="px-4 md:px-5">
         <div className="flex items-center justify-between h-[52px] md:h-16">
           {/* Logo */}
@@ -179,7 +183,7 @@ const PublicNavigation = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden overflow-hidden rounded-b-[24px] border-t border-white/[0.08] bg-[hsl(0_0%_5%/0.97)]"
+            className="p2g-nav-menu lg:hidden overflow-hidden"
           >
             <div className="px-4 py-4 flex flex-col gap-1">
               {navItems.map((item) => (

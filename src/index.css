@@ -271,53 +271,74 @@
   .max-h-screen { max-height: 100dvh; }
 }
 
-/* Schwebende Kopfleiste, oeffentlich wie eingeloggt.
-   Nachgebaut nach den Glas-Materialien von iOS: der Grundton ist fast farblos,
-   die Wirkung kommt aus drei Dingen — starke Unschaerfe, kraeftig angehobene
-   Saettigung (Apple nennt das Vibrancy, der Hintergrund faerbt das Glas ein)
-   und eine helle Lichtkante am oberen Rand, die nach unten ausblendet.
-   Bewusst ohne overflow:hidden, sonst schneidet die Leiste ihr Konto-Menue ab. */
+/* ===========================================================================
+   Liquid Glass — schwebende Kopfleiste, oeffentlich wie eingeloggt
+   ---------------------------------------------------------------------------
+   Vier Ebenen uebereinander, wie bei den Materialien von iOS:
+     1. Blur      — loest den Hintergrund auf (backdrop-filter)
+     2. Vibrancy  — hebt dessen Saettigung an, damit das Glas Farbe annimmt
+     3. Tint      — halbtransparenter Verlauf, oben hell, unten kuehl gedunkelt
+     4. Shine     — Lichtkante oben, Glasrand ringsum, Tiefe nach unten
+   Die Lichtbrechung (feDisplacementMap) kommt als fuenfte Ebene dazu, aber nur
+   in Chromium — siehe .liquid-glass-ready weiter unten.
+
+   Feintuning an genau drei Stellen:
+     --glass-blur   Unschaerfe. Hoeher = ruhiger, aber matter.
+     --glass-tint   Deckkraft des dunklen Grundtons. Hoeher = lesbarer, weniger glasig.
+     --glass-shine  Staerke der Lichtkante.
+   =========================================================================== */
+:root {
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+  --glass-tint: 0.26;
+  --glass-shine: 1;
+  --glass-radius: 24px;
+  /* Kuehler Grundton statt reinem Schwarz — das ist der Unterschied zwischen
+     "abgedunkelt" und "Glas". */
+  --glass-dark: 14 14 22;
+}
+
 .p2g-nav-shell {
   position: relative;
   pointer-events: auto;
-  border-radius: 24px;
+  border-radius: var(--glass-radius);
   background:
     linear-gradient(
       180deg,
-      hsl(0 0% 100% / 0.14),
-      hsl(0 0% 100% / 0.05) 45%,
-      hsl(0 0% 100% / 0.015)
+      rgb(255 255 255 / 0.18),
+      rgb(255 255 255 / 0.05) 42%,
+      rgb(var(--glass-dark) / 0.1)
     ),
-    hsl(0 0% 0% / 0.34);
-  /* Die Saettigung traegt den Effekt: ohne sie wirkt das Glas grau statt
-     lebendig. Die Unschaerfe loest den Hintergrund auf, damit Text darunter
-     nicht mit der Navigation konkurriert. */
-  backdrop-filter: blur(36px) saturate(190%);
-  -webkit-backdrop-filter: blur(36px) saturate(190%);
+    rgb(var(--glass-dark) / var(--glass-tint));
+  backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
   box-shadow:
-    /* Glanz auf der Oberkante, wie Licht auf einer Glaskante */
-    inset 0 1px 0 hsl(0 0% 100% / 0.16),
-    /* Dunkle Unterkante gibt dem Glas Dicke */
-    inset 0 -1px 0 hsl(0 0% 0% / 0.4),
-    0 2px 8px -4px hsl(0 0% 0% / 0.5),
-    0 14px 40px -12px hsl(0 0% 0% / 0.7);
+    /* Glanz auf der Oberkante */
+    inset 0 1px 0 rgb(255 255 255 / calc(0.28 * var(--glass-shine))),
+    /* zarter Schimmer auf der Unterkante */
+    inset 0 -1px 0 rgb(255 255 255 / calc(0.06 * var(--glass-shine))),
+    /* durchgehender Glasrand */
+    inset 0 0 0 1px rgb(255 255 255 / calc(0.09 * var(--glass-shine))),
+    0 2px 8px -4px rgb(0 0 0 / 0.5),
+    0 16px 44px -14px rgb(0 0 0 / 0.72);
+  transition: background-color 250ms ease-out, transform 250ms ease-out;
 }
 
-/* Der Rand selbst ist ein Verlauf: oben hell, unten fast weg. Ein gleichmaessig
-   heller Rahmen wuerde flach wirken, erst das Gefaelle laesst die Kante
-   gewoelbt aussehen. Umgesetzt als 1px-Ring ueber zwei Masken. */
+/* Gerichtete Lichtkante: oben hell, nach unten fast weg. Ein gleichmaessiger
+   Rahmen wirkt flach, erst das Gefaelle laesst die Kante gewoelbt aussehen.
+   1px-Ring ueber zwei Masken, damit die Mitte frei bleibt. */
 .p2g-nav-shell::before {
   content: "";
   position: absolute;
   inset: 0;
-  z-index: 1;
+  z-index: 2;
   border-radius: inherit;
   padding: 1px;
   background: linear-gradient(
     180deg,
-    hsl(0 0% 100% / 0.38),
-    hsl(0 0% 100% / 0.1) 38%,
-    hsl(0 0% 100% / 0.04)
+    rgb(255 255 255 / calc(0.4 * var(--glass-shine))),
+    rgb(255 255 255 / calc(0.1 * var(--glass-shine))) 38%,
+    rgb(255 255 255 / calc(0.03 * var(--glass-shine)))
   );
   -webkit-mask:
     linear-gradient(#000 0 0) content-box,
@@ -330,13 +351,101 @@
   pointer-events: none;
 }
 
-/* Ohne Backdrop-Filter (aeltere Browser) wuerde die Leiste durchsichtig wirken
-   und der Text auf dem Seiteninhalt kleben. */
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .p2g-nav-shell {
-    background: hsl(0 0% 5% / 0.97);
-    border: 1px solid hsl(0 0% 100% / 0.1);
+/* Beim Scrollen wird der Grundton kraeftiger: ueber dem Hero darf die Leiste
+   fast verschwinden, ueber laufendem Inhalt muss der Text sicher lesbar sein.
+   0.62 ist nicht geraten, sondern gerechnet: selbst vor einer reinen
+   Weissflaeche ergibt das einen Grauwert von 106 und damit 5,4:1 gegen weisse
+   Schrift — ueber der WCAG-AA-Schwelle von 4,5:1. Bei 0.46 waeren es nur
+   3,2:1 gewesen. */
+.p2g-nav-shell[data-scrolled="true"] {
+  --glass-tint: 0.62;
+}
+
+/* Lichtbrechung am Rand. Nur Chromium versteht einen SVG-Filter im
+   backdrop-filter; Safari und Firefox bekommen die Ebenen 1-4 und sehen
+   deshalb kein bisschen kaputt aus, nur etwas ruhiger. Die Klasse setzt
+   LiquidGlass.tsx erst nach erfolgreicher Pruefung. */
+.liquid-glass-ready .p2g-nav-shell {
+  backdrop-filter: url(#p2g-liquid-glass) blur(var(--glass-blur)) saturate(var(--glass-saturate));
+}
+
+/* Weniger Transparenz gewuenscht (Systemeinstellung): Glas zu, Text zuerst. */
+@media (prefers-reduced-transparency: reduce) {
+  .p2g-nav-shell,
+  .p2g-nav-shell[data-scrolled="true"] {
+    background: rgb(var(--glass-dark) / 0.97);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
   }
+  .liquid-glass-ready .p2g-nav-shell { backdrop-filter: none; }
+}
+
+/* Ohne Backdrop-Filter waere die Leiste bloss durchsichtig und der Text kleble
+   auf dem Seiteninhalt. */
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .p2g-nav-shell { background: rgb(var(--glass-dark) / 0.97); }
+}
+
+/* Die gleitende Pille hinter dem aktiven Menuepunkt ist dasselbe Material,
+   nur eine Nummer kleiner: heller Kern, Lichtkante oben, weicher Rand. */
+.p2g-nav-pill {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.14), rgb(255 255 255 / 0.05)),
+    var(--pill-accent, hsl(var(--primary) / 0.16));
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.22),
+    inset 0 0 0 1px rgb(255 255 255 / 0.08),
+    0 2px 10px -4px rgb(0 0 0 / 0.55);
+  pointer-events: none;
+}
+
+/* Mit Akzentfarbe: der Hex-Wert kommt roh herein, deshalb nur als sehr
+   duenne Lage darueber statt als Vollflaeche. */
+.p2g-nav-pill[style*="--pill-accent"] { opacity: 0.85; }
+
+/* Leichtes Anheben beim Ueberfahren — genug, um Leben zu zeigen, zu wenig,
+   um beim Lesen zu stoeren. */
+@media (hover: hover) and (pointer: fine) {
+  .p2g-nav-shell:hover { transform: scale(1.005); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .p2g-nav-shell { transition: none; }
+  .p2g-nav-shell:hover { transform: none; }
+  .p2g-nav-pill { transition: none !important; }
+}
+
+/* Aufgeklapptes Menue auf kleinen Schirmen: dasselbe Glas, aber deutlich
+   kraeftiger getoent. Eine ganze Flaeche Text braucht mehr Deckung als ein
+   schmaler Streifen, sonst liest man den Seiteninhalt mit. */
+.p2g-nav-menu {
+  border-top: 1px solid rgb(255 255 255 / 0.08);
+  border-bottom-left-radius: var(--glass-radius);
+  border-bottom-right-radius: var(--glass-radius);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.05), rgb(255 255 255 / 0.015)),
+    rgb(var(--glass-dark) / 0.88);
+  backdrop-filter: blur(28px) saturate(var(--glass-saturate));
+  -webkit-backdrop-filter: blur(28px) saturate(var(--glass-saturate));
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .p2g-nav-menu {
+    background: rgb(var(--glass-dark) / 0.99);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .p2g-nav-menu { background: rgb(var(--glass-dark) / 0.99); }
+}
+
+/* Tastaturfokus muss auf Glas genauso deutlich sein wie auf Vollflaeche. */
+.p2g-nav-shell :is(a, button):focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+  border-radius: 999px;
 }
 
 /* Feste Leisten am unteren Rand duerfen nicht unter dem Home-Indikator liegen. */
