@@ -14,6 +14,7 @@ import {
   Timer
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -318,6 +319,17 @@ export const MyBookings = () => {
                               </AlertDialog>
                             </div>
                           </div>
+                          {/* Nur bezahlte Buchungen haben einen Beleg. Freistunden
+                              und Vereinskontingente erzeugen keinen. */}
+                          {(booking.price_cents ?? 0) > 0 && (
+                            <div className="mt-3 border-t border-border/50 pt-3">
+                              <InvoiceDownloadButton
+                                sourceId={booking.id}
+                                receiptType="booking"
+                                className="gap-1.5"
+                              />
+                            </div>
+                          )}
                         </motion.div>
                       ))}
                     </div>
@@ -368,6 +380,15 @@ export const MyBookings = () => {
                               </div>
                             </div>
                           </div>
+                          {(booking.price_cents ?? 0) > 0 && booking.status !== "expired" && (
+                            <div className="mt-3 border-t border-border/50 pt-3">
+                              <InvoiceDownloadButton
+                                sourceId={booking.id}
+                                receiptType="booking"
+                                className="gap-1.5"
+                              />
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>

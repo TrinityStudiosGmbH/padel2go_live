@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
-import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml, resolveResendKey } from "../_shared/email.ts";
+import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml, resolveResendKey, invoiceUrl } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 import { buildBookingIcs, googleCalendarUrl, signBookingIcsToken, bookingIcsUrl } from "../_shared/bookingIcs.ts";
 
@@ -195,7 +195,7 @@ serve(async (req) => {
     // not exist yet for free bookings or if this mail races the webhook.
     const { data: bookingReceipt } = await supabase
       .from("receipts")
-      .select("receipt_number, tax_rate, tax_cents")
+      .select("receipt_number, tax_rate, tax_cents, access_token")
       .eq("receipt_type", "booking")
       .eq("source_id", booking_id)
       .maybeSingle();
@@ -261,6 +261,10 @@ serve(async (req) => {
       highlight: { label: "Bezahlt", value: `${paidAmount} €`, sub: [taxLine, receiptNumberLine] },
       ctaLabel: "Buchung ansehen",
       ctaUrl: bookingUrl,
+      // Nur wenn es einen Beleg gibt: Freistunden und 0-Euro-Buchungen haben keinen.
+      ...(bookingReceipt?.access_token
+        ? { secondaryCtaLabel: "Rechnung herunterladen", secondaryCtaUrl: invoiceUrl(bookingReceipt.access_token) }
+        : {}),
       calendar: { googleUrl: googleCalUrl, appleUrl: appleCalUrl },
       note: "Die .ics-Datei im Anhang funktioniert auch mit Outlook. Wir freuen uns auf dein Match! 🏆",
       legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",

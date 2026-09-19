@@ -20,6 +20,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { eur } from "@/lib/marketplace";
 import { StorageImage } from "@/components/StorageImage";
 import { invokeEdgeFunction } from "@/lib/edgeFunctionUtils";
+import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
 
 const dateFmt = (iso: string) =>
   new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
@@ -212,6 +213,14 @@ export function AccountOrdersTab() {
                     <span className="font-mono text-xs text-muted-foreground">Nr. {o.reference_code}</span>
                   )}
                 </div>
+
+                {/* Ab bezahlt gibt es die Rechnung. Eine stornierte oder offene
+                    Bestellung hat keinen Beleg, dort waere der Knopf eine Sackgasse. */}
+                {(o.status === "success" || o.status === "refunded") && (
+                  <div className="mt-3">
+                    <InvoiceDownloadButton sourceId={o.id} receiptType="marketplace_order" className="gap-1.5" />
+                  </div>
+                )}
 
                 {o.status === "pending" && (
                   <div className="mt-3 flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3">

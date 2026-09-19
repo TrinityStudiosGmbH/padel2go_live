@@ -10,6 +10,7 @@ import { useMutation } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { MailTestPanel } from "@/components/admin/settings/MailTestPanel";
+import { BillingProfilePanel } from "@/components/admin/settings/BillingProfilePanel";
 
 type PreviewTable = {
   table: string;
@@ -102,6 +103,8 @@ export default function AdminSettings() {
         </p>
 
         {/* E-Mail-Test — jede ausgehende Mail mit Beispieldaten verschicken */}
+        <BillingProfilePanel />
+
         <MailTestPanel />
 
         {/* Launch-Reset — löscht Testdaten, Stammdaten und Inhalte bleiben */}

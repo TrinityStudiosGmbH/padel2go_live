@@ -1,6 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
-import { resolveResendKey, brandedEmailHtml, sendBrandedEmail } from "../_shared/email.ts";
+import { resolveResendKey, brandedEmailHtml, sendBrandedEmail, invoiceUrl } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 import { WIDERRUFSBELEHRUNG_HTML } from "../_shared/legal.ts";
 
@@ -125,7 +125,7 @@ serve(async (req) => {
       // Receipt with sequential number + VAT split (created at settle time).
       const { data: receipt } = await supabase
         .from("receipts")
-        .select("receipt_number, gross_cents, discount_cents, paid_cents, tax_rate, tax_cents")
+        .select("receipt_number, gross_cents, discount_cents, paid_cents, tax_rate, tax_cents, access_token")
         .eq("receipt_type", "marketplace_order")
         .eq("source_id", order.id)
         .maybeSingle();
@@ -168,6 +168,10 @@ serve(async (req) => {
           : "Deine Bestellung ist abgeschlossen. Viel Spaß!",
         ctaLabel: "Zum Shop",
         ctaUrl: "https://www.padel2go-official.de/marketplace",
+        // Fuer Gaeste ohne Konto ist dieser Link der einzige Weg zur Rechnung.
+        ...(receipt?.access_token
+          ? { secondaryCtaLabel: "Rechnung herunterladen", secondaryCtaUrl: invoiceUrl(receipt.access_token) }
+          : {}),
         ...(isPhysical ? { legalHtml: WIDERRUFSBELEHRUNG_HTML } : {}),
       });
 

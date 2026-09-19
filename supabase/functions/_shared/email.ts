@@ -15,6 +15,16 @@ export const APP_URL = "https://www.padel2go-official.de";
 // Served from the Vite `public/` folder of the web app (public/email/logo-written.png).
 export const EMAIL_LOGO_URL = `${APP_URL}/email/logo-written.png`;
 
+/**
+ * Link auf die Rechnung als PDF. Traegt das Zugriffstoken des Belegs, damit
+ * auch ein Gast ohne Konto herankommt — der Link aus der Mail ist fuer viele
+ * der einzige Weg dorthin.
+ */
+export function invoiceUrl(accessToken: string): string {
+  const base = (Deno.env.get("SUPABASE_URL") ?? "").replace(/\/$/, "");
+  return `${base}/functions/v1/receipt-pdf?token=${encodeURIComponent(accessToken)}`;
+}
+
 // Brand palette — black + lime, identical to the web app.
 export const BRAND = {
   lime: "#C7F011",
