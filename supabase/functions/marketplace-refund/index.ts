@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     // ── Load order ─────────────────────────────────────────────────────────────
     const { data: order, error: orderErr } = await supabaseAdmin
       .from("marketplace_redemptions")
-      .select("id, status, amount_cents, stripe_session_id, reference_code, user_id, item_id, quantity, play_spent, reward_spent, guest_email, guest_name")
+      .select("id, status, amount_cents, stripe_session_id, reference_code, user_id, item_id, quantity, play_spent, reward_spent, guest_email, guest_name, tax_rate")
       .eq("id", orderId)
       .maybeSingle();
     if (orderErr || !order) return json({ error: "Bestellung nicht gefunden" }, 404);
@@ -152,7 +152,10 @@ Deno.serve(async (req) => {
         p_gross_cents: -refundAmountCents,
         p_discount_cents: 0,
         p_paid_cents: -refundAmountCents,
-        p_tax_rate: 19,
+        // Der Satz der Bestellung, nicht fest 19. Die Bestellung haelt ihn seit
+        // dem Kauf fest, die Gutschrift muss denselben ausweisen — sonst waere
+        // sie bei einem 7-Prozent-Produkt still falsch.
+        p_tax_rate: Number((order as { tax_rate?: number }).tax_rate ?? 19),
       });
       if (receiptError) console.log("[marketplace-refund] receipt creation failed:", receiptError.message);
     }

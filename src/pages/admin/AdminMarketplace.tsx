@@ -159,6 +159,7 @@ const emptyForm = (): Partial<MarketplaceItemInput> => ({
   credit_cost: 0,
   price_cents: 0,
   compare_at_price_cents: null,
+  tax_rate: 19,
   description: "",
   subtitle: "",
   long_description: "",
@@ -425,6 +426,8 @@ const AdminMarketplace = () => {
       credit_cost: item.credit_cost,
       price_cents: item.price_cents ?? 0,
       compare_at_price_cents: item.compare_at_price_cents ?? null,
+      // tax_rate fehlt noch in den generierten Supabase-Typen -> Cast wie anderswo im Repo.
+      tax_rate: Number((item as any).tax_rate ?? 19),
       description: item.description || "",
       subtitle: item.subtitle || "",
       long_description: item.long_description || "",
@@ -533,6 +536,7 @@ const AdminMarketplace = () => {
       credit_cost: formData.credit_cost,
       price_cents: formData.price_cents,
       compare_at_price_cents: formData.compare_at_price_cents || null,
+      tax_rate: Number(formData.tax_rate ?? 19),
       description: formData.description,
       subtitle: formData.subtitle || null,
       long_description: formData.long_description || null,
@@ -1256,8 +1260,8 @@ const AdminMarketplace = () => {
               </div>
             </div>
 
-            {/* Price + compare + credits */}
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            {/* Preis, UVP, Punkte-Rabatt, Steuersatz */}
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex flex-col gap-2">
                 <Label className={FIELD_LABEL}>
                   Preis (€)<span className="text-primary"> *</span>
@@ -1307,6 +1311,26 @@ const AdminMarketplace = () => {
                   Fixer Betrag an Points, den jeder Käufer bei diesem Produkt als Rabatt einlösen kann
                   . 0 = kein Punkterabatt.
                 </p>
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label className={FIELD_LABEL}>Steuersatz (%)</Label>
+                <Select
+                  value={String(formData.tax_rate ?? 19)}
+                  onValueChange={(v) => setFormData({ ...formData, tax_rate: Number(v) })}
+                >
+                  <SelectTrigger className={FIELD_INPUT}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="19">19 % — Regelsatz</SelectItem>
+                    <SelectItem value="7">7 % — ermäßigt</SelectItem>
+                    <SelectItem value="0">0 % — steuerfrei</SelectItem>
+                  </SelectContent>
+                </Select>
+                <span className="text-[11.5px] leading-relaxed text-muted-foreground">
+                  Landet auf Beleg und Gutschrift. Bei einer Änderung gilt der neue Satz erst
+                  für neue Bestellungen.
+                </span>
               </div>
             </div>
 
