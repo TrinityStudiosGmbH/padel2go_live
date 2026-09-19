@@ -94,9 +94,11 @@ export function TubelightNavBar({ items, className }: TubelightNavBarProps) {
     <div
       ref={listRef}
       onMouseLeave={() => setHovered(null)}
+      // Keine helle Umrandung — die Gruppe wird allein durch die leicht
+      // aufgehellte Flaeche kenntlich.
       className={cn(
         "relative flex items-center gap-1 rounded-full px-2 py-1.5",
-        "border border-white/[0.07] bg-white/[0.04]",
+        "bg-white/[0.035]",
         className
       )}
     >
