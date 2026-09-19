@@ -69,7 +69,7 @@ const DashboardNavigation = () => {
       <div className="container mx-auto px-4">
         <nav className="p2g-nav-shell">
           <div className="px-4 md:px-5">
-        <div className="flex items-center justify-between h-[50px] md:h-[62px] gap-2">
+        <div className="flex items-center justify-between h-[52px] md:h-16 gap-2">
           {/* Logo */}
           <NavLink to="/dashboard/home" className="flex items-center shrink-0 will-change-transform">
             <img
@@ -175,7 +175,7 @@ const DashboardNavigation = () => {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
-            className="lg:hidden overflow-hidden rounded-b-[20px] border-t border-white/[0.07] bg-[hsl(0_0%_4%)]"
+            className="lg:hidden overflow-hidden rounded-b-[24px] border-t border-white/[0.08] bg-[hsl(0_0%_5%/0.97)]"
           >
             <div className="px-4 py-4 flex flex-col gap-1">
               {dashboardItems.map((item) => (

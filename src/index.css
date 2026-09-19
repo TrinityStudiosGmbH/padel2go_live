@@ -271,28 +271,72 @@
   .max-h-screen { max-height: 100dvh; }
 }
 
-/* Schwebende Kopfleiste, oeffentlich wie eingeloggt. Zwei Hintergrundschichten:
-   ein heller Verlauf fuer den Glanz, darunter getoentes Schwarz, damit die
-   Schrift auch ueber hellen Bildern lesbar bleibt. Bewusst ohne overflow:hidden,
-   sonst schneidet die Leiste ihr eigenes Konto-Menue ab. */
+/* Schwebende Kopfleiste, oeffentlich wie eingeloggt.
+   Nachgebaut nach den Glas-Materialien von iOS: der Grundton ist fast farblos,
+   die Wirkung kommt aus drei Dingen — starke Unschaerfe, kraeftig angehobene
+   Saettigung (Apple nennt das Vibrancy, der Hintergrund faerbt das Glas ein)
+   und eine helle Lichtkante am oberen Rand, die nach unten ausblendet.
+   Bewusst ohne overflow:hidden, sonst schneidet die Leiste ihr Konto-Menue ab. */
 .p2g-nav-shell {
+  position: relative;
   pointer-events: auto;
-  border-radius: 20px;
-  border: 1px solid hsl(0 0% 100% / 0.09);
+  border-radius: 24px;
   background:
-    linear-gradient(180deg, hsl(0 0% 100% / 0.09), hsl(0 0% 100% / 0.025)),
-    hsl(0 0% 0% / 0.44);
-  box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.75);
-  /* Wenig Tuenche, kraeftige Unschaerfe: der Hintergrund bleibt sichtbar,
-     loest sich aber auf, statt hinter der Schrift lesbar zu bleiben. */
-  backdrop-filter: blur(32px) saturate(165%);
-  -webkit-backdrop-filter: blur(32px) saturate(165%);
+    linear-gradient(
+      180deg,
+      hsl(0 0% 100% / 0.14),
+      hsl(0 0% 100% / 0.05) 45%,
+      hsl(0 0% 100% / 0.015)
+    ),
+    hsl(0 0% 0% / 0.34);
+  /* Die Saettigung traegt den Effekt: ohne sie wirkt das Glas grau statt
+     lebendig. Die Unschaerfe loest den Hintergrund auf, damit Text darunter
+     nicht mit der Navigation konkurriert. */
+  backdrop-filter: blur(36px) saturate(190%);
+  -webkit-backdrop-filter: blur(36px) saturate(190%);
+  box-shadow:
+    /* Glanz auf der Oberkante, wie Licht auf einer Glaskante */
+    inset 0 1px 0 hsl(0 0% 100% / 0.16),
+    /* Dunkle Unterkante gibt dem Glas Dicke */
+    inset 0 -1px 0 hsl(0 0% 0% / 0.4),
+    0 2px 8px -4px hsl(0 0% 0% / 0.5),
+    0 14px 40px -12px hsl(0 0% 0% / 0.7);
+}
+
+/* Der Rand selbst ist ein Verlauf: oben hell, unten fast weg. Ein gleichmaessig
+   heller Rahmen wuerde flach wirken, erst das Gefaelle laesst die Kante
+   gewoelbt aussehen. Umgesetzt als 1px-Ring ueber zwei Masken. */
+.p2g-nav-shell::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(
+    180deg,
+    hsl(0 0% 100% / 0.38),
+    hsl(0 0% 100% / 0.1) 38%,
+    hsl(0 0% 100% / 0.04)
+  );
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
 }
 
 /* Ohne Backdrop-Filter (aeltere Browser) wuerde die Leiste durchsichtig wirken
    und der Text auf dem Seiteninhalt kleben. */
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .p2g-nav-shell { background: hsl(0 0% 4% / 0.97); }
+  .p2g-nav-shell {
+    background: hsl(0 0% 5% / 0.97);
+    border: 1px solid hsl(0 0% 100% / 0.1);
+  }
 }
 
 /* Feste Leisten am unteren Rand duerfen nicht unter dem Home-Indikator liegen. */
