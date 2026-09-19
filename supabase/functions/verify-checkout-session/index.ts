@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 /**
  * Wahrheit fuer die Erfolgsseite.
@@ -60,30 +61,20 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
 
-    let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      const { data: ic } = await supabaseAdmin
-        .from("site_integration_configs").select("config").eq("service", "stripe").maybeSingle();
-      stripeKey = (ic?.config as Record<string, string> | undefined)?.secret_key;
-    }
-    if (!stripeKey) {
-      return new Response(JSON.stringify({ error: "Zahlungsanbieter ist nicht konfiguriert" }), { status: 500, headers });
+    let stripeKey: string;
+    try {
+      stripeKey = (await resolveStripe(supabaseAdmin)).secretKey;
+    } catch (e) {
+      return new Response(JSON.stringify({ error: (e as Error).message }), { status: 500, headers });
     }
 
-    // Testmodus-Sitzungen (freigeschaltete Tester) kennt der Live-Key nicht.
+    // Sitzungen aus dem jeweils anderen Modus kennt dieser Schluessel nicht —
+    // das ist in Ordnung, sie melden sich dann als "unbekannt".
     let session: Stripe.Checkout.Session | null = null;
     try {
       session = await new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" })
         .checkout.sessions.retrieve(session_id);
-    } catch {
-      const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-      if (testKey) {
-        try {
-          session = await new Stripe(testKey, { apiVersion: "2025-08-27.basil" })
-            .checkout.sessions.retrieve(session_id);
-        } catch { /* bleibt null */ }
-      }
-    }
+    } catch { /* bleibt null */ }
 
     if (!session) {
       log("Sitzung unbekannt", { session_id });

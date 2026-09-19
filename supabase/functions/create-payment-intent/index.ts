@@ -1,5 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import Stripe from "npm:stripe@18.5.0";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 // Native in-app payments (Apple Pay / saved cards) for COURT BOOKINGS via Stripe's
 // PaymentSheet. Mirrors create-checkout-session's validation + pricing + voucher logic, but
@@ -34,12 +35,11 @@ Deno.serve(async (req) => {
     const supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      const { data: ic } = await supabaseAdmin.from("site_integration_configs").select("config").eq("service", "stripe").single();
-      stripeKey = (ic?.config as Record<string, string>)?.secret_key;
-    }
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not configured");
+    // Modus, Geheim- und oeffentlicher Schluessel aus einer Hand. Wichtig ist,
+    // dass beide zum selben Modus gehoeren: die App baut ihr Stripe-SDK mit dem
+    // oeffentlichen Schluessel auf, den wir hier zurueckgeben.
+    const stripeCreds = await resolveStripe(supabaseAdmin);
+    const stripeKey = stripeCreds.secretKey;
 
     // Auth — native payments are for signed-in users only (guests use hosted checkout).
     const authHeader = req.headers.get("Authorization");
@@ -48,29 +48,10 @@ Deno.serve(async (req) => {
     const user = userData?.user;
     if (!user?.id || !user.email) return json({ error: "Authentication required" }, 401);
 
-    // TEST MODE for allowlisted testers (sandbox cards) — same switch as checkout.
-    const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-    const testEmails = (Deno.env.get("STRIPE_TEST_USER_EMAILS") ?? "")
-      .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-    const isTestMode = !!testKey && testEmails.includes(user.email.toLowerCase());
-    if (isTestMode) {
-      stripeKey = testKey!;
-      logStep("TEST MODE intent (sandbox key)", { email: user.email });
-    }
-
-    // Publishable key must match the mode the intent is created in — the app initializes
-    // the Stripe SDK with whatever we return here.
-    let publishableKey = isTestMode
-      ? Deno.env.get("STRIPE_TEST_PUBLISHABLE_KEY") ?? ""
-      : Deno.env.get("STRIPE_PUBLISHABLE_KEY") ?? "";
+    const publishableKey = stripeCreds.publishableKey;
     if (!publishableKey) {
-      const { data: ic } = await supabaseAdmin.from("site_integration_configs").select("config").eq("service", "stripe").single();
-      const cfg = (ic?.config as Record<string, string>) ?? {};
-      // The DB config holds the test pair; only use it when it matches the active mode.
-      const cfgKey = cfg.publishable_key ?? "";
-      if (cfgKey.startsWith(isTestMode ? "pk_test" : "pk_live")) publishableKey = cfgKey;
+      throw new Error("Kein öffentlicher Stripe-Schlüssel für diesen Modus hinterlegt");
     }
-    if (!publishableKey) throw new Error("Stripe publishable key is not configured for this mode");
 
     const { booking_id, voucher_id } = await req.json();
     if (!booking_id) return json({ error: "booking_id is required" }, 400);
@@ -234,7 +215,7 @@ Deno.serve(async (req) => {
       },
     }, { idempotencyKey: `pi_${booking.id}_${amountCents}` });
 
-    logStep("PaymentIntent created", { intentId: intent.id, amountCents, testMode: isTestMode });
+    logStep("PaymentIntent created", { intentId: intent.id, amountCents, mode: stripeCreds.mode });
 
     return json({
       publishable_key: publishableKey,
@@ -242,7 +223,7 @@ Deno.serve(async (req) => {
       customer_id: customerId,
       ephemeral_key: ephemeralKey.secret,
       amount_cents: amountCents,
-      test_mode: isTestMode,
+      test_mode: stripeCreds.mode === "test",
     });
   } catch (err) {
     const message = (err as Error).message ?? "Unknown error";

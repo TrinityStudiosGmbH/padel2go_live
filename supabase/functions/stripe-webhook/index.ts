@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
+import { resolveWebhookSecrets } from "../_shared/stripe.ts";
 
 // Stripe webhooks are server-to-server, minimal CORS needed
 const corsHeaders = {
@@ -38,53 +39,47 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Resolve keys: env var takes precedence, DB config is fallback
-    let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    let webhookSecret = Deno.env.get("STRIPE_WEBHOOK_SECRET");
-    if (!stripeKey || !webhookSecret) {
-      const { data: ic } = await supabaseAdmin.from("site_integration_configs").select("config").eq("service", "stripe").single();
-      const cfg = (ic?.config as Record<string, string>) ?? {};
-      if (!stripeKey) stripeKey = cfg.secret_key;
-      if (!webhookSecret) webhookSecret = cfg.webhook_secret;
+    // Beide Signatur-Geheimnisse, das des aktiven Modus zuerst. Waehrend einer
+    // Umstellung kann Stripe noch ein Ereignis aus dem anderen Modus
+    // nachliefern; das darf nicht als ungueltige Signatur abprallen.
+    const { secrets: webhookSecrets, keyFor } = await resolveWebhookSecrets(supabaseAdmin);
+    if (webhookSecrets.length === 0) {
+      throw new Error("Kein Stripe-Webhook-Geheimnis hinterlegt (Admin → Integrationen → Stripe)");
     }
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not configured");
-    if (!webhookSecret) throw new Error("STRIPE_WEBHOOK_SECRET is not configured");
 
-    let stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
+    let stripe = new Stripe(keyFor[webhookSecrets[0].mode] || keyFor.live || keyFor.test, {
+      apiVersion: "2025-08-27.basil",
+    });
 
     const signature = req.headers.get("stripe-signature");
     if (!signature) throw new Error("No Stripe signature found");
 
     const body = await req.text();
-    let event: Stripe.Event;
+    let event!: Stripe.Event;
+    let verifiedMode: "live" | "test" | null = null;
 
-    try {
-      event = await stripe.webhooks.constructEventAsync(body, signature, webhookSecret);
-    } catch (err) {
-      // TEST MODE events (sandbox checkouts by allowlisted testers) are signed with the
-      // test webhook secret — retry with it and switch the API client to the test key so
-      // follow-up calls (refunds etc.) hit the matching Stripe mode.
-      const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-      const testSecret = Deno.env.get("STRIPE_TEST_WEBHOOK_SECRET");
-      let verified = false;
-      if (testKey && testSecret) {
-        try {
-          event = await stripe.webhooks.constructEventAsync(body, signature, testSecret);
-          stripe = new Stripe(testKey, { apiVersion: "2025-08-27.basil" });
-          verified = true;
-          logStep("TEST MODE event verified (sandbox)");
-        } catch { /* fall through to 400 below */ }
-      }
-      if (!verified) {
-        logStep("Webhook signature verification failed", { error: (err as Error).message });
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
+    for (const candidate of webhookSecrets) {
+      try {
+        event = await stripe.webhooks.constructEventAsync(body, signature, candidate.secret);
+        verifiedMode = candidate.mode;
+        break;
+      } catch { /* naechstes Geheimnis probieren */ }
     }
 
-    logStep("Event verified", { type: event.type, id: event.id });
+    if (!verifiedMode) {
+      logStep("Webhook signature verification failed");
+      return new Response(JSON.stringify({ error: "Invalid signature" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Folgeaufrufe (Erstattungen etc.) muessen im selben Modus laufen wie das
+    // Ereignis, sonst kennt Stripe die Zahlung nicht.
+    if (keyFor[verifiedMode]) {
+      stripe = new Stripe(keyFor[verifiedMode], { apiVersion: "2025-08-27.basil" });
+    }
+    logStep("Event verified", { type: event.type, id: event.id, mode: verifiedMode });
 
     // Native PaymentSheet (Apple Pay / saved cards, see create-payment-intent) settles
     // through the SAME code path as hosted checkout: normalize the succeeded intent into a

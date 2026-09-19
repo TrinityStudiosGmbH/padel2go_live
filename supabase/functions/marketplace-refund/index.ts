@@ -2,6 +2,7 @@ import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveResendKey, brandedEmailHtml, sendBrandedEmail } from "../_shared/email.ts";
 import { hasAdminAccess } from "../_shared/adminAccess.ts";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 // Admin-only refund/cancellation for a paid marketplace order.
 // Flow (idempotent + retry-safe):
@@ -69,16 +70,12 @@ Deno.serve(async (req) => {
     let refundAmountCents = 0;
     let stripeRefundId: string | null = null;
     if (amount > 0 && sessionId) {
-      let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-      if (!stripeKey) {
-        const { data: ic } = await supabaseAdmin
-          .from("site_integration_configs")
-          .select("config")
-          .eq("service", "stripe")
-          .single();
-        stripeKey = (ic?.config as Record<string, string>)?.secret_key;
+      let stripeKey: string;
+      try {
+        stripeKey = (await resolveStripe(supabaseAdmin)).secretKey;
+      } catch (e) {
+        return json({ error: (e as Error).message }, 500);
       }
-      if (!stripeKey) return json({ error: "Stripe ist nicht konfiguriert" }, 500);
 
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
 

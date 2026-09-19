@@ -2,6 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveResendKey, brandedEmailHtml, sendBrandedEmail } from "../_shared/email.ts";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -143,17 +144,8 @@ serve(async (req) => {
 
     let refundIssued = false;
     if (payment?.status === "completed" && payment.stripe_payment_intent_id) {
-      // Resolve Stripe key: env var first, DB config fallback (mirrors stripe-webhook).
-      let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-      if (!stripeKey) {
-        const { data: ic } = await supabaseAdmin
-          .from("site_integration_configs")
-          .select("config")
-          .eq("service", "stripe")
-          .single();
-        stripeKey = (ic?.config as Record<string, string>)?.secret_key;
-      }
-      if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not configured");
+      // Modus und Schluessel kommen aus der gemeinsamen Aufloesung.
+      const stripeKey = (await resolveStripe(supabaseAdmin)).secretKey;
 
       const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
       try {

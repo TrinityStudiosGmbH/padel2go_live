@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import {
   Loader2, Eye, EyeOff, Save, CreditCard, Mail, Sparkles, Languages, Globe, ShieldCheck,
 } from "lucide-react";
@@ -13,11 +14,18 @@ import { supabase } from "@/integrations/supabase/client";
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 interface StripeConfig {
+  /** 'live' = echte Abrechnung, 'test' = Sandbox. Steuert die ganze Plattform. */
+  mode: "live" | "test";
   secret_key: string;
   webhook_secret: string;
   publishable_key: string;
   has_secret_key: boolean;
   has_webhook_secret: boolean;
+  test_secret_key: string;
+  test_webhook_secret: string;
+  test_publishable_key: string;
+  has_test_secret_key: boolean;
+  has_test_webhook_secret: boolean;
 }
 
 interface ResendConfig {
@@ -120,8 +128,11 @@ export default function AdminIntegrations() {
 
   // Per-service form state (empty string = "don't change")
   const [stripe, setStripe] = useState<StripeConfig>({
+    mode: "live",
     secret_key: "", webhook_secret: "", publishable_key: "",
     has_secret_key: false, has_webhook_secret: false,
+    test_secret_key: "", test_webhook_secret: "", test_publishable_key: "",
+    has_test_secret_key: false, has_test_webhook_secret: false,
   });
   const [resendState, setResendState] = useState<ResendConfig>({
     api_key: "", has_api_key: false,
@@ -171,11 +182,17 @@ export default function AdminIntegrations() {
       const c = (row.config as Record<string, string>) ?? {};
       if (row.service === "stripe") {
         setStripe({
+          mode: c.mode === "test" ? "test" : "live",
           secret_key: "",
           webhook_secret: "",
           publishable_key: c.publishable_key ?? "",
           has_secret_key: !!c.secret_key,
           has_webhook_secret: !!c.webhook_secret,
+          test_secret_key: "",
+          test_webhook_secret: "",
+          test_publishable_key: c.test_publishable_key ?? "",
+          has_test_secret_key: !!c.test_secret_key,
+          has_test_webhook_secret: !!c.test_webhook_secret,
         });
       }
       if (row.service === "resend") {
@@ -209,55 +226,89 @@ export default function AdminIntegrations() {
   // therefore: skip the upsert entirely when nothing changed, carry over
   // untouched plain (non-masked) values from the loaded config, and warn the
   // admin that secret fields which were not re-entered get cleared.
+  /**
+   * Speichert nur die Felder, die wirklich ausgefuellt wurden.
+   *
+   * Frueher schrieb das Formular die komplette Konfiguration neu. Geheime Werte
+   * kommen aber maskiert aus der Datenbank und koennen nicht zurueckgeschrieben
+   * werden — sie fehlten also beim Speichern und wurden geloescht. Wer nur den
+   * Sandbox-Schluessel nachtragen wollte, verlor damit den Live-Schluessel.
+   * merge_integration_config legt jetzt nur die uebergebenen Felder darueber.
+   */
   const save = async (service: string, newConfig: Record<string, string>) => {
-    const original = originalConfigs[service] ?? {};
-    const payload: Record<string, string> = {};
-    const clearedSecrets: string[] = [];
-    let changed = false;
-
+    const patch: Record<string, string> = {};
     for (const [k, v] of Object.entries(newConfig)) {
-      if (v === "" || v === null || v === undefined || isMasked(v)) {
-        // Empty or still-masked = unchanged; the real value cannot be read
-        // back, so it cannot survive a full-config upsert.
-        if (original[k] !== undefined && original[k] !== "") clearedSecrets.push(k);
-        continue;
-      }
-      payload[k] = v;
-      if (v !== original[k]) changed = true;
+      if (v === "" || v === null || v === undefined || isMasked(v)) continue;
+      patch[k] = v;
     }
 
-    // Preserve plain values stored in the config that this form doesn't manage
-    for (const [k, v] of Object.entries(original)) {
-      if (k in newConfig) continue;
-      if (isMasked(v)) clearedSecrets.push(k);
-      else payload[k] = String(v);
-    }
-
-    if (!changed) {
+    if (Object.keys(patch).length === 0) {
       toast.info("Keine Änderungen", {
-        description: "Es wurde nichts gespeichert — bestehende Schlüssel bleiben erhalten.",
+        description: "Es wurde nichts eingegeben — bestehende Schlüssel bleiben erhalten.",
       });
       return;
     }
 
     setSaving(service);
-    // Table is not in the generated types.ts yet
-    const { error } = await (supabase.from as any)("site_integration_configs")
-      .upsert({ service, config: payload, updated_at: new Date().toISOString() });
+    // Neue RPC, noch nicht in den generierten Typen -> Cast wie oben bei der Maskierung.
+    let { error } = await (supabase.rpc as any)("merge_integration_config", {
+      p_service: service,
+      p_patch: patch,
+    });
 
-    setSaving(null);
-    if (error) {
-      toast.error("Fehler beim Speichern", { description: error.message });
-    } else {
-      toast.success("Gespeichert", { description: `${service}-Konfiguration aktualisiert.` });
-      if (clearedSecrets.length > 0) {
-        toast.warning("Geheime Felder wurden entfernt", {
-          description: `Nicht neu eingegebene Werte (${clearedSecrets.join(", ")}) wurden beim Speichern gelöscht. Bitte neu eingeben, falls sie weiterhin benötigt werden.`,
+    // Solange die Migration noch nicht gelaufen ist, gibt es die Funktion nicht.
+    // Dann der alte Weg, damit das Speichern nicht ausfaellt — mit dem alten
+    // Nachteil, dass nicht neu eingegebene Geheimnisse dabei verloren gehen.
+    if (error && /does not exist|PGRST202|schema cache/i.test(error.message ?? "")) {
+      const original = originalConfigs[service] ?? {};
+      const legacy: Record<string, string> = { ...patch };
+      for (const [k, v] of Object.entries(original)) {
+        if (k in legacy || isMasked(v)) continue;
+        legacy[k] = String(v);
+      }
+      ({ error } = await (supabase.from as any)("site_integration_configs")
+        .upsert({ service, config: legacy, updated_at: new Date().toISOString() }));
+      if (!error) {
+        toast.warning("Ohne Zusammenführen gespeichert", {
+          description: "Die Datenbank-Migration fehlt noch. Nicht neu eingegebene geheime Werte wurden dabei entfernt.",
           duration: 10000,
         });
       }
-      loadConfigs();
     }
+    setSaving(null);
+
+    if (error) {
+      toast.error("Fehler beim Speichern", { description: error.message });
+      return;
+    }
+    toast.success("Gespeichert", {
+      description: `${Object.keys(patch).length} Feld(er) aktualisiert. Nicht ausgefüllte Felder bleiben unverändert.`,
+    });
+    loadConfigs();
+  };
+
+  /** Der Modusschalter wirkt sofort und fasst keine Schluessel an. */
+  const setStripeMode = async (next: "live" | "test") => {
+    setSaving("stripe-mode");
+    // Dieselbe neue RPC, ebenfalls noch ohne generierte Typen.
+    const { error } = await (supabase.rpc as any)("merge_integration_config", {
+      p_service: "stripe",
+      p_patch: { mode: next },
+    });
+    setSaving(null);
+    if (error) {
+      const missing = /does not exist|PGRST202|schema cache/i.test(error.message ?? "");
+      toast.error("Modus konnte nicht umgestellt werden", {
+        description: missing
+          ? "Die Datenbank-Migration für den Moduswechsel fehlt noch."
+          : error.message,
+      });
+      return;
+    }
+    setStripe((p) => ({ ...p, mode: next }));
+    toast.success(
+      next === "test" ? "Testbetrieb aktiv — es fließt kein echtes Geld" : "Echtbetrieb aktiv — Zahlungen sind echt",
+    );
   };
 
   if (isLoading) {
@@ -300,22 +351,62 @@ export default function AdminIntegrations() {
                 </div>
                 <StatusBadge configured={stripe.has_secret_key && stripe.has_webhook_secret} />
               </div>
+
+              {/* Betriebsart — wirkt sofort und fuer die ganze Plattform */}
+              <div className={`flex flex-wrap items-center justify-between gap-3 rounded-[13px] border px-[15px] py-3.5 ${
+                stripe.mode === "test"
+                  ? "border-[hsl(41_100%_65%/0.35)] bg-[hsl(41_100%_65%/0.09)]"
+                  : "border-primary/[0.26] bg-primary/[0.06]"
+              }`}>
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="text-[13.5px] font-bold text-foreground">
+                    {stripe.mode === "test" ? "Testbetrieb (Sandbox)" : "Echtbetrieb"}
+                  </span>
+                  <span className="text-[12px] leading-relaxed text-muted-foreground">
+                    {stripe.mode === "test"
+                      ? "Alle Zahlungen laufen gegen die Sandbox. Es fließt kein echtes Geld, Testkarten wie 4242 4242 4242 4242 funktionieren."
+                      : "Alle Zahlungen sind echt und werden abgerechnet."}
+                  </span>
+                </div>
+                <div className="flex flex-none items-center gap-2.5">
+                  <span className="text-xs text-muted-foreground">Testbetrieb</span>
+                  <Switch
+                    checked={stripe.mode === "test"}
+                    onCheckedChange={(on) => setStripeMode(on ? "test" : "live")}
+                    disabled={saving === "stripe-mode"}
+                  />
+                  {saving === "stripe-mode" && <Loader2 className="h-4 w-4 animate-spin text-primary" />}
+                </div>
+              </div>
+
+              {stripe.mode === "test" && (
+                <div className="flex items-start gap-2.5 rounded-[13px] border border-[hsl(0_100%_71%/0.3)] bg-[hsl(0_100%_71%/0.08)] px-[15px] py-3">
+                  <ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#FF6B6B]" />
+                  <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_82%)]">
+                    Solange der Testbetrieb läuft, kommt bei echten Kundenzahlungen kein Geld an.
+                    Vor dem Start unbedingt zurück auf Echtbetrieb stellen.
+                  </span>
+                </div>
+              )}
+
+              {/* Echtbetrieb */}
               <div className="flex flex-col gap-[13px]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[hsl(0_0%_58%)]">
+                  Echtbetrieb · Live-Schlüssel
+                </span>
                 <SecretInput
                   label="Secret Key"
                   value={stripe.secret_key}
                   onChange={(v) => setStripe(p => ({ ...p, secret_key: v }))}
                   placeholder={maskedPlaceholder("stripe", "secret_key")}
-                  hint={stripe.has_secret_key ? "Schlüssel hinterlegt — beim Speichern neu eingeben, sonst wird er entfernt" : "sk_live_... oder sk_test_..."}
-                  warnHint={stripe.has_secret_key}
+                  hint={stripe.has_secret_key ? "Hinterlegt. Leer lassen, um ihn zu behalten." : "sk_live_…"}
                 />
                 <SecretInput
                   label="Webhook Secret"
                   value={stripe.webhook_secret}
                   onChange={(v) => setStripe(p => ({ ...p, webhook_secret: v }))}
                   placeholder={maskedPlaceholder("stripe", "webhook_secret")}
-                  hint={stripe.has_webhook_secret ? "Secret hinterlegt — beim Speichern neu eingeben, sonst wird es entfernt" : "whsec_..."}
-                  warnHint={stripe.has_webhook_secret}
+                  hint={stripe.has_webhook_secret ? "Hinterlegt. Leer lassen, um es zu behalten." : "whsec_… aus dem Live-Webhook"}
                 />
                 <div className="flex flex-col gap-[7px]">
                   <Label className={fieldLabelClass}>
@@ -324,16 +415,60 @@ export default function AdminIntegrations() {
                   <Input
                     value={stripe.publishable_key}
                     onChange={(e) => setStripe(p => ({ ...p, publishable_key: e.target.value }))}
-                    placeholder="pk_live_... oder pk_test_..."
+                    placeholder="pk_live_…"
                     className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] font-mono text-[13px]"
                   />
                 </div>
               </div>
+
+              {/* Testbetrieb */}
+              <div className="flex flex-col gap-[13px] rounded-[13px] border border-[hsl(0_0%_12%)] bg-white/[0.02] p-[15px]">
+                <span className="font-mono text-[10px] uppercase tracking-[0.14em] text-[hsl(0_0%_58%)]">
+                  Testbetrieb · Sandbox-Schlüssel
+                </span>
+                <SecretInput
+                  label="Test Secret Key"
+                  value={stripe.test_secret_key}
+                  onChange={(v) => setStripe(p => ({ ...p, test_secret_key: v }))}
+                  placeholder={maskedPlaceholder("stripe", "test_secret_key")}
+                  hint={stripe.has_test_secret_key ? "Hinterlegt. Leer lassen, um ihn zu behalten." : "sk_test_…"}
+                />
+                <SecretInput
+                  label="Test Webhook Secret"
+                  value={stripe.test_webhook_secret}
+                  onChange={(v) => setStripe(p => ({ ...p, test_webhook_secret: v }))}
+                  placeholder={maskedPlaceholder("stripe", "test_webhook_secret")}
+                  hint={stripe.has_test_webhook_secret ? "Hinterlegt. Leer lassen, um es zu behalten." : "whsec_… aus dem Test-Webhook"}
+                />
+                <div className="flex flex-col gap-[7px]">
+                  <Label className={fieldLabelClass}>
+                    Test Publishable Key <span className="tracking-[0.06em] text-muted-foreground/60">(öffentlich)</span>
+                  </Label>
+                  <Input
+                    value={stripe.test_publishable_key}
+                    onChange={(e) => setStripe(p => ({ ...p, test_publishable_key: e.target.value }))}
+                    placeholder="pk_test_…"
+                    className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] font-mono text-[13px]"
+                  />
+                </div>
+              </div>
+
+              <p className="text-[11.5px] leading-relaxed text-muted-foreground">
+                Der Webhook muss in beiden Stripe-Modi getrennt eingerichtet werden. Ziel ist jeweils{" "}
+                <span className="font-mono text-[11px] text-foreground">
+                  https://wvvdkuextsbsecqbfksb.supabase.co/functions/v1/stripe-webhook
+                </span>
+                . Jeder Modus hat sein eigenes Signaturgeheimnis.
+              </p>
+
               <Button
                 onClick={() => save("stripe", {
                   secret_key: stripe.secret_key,
                   webhook_secret: stripe.webhook_secret,
                   publishable_key: stripe.publishable_key,
+                  test_secret_key: stripe.test_secret_key,
+                  test_webhook_secret: stripe.test_webhook_secret,
+                  test_publishable_key: stripe.test_publishable_key,
                 })}
                 disabled={saving === "stripe"}
                 className={saveButtonClass}

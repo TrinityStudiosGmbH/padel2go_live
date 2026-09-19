@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -289,12 +290,7 @@ serve(async (req) => {
         : await openOrderQuery.eq("guest_email", effectiveEmail).maybeSingle();
 
       if (openOrder?.stripe_session_id) {
-        let resumeKey = Deno.env.get("STRIPE_SECRET_KEY");
-        if (!resumeKey) {
-          const { data: ic } = await supabaseAdmin
-            .from("site_integration_configs").select("config").eq("service", "stripe").maybeSingle();
-          resumeKey = (ic?.config as Record<string, string> | undefined)?.secret_key;
-        }
+        const resumeKey = await resolveStripe(supabaseAdmin).then((c) => c.secretKey).catch(() => null);
         if (resumeKey) {
           try {
             const existing = await new Stripe(resumeKey, { apiVersion: "2025-08-27.basil" })
@@ -327,12 +323,7 @@ serve(async (req) => {
           }
         }
 
-        let renewKey = Deno.env.get("STRIPE_SECRET_KEY");
-        if (!renewKey) {
-          const { data: ic } = await supabaseAdmin
-            .from("site_integration_configs").select("config").eq("service", "stripe").maybeSingle();
-          renewKey = (ic?.config as Record<string, string> | undefined)?.secret_key;
-        }
+        const renewKey = await resolveStripe(supabaseAdmin).then((c) => c.secretKey).catch(() => null);
         if (!renewKey) return json({ error: "Zahlungsanbieter ist nicht konfiguriert" }, 500);
 
         const renewAmount = Math.max(50, priceCents);
@@ -561,29 +552,16 @@ serve(async (req) => {
     }
 
     // ── ELSE: charge the remainder via Stripe (respect the 50c minimum). ────────
-    let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      const { data: ic } = await supabaseAdmin
-        .from("site_integration_configs")
-        .select("config")
-        .eq("service", "stripe")
-        .single();
-      stripeKey = (ic?.config as Record<string, string>)?.secret_key;
-    }
-    // TEST MODE: allowlisted tester accounts pay against Stripe TEST mode (sandbox cards).
-    {
-      const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-      const testEmails = (Deno.env.get("STRIPE_TEST_USER_EMAILS") ?? "")
-        .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-      if (testKey && user?.email && testEmails.includes(user.email.toLowerCase())) {
-        stripeKey = testKey;
-        logStep("TEST MODE checkout (sandbox key)", { email: user.email });
-      }
-    }
-    if (!stripeKey) {
-      logStep("Stripe key missing — rolling back");
+    // Der Schalter im Admin bestimmt Echt- oder Testbetrieb. Die frühere
+    // Freischaltung einzelner Tester-Adressen entfaellt damit: ein Schalter für
+    // die ganze Plattform ist eindeutig, eine halb umgestellte Kasse nicht.
+    let stripeKey: string;
+    try {
+      stripeKey = (await resolveStripe(supabaseAdmin)).secretKey;
+    } catch (e) {
+      logStep("Stripe nicht nutzbar — Bestellung wird freigegeben", { error: (e as Error).message });
       await releaseOrder();
-      return json({ error: "Zahlungsanbieter ist nicht konfiguriert" }, 500);
+      return json({ error: (e as Error).message }, 500);
     }
 
     if (!origin) {

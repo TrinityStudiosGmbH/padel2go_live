@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
+import { resolveStripe } from "../_shared/stripe.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -57,13 +58,11 @@ serve(async (req) => {
     // Service client for writes
     const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Resolve Stripe key: env var takes precedence, DB config is fallback
-    let stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) {
-      const { data: ic } = await supabaseAdmin.from("site_integration_configs").select("config").eq("service", "stripe").single();
-      stripeKey = (ic?.config as Record<string, string>)?.secret_key;
-    }
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not configured");
+    // Ein Schalter im Admin (Integrationen -> Stripe) entscheidet ueber Echt-
+    // oder Testbetrieb. resolveStripe prueft dabei auch, dass der hinterlegte
+    // Schluessel zum Modus passt.
+    const stripeCreds = await resolveStripe(supabaseAdmin);
+    const stripeKey = stripeCreds.secretKey;
 
     // Try to resolve authenticated user — for guests this will return null
     let user: { id: string; email: string } | null = null;
@@ -76,18 +75,6 @@ serve(async (req) => {
       }
     }
     logStep("Auth resolved", { userId: user?.id ?? "guest" });
-
-    // TEST MODE: allowlisted tester accounts check out against Stripe TEST mode
-    // (sandbox cards like 4242 4242 4242 4242) — everyone else stays on the live key.
-    {
-      const testKey = Deno.env.get("STRIPE_TEST_SECRET_KEY");
-      const testEmails = (Deno.env.get("STRIPE_TEST_USER_EMAILS") ?? "")
-        .split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
-      if (testKey && user?.email && testEmails.includes(user.email.toLowerCase())) {
-        stripeKey = testKey;
-        logStep("TEST MODE checkout (sandbox key)", { email: user.email });
-      }
-    }
 
     const body = await req.json();
     const { booking_id, voucher_id } = body;
