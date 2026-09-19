@@ -269,8 +269,49 @@ serve(async (req) => {
     }
     const insertedRow = Array.isArray(insertResult) ? insertResult[0] : insertResult;
     if (!insertedRow || !(insertedRow as any).order_id) {
-      logStep("Duplicate marketplace checkout rejected", { userId: user?.id ?? "guest", itemId });
-      return json({ error: "Ein Bezahlvorgang für diesen Artikel läuft bereits. Bitte einen Moment warten." }, 409);
+      // Es laeuft bereits eine Bestellung fuer diesen Artikel. Frueher endete das
+      // hier in einer Sackgasse: 45 Minuten lang nur die Meldung "laeuft bereits",
+      // ohne Weg zur angefangenen Zahlung. Jetzt holen wir die offene
+      // Stripe-Sitzung und schicken den Kunden dorthin zurueck — genau so, wie es
+      // die Court-Buchung schon macht. Eine zweite Abbuchung kann daraus nicht
+      // entstehen, weil es dieselbe Sitzung ist.
+      logStep("Laufende Bestellung gefunden — versuche Wiederaufnahme", { userId: user?.id ?? "guest", itemId });
+
+      const openOrderQuery = supabaseAdmin
+        .from("marketplace_redemptions")
+        .select("id, stripe_session_id, reference_code")
+        .eq("item_id", itemId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1);
+      const { data: openOrder } = user
+        ? await openOrderQuery.eq("user_id", user.id).maybeSingle()
+        : await openOrderQuery.eq("guest_email", effectiveEmail).maybeSingle();
+
+      if (openOrder?.stripe_session_id) {
+        let resumeKey = Deno.env.get("STRIPE_SECRET_KEY");
+        if (!resumeKey) {
+          const { data: ic } = await supabaseAdmin
+            .from("site_integration_configs").select("config").eq("service", "stripe").maybeSingle();
+          resumeKey = (ic?.config as Record<string, string> | undefined)?.secret_key;
+        }
+        if (resumeKey) {
+          try {
+            const existing = await new Stripe(resumeKey, { apiVersion: "2025-08-27.basil" })
+              .checkout.sessions.retrieve(openOrder.stripe_session_id);
+            if (existing.status === "open" && existing.url) {
+              logStep("Offene Sitzung wiederverwendet", { orderId: openOrder.id });
+              return json({ url: existing.url, resumed: true }, 200);
+            }
+          } catch (resumeErr) {
+            logStep("Offene Sitzung nicht abrufbar", { error: (resumeErr as Error).message });
+          }
+        }
+      }
+
+      return json({
+        error: "Für diesen Artikel läuft bereits ein Bezahlvorgang. Du findest ihn unter Konto → Bestellungen.",
+      }, 409);
     }
 
     // The RPC reserved the points in-txn and reports what it ACTUALLY took (a concurrent

@@ -12,13 +12,14 @@ import {
 } from "@/components/ui/dialog";
 import {
   Loader2, Package, ShoppingBag, ArrowRight, Coins, MapPin,
-  Clock, Truck, PackageCheck, XCircle, RotateCcw, Image as ImageIcon,
+  Clock, Truck, PackageCheck, XCircle, RotateCcw, Image as ImageIcon, CreditCard,
 } from "lucide-react";
 import { useUserRedemptions, type UserRedemption } from "@/hooks/useUserRedemptions";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { eur } from "@/lib/marketplace";
 import { StorageImage } from "@/components/StorageImage";
+import { invokeEdgeFunction } from "@/lib/edgeFunctionUtils";
 
 const dateFmt = (iso: string) =>
   new Date(iso).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" });
@@ -26,6 +27,8 @@ const dateFmt = (iso: string) =>
 type StatusView = { label: string; icon: typeof Clock; className: string };
 
 function statusView(o: UserRedemption): StatusView {
+  if (o.status === "pending")
+    return { label: "Zahlung offen", icon: CreditCard, className: "bg-amber-500/15 text-amber-400 border-amber-500/30" };
   if (o.status === "refunded")
     return { label: "Erstattet", icon: RotateCcw, className: "bg-red-500/15 text-red-400 border-red-500/30" };
   if (o.status === "cancelled")
@@ -55,6 +58,32 @@ export function AccountOrdersTab() {
 
   const [returnOrderId, setReturnOrderId] = useState<string | null>(null);
   const [reason, setReason] = useState("");
+  const [resumingId, setResumingId] = useState<string | null>(null);
+
+  /**
+   * Zurueck in die angefangene Zahlung. Wir rufen dieselbe Kasse noch einmal
+   * auf; sie erkennt die laufende Bestellung und gibt die BESTEHENDE
+   * Stripe-Sitzung zurueck, legt also keine zweite an. Eine doppelte Abbuchung
+   * ist damit ausgeschlossen.
+   */
+  const resumePayment = async (order: UserRedemption) => {
+    setResumingId(order.id);
+    try {
+      const { data, error } = await invokeEdgeFunction<{ url?: string; error?: string }>(
+        "marketplace-checkout",
+        { body: { item_id: order.item_id, quantity: order.quantity ?? 1 } },
+      );
+      if (data?.url) {
+        window.location.href = data.url;
+        return;
+      }
+      toast.error(data?.error || error?.message || "Die Zahlung konnte nicht fortgesetzt werden.");
+    } catch (e) {
+      toast.error((e as Error).message);
+    } finally {
+      setResumingId(null);
+    }
+  };
 
   const { data: returns } = useQuery({
     queryKey: ["marketplace-returns", user?.id],
@@ -90,9 +119,13 @@ export function AccountOrdersTab() {
     },
   });
 
-  // Only completed orders belong in the customer's history — hide abandoned
-  // (pending) / failed checkout attempts.
-  const orders = (data ?? []).filter((o) => ["success", "refunded", "cancelled"].includes(o.status));
+  // Offene Bestellungen gehoeren SICHTBAR hierher. Frueher waren sie
+  // ausgefiltert: wer den Bezahlvorgang abgebrochen hat, sah nichts mehr davon
+  // und kam 45 Minuten lang auch nicht weiter, weil die Kasse den Artikel als
+  // belegt meldete. Nur wirklich fehlgeschlagene Versuche bleiben verborgen.
+  const orders = (data ?? []).filter((o) =>
+    ["success", "refunded", "cancelled", "pending"].includes(o.status),
+  );
 
   if (isLoading) {
     return (
@@ -179,6 +212,28 @@ export function AccountOrdersTab() {
                     <span className="font-mono text-xs text-muted-foreground">Nr. {o.reference_code}</span>
                   )}
                 </div>
+
+                {o.status === "pending" && (
+                  <div className="mt-3 flex flex-col gap-2 rounded-xl border border-amber-500/30 bg-amber-500/[0.07] p-3">
+                    <span className="text-[13px] leading-relaxed text-amber-200/90">
+                      Diese Bestellung ist noch nicht bezahlt. Es wurde nichts abgebucht.
+                    </span>
+                    <Button
+                      size="sm"
+                      variant="lime"
+                      className="w-fit gap-2"
+                      disabled={resumingId === o.id}
+                      onClick={() => resumePayment(o)}
+                    >
+                      {resumingId === o.id ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <CreditCard className="h-4 w-4" />
+                      )}
+                      Jetzt bezahlen
+                    </Button>
+                  </div>
+                )}
 
                 {hasAddress && (
                   <div className="flex items-start gap-1.5 mt-2 text-xs text-muted-foreground">
