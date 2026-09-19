@@ -16,7 +16,7 @@ import { useMarketplaceCheckout } from "@/hooks/useMarketplaceCheckout";
 import { useAuth } from "@/hooks/useAuth";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import { usePointsValue } from "@/hooks/usePointsValue";
-import { eur, ptsFmt, maxRedeemablePoints } from "@/lib/marketplace";
+import { eur, ptsFmt, maxRedeemablePoints, productPointsCap } from "@/lib/marketplace";
 import { localized } from "@/lib/localized";
 import { StorageImage } from "@/components/StorageImage";
 
@@ -31,7 +31,7 @@ const MarketplaceCheckout = () => {
   const checkout = useMarketplaceCheckout();
   const { user } = useAuth();
   const { summary } = useP2GPoints();
-  const { centsPerPoint, enabled: pointsEnabled } = usePointsValue();
+  const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
 
   const product = data?.product ?? null;
   const qtyMax = Math.min(product?.stock_quantity ?? 5, 5);
@@ -54,8 +54,8 @@ const MarketplaceCheckout = () => {
   const subtotal = price * qty;
   const balance = summary?.redeemable_balance ?? 0;
   const canUsePoints = !!user && pointsEnabled;
-  const productPointsCap = product?.credit_cost ?? 0;
-  const maxRedeem = canUsePoints ? maxRedeemablePoints(subtotal, balance, centsPerPoint, productPointsCap) : 0;
+  const pointsCap = productPointsCap(subtotal, centsPerPoint, maxPercent);
+  const maxRedeem = canUsePoints ? maxRedeemablePoints(subtotal, balance, centsPerPoint, maxPercent) : 0;
   const redeem = Math.min(pointsUse, maxRedeem);
   const discountCents = Math.floor(redeem * centsPerPoint);
   const total = Math.max(50, subtotal - discountCents);
@@ -277,7 +277,11 @@ const MarketplaceCheckout = () => {
                           <span className="font-stat font-bold text-sm text-primary">−{eur(discountCents)}</span>
                         </div>
                         <span className="text-[11.5px] text-muted-foreground">
-                          {t("checkout.pointsRule", { maxPoints: ptsFmt(productPointsCap), points: ptsFmt(Math.round(100 / centsPerPoint)) })}
+                          {t("checkout.pointsRule", {
+                            percent: maxPercent,
+                            maxPoints: ptsFmt(pointsCap),
+                            points: ptsFmt(Math.round(100 / centsPerPoint)),
+                          })}
                         </span>
                       </>
                     ) : (

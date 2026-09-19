@@ -167,12 +167,16 @@ serve(async (req) => {
     if (user && pointsToUse > 0) {
       const { data: siteSettings } = await supabaseAdmin
         .from("site_settings")
-        .select("feature_credits_payment_enabled, credits_per_euro")
+        .select("feature_credits_payment_enabled, credits_per_euro, credits_payment_max_percent")
         .eq("id", "global")
         .single();
 
       const creditsEnabled = (siteSettings as any)?.feature_credits_payment_enabled ?? false;
       const creditsPerEuro: number = (siteSettings as any)?.credits_per_euro ?? 100;
+      const maxPercent: number = Math.min(
+        100,
+        Math.max(0, Number((siteSettings as any)?.credits_payment_max_percent ?? 50) || 0),
+      );
 
       if (!creditsEnabled) {
         return json({ error: "Punkte-Zahlung ist aktuell nicht aktiviert" }, 400);
@@ -186,14 +190,15 @@ serve(async (req) => {
 
       const availablePoints = (wallet?.play_credits ?? 0) + (wallet?.reward_credits ?? 0);
       const centsPerPoint = 100 / creditsPerEuro;
-      // Fixer Punkte-Deckel PRO PRODUKT (Admin-Feld "Punkte-Rabatt (max.)" =
-      // marketplace_items.credit_cost, pro Bestellung, unabhängig von der Menge).
-      // 0 = kein Punkterabatt bei diesem Produkt. Ersetzt den früheren Prozent-Cap.
-      const productPointsCap = Math.max(0, Math.floor(Number(item.credit_cost ?? 0)) || 0);
+      // Deckel je Bestellung: ein fester Anteil des Warenwerts, global gesetzt
+      // unter Preise & Punkte. Kein Feld mehr am Produkt — 170 € bei 50 % sind
+      // 85 € Rabatt, egal welches Produkt. priceCents ist bereits der Wert der
+      // gesamten Menge, der Anteil gilt also auf die ganze Position.
+      const capByPercentCents = Math.floor((priceCents * maxPercent) / 100);
       const requestedDiscountCents = Math.floor(pointsToUse * centsPerPoint);
       actualDiscountCents = Math.min(
         requestedDiscountCents,
-        Math.floor(productPointsCap * centsPerPoint),
+        capByPercentCents,
         priceCents,
         Math.floor(availablePoints * centsPerPoint),
       );

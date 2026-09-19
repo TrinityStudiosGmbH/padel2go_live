@@ -9,19 +9,40 @@ export const discountPct = (priceCents: number, uvpCents?: number | null): numbe
   uvpCents && uvpCents > priceCents ? Math.round((1 - priceCents / uvpCents) * 100) : 0;
 
 /**
- * Highest number of points that may be applied to a subtotal, mirroring the
- * server-side cap in the marketplace-checkout edge function: the per-product
- * fixed cap (Admin "Punkte-Rabatt (max.)" = marketplace_items.credit_cost,
- * per order), never more than the subtotal or the user's balance, rounded to 10.
+ * Punkte-Obergrenze eines Produkts, hergeleitet aus Warenwert, Umrechenkurs und
+ * dem globalen Prozentsatz (Preise & Punkte → „Max. Anteil einer Zahlung").
+ * Es gibt kein Feld am Produkt mehr: 170 € bei 50 % und 100 Punkten je Euro
+ * ergeben 8.500 Punkte. Unabhaengig vom Guthaben des Kaeufers — das ist die
+ * Zahl, die auf der Produktseite steht.
+ *
+ * Abgerundet auf Zehner, weil der Schieberegler im Checkout in Zehnerschritten
+ * laeuft: sonst stuende dort eine Zahl, die sich nicht einstellen laesst.
+ */
+export function productPointsCap(
+  subtotalCents: number,
+  centsPerPoint: number,
+  maxPercent: number,
+): number {
+  if (centsPerPoint <= 0) return 0;
+  const pct = Math.min(100, Math.max(0, maxPercent || 0));
+  const capCents = Math.floor((subtotalCents * pct) / 100);
+  return Math.max(0, Math.floor(capCents / centsPerPoint / 10) * 10);
+}
+
+/**
+ * Was dieser Kaeufer tatsaechlich einsetzen kann: die Obergrenze des Produkts,
+ * begrenzt durch sein Guthaben. Spiegelt den Server-Deckel in der
+ * marketplace-checkout Edge Function.
  */
 export function maxRedeemablePoints(
   subtotalCents: number,
   balance: number,
   centsPerPoint: number,
-  productCapPoints: number,
+  maxPercent: number,
 ): number {
-  if (!balance || balance <= 0 || centsPerPoint <= 0) return 0;
-  const capByPrice = Math.floor(subtotalCents / centsPerPoint);
-  const cap = Math.min(balance, Math.max(0, productCapPoints || 0), capByPrice);
-  return Math.max(0, Math.floor(cap / 10) * 10);
+  if (!balance || balance <= 0) return 0;
+  return Math.min(
+    productPointsCap(subtotalCents, centsPerPoint, maxPercent),
+    Math.floor(balance / 10) * 10,
+  );
 }

@@ -6,7 +6,6 @@ import type { MarketplaceCategory, MarketplaceItem, ProductStatus, ProductType }
 export interface MarketplaceItemInput {
   name: string;
   category: MarketplaceCategory;
-  credit_cost: number;
   price_cents: number;
   description: string;
   image_url: string;
@@ -326,12 +325,14 @@ export const useCreateMarketplaceItem = () => {
     mutationFn: async (item: MarketplaceItemInput) => {
       const { data, error } = await supabase
         .from("marketplace_items")
+        // credit_cost entfaellt mit Migration 20260920100000; die generierten
+        // Typen fuehren die Spalte noch als Pflichtfeld. Cast wie anderswo im Repo.
         .insert([{
           ...item,
           is_active: item.is_active ?? true,
           sort_order: item.sort_order ?? 0,
           product_type: item.product_type ?? "rental",
-        }])
+        } as any])
         .select()
         .single();
 

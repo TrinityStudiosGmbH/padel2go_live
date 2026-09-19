@@ -65,6 +65,8 @@ import {
   AlertTriangle,
 } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { usePointsValue } from "@/hooks/usePointsValue";
+import { ptsFmt, productPointsCap } from "@/lib/marketplace";
 import { useTranslation } from "react-i18next";
 import {
   useAdminMarketplaceItems,
@@ -156,7 +158,6 @@ const formatEuro = (cents: number) =>
 const emptyForm = (): Partial<MarketplaceItemInput> => ({
   name: "",
   category: "equipment",
-  credit_cost: 0,
   price_cents: 0,
   compare_at_price_cents: null,
   tax_rate: 19,
@@ -199,6 +200,7 @@ const AdminMarketplace = () => {
   const { translateRow } = useTranslateContent();
   const queryClient = useQueryClient();
   const { t } = useTranslation("common");
+  const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
   const [bulk, setBulk] = useState<{ done: number; total: number } | null>(null);
 
   const { data: categories } = useAdminCatalogCategories();
@@ -423,7 +425,6 @@ const AdminMarketplace = () => {
     setFormData({
       name: item.name,
       category: item.category,
-      credit_cost: item.credit_cost,
       price_cents: item.price_cents ?? 0,
       compare_at_price_cents: item.compare_at_price_cents ?? null,
       // tax_rate fehlt noch in den generierten Supabase-Typen -> Cast wie anderswo im Repo.
@@ -533,7 +534,6 @@ const AdminMarketplace = () => {
     const data: MarketplaceItemInput = {
       name: formData.name,
       category: (formData.category as MarketplaceCategory) || "equipment",
-      credit_cost: formData.credit_cost,
       price_cents: formData.price_cents,
       compare_at_price_cents: formData.compare_at_price_cents || null,
       tax_rate: Number(formData.tax_rate ?? 19),
@@ -815,7 +815,7 @@ const AdminMarketplace = () => {
                         <TableHead className={TH}>Kategorie</TableHead>
                         <TableHead className={TH}>Marke</TableHead>
                         <TableHead className={`${TH} text-right`}>Preis</TableHead>
-                        <TableHead className={`${TH} text-right`}>Points</TableHead>
+                        <TableHead className={`${TH} text-right`}>Max. Points</TableHead>
                         <TableHead className={TH}>Status</TableHead>
                         <TableHead className={TH}>Aktiv</TableHead>
                         <TableHead className={`${TH} text-right`}>Aktionen</TableHead>
@@ -868,10 +868,10 @@ const AdminMarketplace = () => {
                           <TableCell className="py-3 pr-3.5 text-right">
                             <span
                               className={`whitespace-nowrap font-mono text-[12.5px] ${
-                                item.credit_cost > 0 ? "text-primary" : "text-[hsl(0_0%_55%)]"
+                                pointsEnabled ? "text-primary" : "text-[hsl(0_0%_55%)]"
                               }`}
                             >
-                              {(item.credit_cost ?? 0).toLocaleString("de-DE")}
+                              {ptsFmt(productPointsCap(item.price_cents ?? 0, centsPerPoint, maxPercent))}
                             </span>
                           </TableCell>
                           <TableCell className="py-3 pr-3.5">
@@ -1299,18 +1299,27 @@ const AdminMarketplace = () => {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label className={FIELD_LABEL}>Punkte-Rabatt (max. Points)</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  value={formData.credit_cost ?? 0}
-                  onChange={(e) => setFormData({ ...formData, credit_cost: parseInt(e.target.value) || 0 })}
-                  className={FIELD_INPUT}
-                />
+                <Label className={FIELD_LABEL}>Punkte-Rabatt (max.)</Label>
+                <div className="flex h-[42px] items-center rounded-[11px] border border-[hsl(0_0%_15%)] bg-white/[0.02] px-3">
+                  <Coins className="mr-2 h-4 w-4 shrink-0 text-primary" />
+                  <span className="font-mono text-[15px] font-bold text-foreground">
+                    {ptsFmt(productPointsCap(formData.price_cents ?? 0, centsPerPoint, maxPercent))} Points
+                  </span>
+                  <span className="ml-2 truncate text-[12px] text-muted-foreground">
+                    = {formatEuro(Math.floor(((formData.price_cents ?? 0) * Math.min(100, Math.max(0, maxPercent))) / 100))}
+                  </span>
+                </div>
                 <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Fixer Betrag an Points, den jeder Käufer bei diesem Produkt als Rabatt einlösen kann
-                  . 0 = kein Punkterabatt.
+                  Rechnet sich aus dem Preis: {maxPercent} % vom Warenwert beim Kurs{" "}
+                  {ptsFmt(Math.round(100 / (centsPerPoint || 1)))} Points = 1 €. Beides wird global unter
+                  Preise &amp; Punkte gesetzt, nicht je Produkt.
                 </p>
+                {!pointsEnabled && (
+                  <p className="flex items-start gap-1.5 text-[11px] leading-relaxed text-[#FFC44D]">
+                    <AlertTriangle className="mt-[1px] h-3 w-3 shrink-0" />
+                    Punkte-Zahlung ist global deaktiviert — im Shop ist derzeit kein Punkterabatt sichtbar.
+                  </p>
+                )}
               </div>
               <div className="flex flex-col gap-2">
                 <Label className={FIELD_LABEL}>Steuersatz (%)</Label>

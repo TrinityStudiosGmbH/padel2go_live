@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Coins, Gift, Info, Loader2, Save } from "lucide-react";
+import { AlertTriangle, Coins, Gift, Info, Loader2, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
@@ -105,6 +105,11 @@ export function PointsSettingsCard() {
   const points90 = Math.round(points60 * 1.5);
   const points120 = points60 * 2;
   const euroPer60 = creditsPerEuro > 0 ? points60 / creditsPerEuro : 0;
+  // Beispiel an einem 100-Euro-Produkt, damit der Prozentsatz greifbar wird.
+  const examplePct = Math.min(100, Math.max(0, maxPercent || 0));
+  const exampleEuro = (100 * examplePct) / 100;
+  const examplePoints = Math.round(exampleEuro * creditsPerEuro);
+  const rateLooksWrong = creditsPerEuro > 1000;
 
   return (
     <div className="grid grid-cols-[repeat(auto-fit,minmax(min(340px,100%),1fr))] items-start gap-[18px]">
@@ -204,6 +209,17 @@ export function PointsSettingsCard() {
             </div>
           </div>
 
+          {!paymentEnabled && (
+            <div className="flex items-start gap-3 rounded-[13px] border border-[hsl(41_100%_65%/0.22)] bg-[hsl(41_100%_65%/0.06)] px-[15px] py-[13px]">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-[#FFC44D]" />
+              <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
+                Im Shop ist derzeit keine Punkte-Einlösung sichtbar: Punktestand-Banner,
+                Produkthinweis und der Regler im Checkout sind ausgeblendet. Nutzer sammeln
+                weiter Punkte, können sie aber nicht einsetzen.
+              </span>
+            </div>
+          )}
+
           <div className="flex flex-col gap-[7px]">
             <Label className={FIELD_LABEL}>
               Punkte für 1 €<span className="text-primary"> *</span>
@@ -231,7 +247,32 @@ export function PointsSettingsCard() {
               onChange={(e) => setMaxPercent(Number(e.target.value) || 0)}
               className={INPUT_CLASS}
             />
+            <span className="text-[11.5px] leading-relaxed text-muted-foreground">
+              Gilt für jedes Marketplace-Produkt. Die maximale Punktzahl je Produkt rechnet
+              sich daraus automatisch — bei 100 € Warenwert sind das{" "}
+              <span className="font-mono font-bold text-foreground">
+                {examplePoints.toLocaleString("de-DE")} Punkte
+              </span>{" "}
+              ={" "}
+              {exampleEuro.toLocaleString("de-DE", {
+                style: "currency",
+                currency: "EUR",
+                minimumFractionDigits: 2,
+              })}{" "}
+              Rabatt.
+            </span>
           </div>
+
+          {rateLooksWrong && (
+            <div className="flex items-start gap-3 rounded-[13px] border border-[hsl(41_100%_65%/0.22)] bg-[hsl(41_100%_65%/0.06)] px-[15px] py-[13px]">
+              <AlertTriangle className="mt-0.5 h-4 w-4 flex-none text-[#FFC44D]" />
+              <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_78%)]">
+                Bei {creditsPerEuro.toLocaleString("de-DE")} Punkten je Euro ist ein Punkt weniger
+                als ein Zehntelcent wert. Rabatte fallen damit praktisch auf null. Gemeint war
+                vermutlich ein deutlich kleinerer Wert, etwa 100.
+              </span>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5 rounded-[15px] border border-primary/[0.26] bg-gradient-to-br from-primary/[0.09] to-primary/[0.02] px-[17px] py-[15px]">
             <span className="text-[13px] text-[hsl(0_0%_72%)]">Was eine 60-Minuten-Buchung bringt</span>

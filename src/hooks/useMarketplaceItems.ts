@@ -9,7 +9,6 @@ export interface MarketplaceItem {
   id: string;
   name: string;
   category: MarketplaceCategory;
-  credit_cost: number;
   price_cents: number | null;
   description: string | null;
   partner_name: string | null;

@@ -19,7 +19,7 @@ import { useCatalogCategories, useCatalogBrands } from "@/hooks/useMarketplaceCa
 import { useAuth } from "@/hooks/useAuth";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import { usePointsValue } from "@/hooks/usePointsValue";
-import { eur, ptsFmt, discountPct, maxRedeemablePoints } from "@/lib/marketplace";
+import { eur, ptsFmt, discountPct, maxRedeemablePoints, productPointsCap } from "@/lib/marketplace";
 import { localized } from "@/lib/localized";
 import type { MarketplaceItem } from "@/hooks/useMarketplaceItems";
 import { StorageImage } from "@/components/StorageImage";
@@ -34,7 +34,7 @@ const MarketplaceProduct = () => {
   const { data: brands } = useCatalogBrands();
   const { user } = useAuth();
   const { summary } = useP2GPoints();
-  const { centsPerPoint, enabled: pointsEnabled } = usePointsValue();
+  const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
 
   const [qty, setQty] = useState(1);
   const [mainIdx, setMainIdx] = useState(0);
@@ -110,8 +110,10 @@ const MarketplaceProduct = () => {
   const qtyMax = Math.min(product.stock_quantity ?? 5, 5);
 
   const balance = summary?.redeemable_balance ?? 0;
-  const productPointsCap = product.credit_cost ?? 0;
-  const maxRedeem = maxRedeemablePoints(price * qty, balance, centsPerPoint, productPointsCap);
+  // Obergrenze des Produkts: rein aus Preis, Kurs und Prozentsatz gerechnet.
+  const pointsCap = productPointsCap(price * qty, centsPerPoint, maxPercent);
+  const pointsCapCents = Math.floor(pointsCap * centsPerPoint);
+  const maxRedeem = maxRedeemablePoints(price * qty, balance, centsPerPoint, maxPercent);
   const maxSaveCents = Math.floor(maxRedeem * centsPerPoint);
 
   // New DB columns not yet in generated types.ts
@@ -248,8 +250,11 @@ const MarketplaceProduct = () => {
                   <span className="text-[13px] leading-snug text-foreground/80">
                     <Trans
                       i18nKey="marketplace:product.pointsUser"
-                      values={{ amount: eur(maxSaveCents) }}
-                      components={{ 1: <span className="font-stat font-bold text-primary" /> }}
+                      values={{ points: ptsFmt(pointsCap), amount: eur(maxSaveCents) }}
+                      components={{
+                        1: <span className="font-stat font-bold text-primary" />,
+                        2: <span className="font-stat font-bold text-primary" />,
+                      }}
                     />
                   </span>
                 </div>
@@ -259,7 +264,7 @@ const MarketplaceProduct = () => {
                   <span className="text-[12.5px] leading-snug text-muted-foreground">
                     <Trans
                       i18nKey="marketplace:product.pointsGuest"
-                      values={{ points: ptsFmt(productPointsCap) }}
+                      values={{ points: ptsFmt(pointsCap), amount: eur(pointsCapCents) }}
                       components={{
                         1: <span className="font-stat font-bold text-primary" />,
                         2: <button onClick={() => navigate("/auth")} className="font-bold text-primary underline" />,
