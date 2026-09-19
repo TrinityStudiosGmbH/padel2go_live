@@ -14,6 +14,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { LobbyActionButton, type BookingForLobby } from "@/components/lobby";
 import { BookingStepper } from "@/components/booking/BookingStepper";
+import { useCheckoutVerification, CheckoutStatusNotice } from "@/components/CheckoutStatusNotice";
 
 interface EarnedReward {
   points: number;
@@ -31,6 +32,9 @@ const BookingSuccess = () => {
   const { user } = useAuth();
   const { canSee } = useFeatureToggles();
   const sessionId = searchParams.get("session_id");
+  // Erst bei Stripe nachfragen, dann feiern.
+  const { state: payState, resumeUrl } = useCheckoutVerification(sessionId);
+  const paymentDone = payState === "confirmed" || payState === "processing" || payState === "unknown";
   const isGuest = searchParams.get("guest") === "1" || !user;
 
   useEffect(() => {
@@ -141,25 +145,36 @@ const BookingSuccess = () => {
           style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, hsl(var(--primary) / 0.09), transparent)" }}
         >
           <div className="mx-auto max-w-[560px] flex flex-col items-center gap-[22px] text-center">
-            {/* Check-Kreis */}
-            <motion.span
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 14 }}
-              className="w-24 h-24 rounded-full bg-primary/10 border border-primary/45 flex items-center justify-center text-primary shadow-[0_0_60px_hsl(var(--primary)/0.3)]"
-            >
-              <Check className="w-11 h-11" strokeWidth={2.5} />
-            </motion.span>
+            <CheckoutStatusNotice
+              state={payState}
+              resumeUrl={resumeUrl}
+              backTo="/booking"
+              backLabel="Zurück zur Buchung"
+            />
 
-            {/* Titel + Untertitel */}
-            <div className="flex flex-col gap-2.5">
-              <h1 className="font-bold tracking-tight text-foreground leading-tight text-[clamp(30px,5vw,42px)]">
-                {t("success.title")}
-              </h1>
-              <p className="text-base leading-relaxed text-muted-foreground">
-                {t("success.description")}
-              </p>
-            </div>
+            {paymentDone && (
+              <>
+                {/* Check-Kreis */}
+                <motion.span
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ delay: 0.15, type: "spring", stiffness: 200, damping: 14 }}
+                  className="w-24 h-24 rounded-full bg-primary/10 border border-primary/45 flex items-center justify-center text-primary shadow-[0_0_60px_hsl(var(--primary)/0.3)]"
+                >
+                  <Check className="w-11 h-11" strokeWidth={2.5} />
+                </motion.span>
+
+                {/* Titel + Untertitel */}
+                <div className="flex flex-col gap-2.5">
+                  <h1 className="font-bold tracking-tight text-foreground leading-tight text-[clamp(30px,5vw,42px)]">
+                    {t("success.title")}
+                  </h1>
+                  <p className="text-base leading-relaxed text-muted-foreground">
+                    {t("success.description")}
+                  </p>
+                </div>
+              </>
+            )}
 
             {/* Detail-Karte (echte Buchungsdaten) */}
             {recentBooking && (

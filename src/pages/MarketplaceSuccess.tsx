@@ -7,6 +7,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { PackageCheck, Truck, ShoppingBag, CalendarDays } from "lucide-react";
 import { ptsFmt } from "@/lib/marketplace";
+import { useCheckoutVerification, CheckoutStatusNotice } from "@/components/CheckoutStatusNotice";
 
 interface OrderState {
   code?: string;
@@ -29,6 +30,10 @@ const MarketplaceSuccess = () => {
 
   const orderNumber = order?.code || sessionId || null;
 
+  // Nicht blind "Vielen Dank" zeigen: bei Stripe nachfragen, was wirklich war.
+  const { state: payState, resumeUrl } = useCheckoutVerification(sessionId);
+  const paymentDone = payState === "confirmed" || payState === "processing" || payState === "unknown";
+
   return (
     <>
       <Helmet>
@@ -43,16 +48,26 @@ const MarketplaceSuccess = () => {
         style={{ background: "radial-gradient(ellipse 60% 40% at 50% 0%, rgba(199,240,17,0.09), transparent), #000" }}
       >
         <div className="mx-auto max-w-[560px] px-5 flex flex-col items-center gap-6 text-center">
-          <motion.span
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ type: "spring", stiffness: 200, damping: 15 }}
-            className="w-24 h-24 rounded-full bg-primary/10 border border-primary/45 flex items-center justify-center text-primary"
-            style={{ boxShadow: "0 0 60px rgba(199,240,17,0.3)" }}
-          >
-            <PackageCheck className="w-11 h-11" strokeWidth={2.2} />
-          </motion.span>
+          <CheckoutStatusNotice
+            state={payState}
+            resumeUrl={resumeUrl}
+            backTo="/marketplace"
+            backLabel="Zurück zum Marketplace"
+          />
 
+          {paymentDone && (
+            <motion.span
+              initial={{ scale: 0, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ type: "spring", stiffness: 200, damping: 15 }}
+              className="w-24 h-24 rounded-full bg-primary/10 border border-primary/45 flex items-center justify-center text-primary"
+              style={{ boxShadow: "0 0 60px rgba(199,240,17,0.3)" }}
+            >
+              <PackageCheck className="w-11 h-11" strokeWidth={2.2} />
+            </motion.span>
+          )}
+
+          {paymentDone && (
           <motion.div
             initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
@@ -83,8 +98,9 @@ const MarketplaceSuccess = () => {
               </span>
             )}
           </motion.div>
+          )}
 
-          {order && (
+          {paymentDone && order && (
             <motion.div
               initial={{ opacity: 0, y: 18 }}
               animate={{ opacity: 1, y: 0 }}
