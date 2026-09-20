@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
         p_user_id: null,
         p_recipient_email: null,
         p_recipient_name: null,
-        p_description: `Erstattung Bestellung ${orderId}`,
+        p_description: `Erstattung Bestellung ${(order as { reference_code?: string }).reference_code ?? orderId}`,
         p_gross_cents: -refundAmountCents,
         p_discount_cents: 0,
         p_paid_cents: -refundAmountCents,

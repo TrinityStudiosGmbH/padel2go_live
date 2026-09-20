@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
+import { bookingDescription } from "../_shared/receiptText.ts";
 import { resolveWebhookSecrets } from "../_shared/stripe.ts";
 
 // Stripe webhooks are server-to-server, minimal CORS needed
@@ -859,7 +860,7 @@ serve(async (req) => {
                 p_user_id: isGuestWebhook ? null : (session.metadata?.user_id || null),
                 p_recipient_email: isGuestWebhook ? (guestEmail ?? null) : null,
                 p_recipient_name: isGuestWebhook ? (guestName ?? null) : null,
-                p_description: `Court-Buchung ${bookingId}`,
+                p_description: await bookingDescription(supabaseAdmin, bookingId),
                 p_gross_cents: paidCents,
                 p_discount_cents: 0,
                 p_paid_cents: paidCents,
@@ -1105,7 +1106,7 @@ serve(async (req) => {
             p_user_id: userId ?? null,
             p_recipient_email: null,
             p_recipient_name: null,
-            p_description: `Erstattung Court-Buchung ${bookingId}`,
+            p_description: await bookingDescription(supabaseAdmin, bookingId, { refund: true }),
             p_gross_cents: -charge.amount_refunded,
             p_discount_cents: 0,
             p_paid_cents: -charge.amount_refunded,
