@@ -111,6 +111,7 @@ serve(async (req) => {
       | undefined;
     const guestEmail: string | undefined = body.guest_email;
     const guestName: string | undefined = body.guest_name;
+    const voucherId: string | undefined = body.voucher_id;
 
     if (!itemId) return json({ error: "Item ID fehlt" }, 400);
 
@@ -154,6 +155,64 @@ serve(async (req) => {
       return json({ error: "E-Mail-Adresse ist erforderlich" }, 400);
     }
 
+    // ── Gutschein ─────────────────────────────────────────────────────────────
+    // Zuerst der Gutschein, dann die Punkte. Andersherum liesse sich der
+    // 50-Prozent-Deckel der Punkte aushebeln: Punkte auf den vollen Warenwert
+    // plus Gutschein darauf koennte zusammen mehr als den Preis ergeben. So
+    // greift der Punktedeckel auf den bereits rabattierten Betrag.
+    let voucherDiscountCents = 0;
+    let appliedVoucherId: string | null = null;
+    let priceAfterVoucher = priceCents;
+
+    if (voucherId) {
+      const { data: voucher } = await supabaseAdmin
+        .from("voucher_codes")
+        .select("*")
+        .eq("id", voucherId)
+        .maybeSingle();
+
+      const scope: string = (voucher as any)?.scope ?? "booking";
+      const now = new Date();
+      const usable = !!voucher
+        && voucher.is_active
+        && (scope === "marketplace" || scope === "both")
+        && new Date(voucher.valid_from) <= now
+        && (!voucher.valid_until || new Date(voucher.valid_until) >= now)
+        && (voucher.max_uses === null || voucher.current_uses < voucher.max_uses);
+
+      if (!usable) {
+        return json({ error: "Gutschein ist hier nicht gültig" }, 400);
+      }
+
+      // Nutzung optimistisch reservieren, bevor irgendetwas berechnet wird —
+      // dasselbe Muster wie bei Buchungen. Schlaegt es fehl, war jemand
+      // schneller und der Code ist aufgebraucht.
+      const { data: reserved } = await supabaseAdmin
+        .from("voucher_codes")
+        .update({ current_uses: voucher!.current_uses + 1 })
+        .eq("id", voucher!.id)
+        .eq("current_uses", voucher!.current_uses)
+        .select("id");
+
+      if (!reserved || reserved.length === 0) {
+        return json({ error: "Gutschein konnte nicht eingelöst werden – bitte erneut versuchen" }, 409);
+      }
+
+      const dt: string = voucher!.discount_type ?? "free";
+      const dv: number = voucher!.discount_value ?? 0;
+      if (dt === "free" || (dt === "percentage" && dv >= 100)) {
+        voucherDiscountCents = priceCents;
+      } else if (dt === "percentage") {
+        voucherDiscountCents = Math.floor((priceCents * dv) / 100);
+      } else if (dt === "fixed") {
+        voucherDiscountCents = Math.min(dv, priceCents);
+      }
+
+      priceAfterVoucher = Math.max(0, priceCents - voucherDiscountCents);
+      appliedVoucherId = voucher!.id;
+      logStep("Gutschein angewendet", { voucherId: appliedVoucherId, dt, dv, priceCents, priceAfterVoucher });
+    }
+
     // ── Points discount (logged-in only; guests are cash-only) ─────────────────
     // The wallet debit itself happens ATOMICALLY inside insert_marketplace_order (same txn
     // as the order row), never here — see that RPC. Here we only size the discount and the
@@ -194,20 +253,22 @@ serve(async (req) => {
       // unter Preise & Punkte. Kein Feld mehr am Produkt — 170 € bei 50 % sind
       // 85 € Rabatt, egal welches Produkt. priceCents ist bereits der Wert der
       // gesamten Menge, der Anteil gilt also auf die ganze Position.
-      const capByPercentCents = Math.floor((priceCents * maxPercent) / 100);
+      // priceAfterVoucher, nicht priceCents: liegt schon ein Gutschein auf der
+      // Bestellung, gilt der Punktedeckel auf den Rest.
+      const capByPercentCents = Math.floor((priceAfterVoucher * maxPercent) / 100);
       const requestedDiscountCents = Math.floor(pointsToUse * centsPerPoint);
       actualDiscountCents = Math.min(
         requestedDiscountCents,
         capByPercentCents,
-        priceCents,
+        priceAfterVoucher,
         Math.floor(availablePoints * centsPerPoint),
       );
       // Never leave a remainder Stripe can't charge (the 0<x<50c band): trim the discount
       // so exactly 50c remains, otherwise points would be burned for a discount never
       // delivered AND the user overcharged the Stripe minimum on top. (Full-coverage → free path.)
-      const remainderIfApplied = priceCents - actualDiscountCents;
+      const remainderIfApplied = priceAfterVoucher - actualDiscountCents;
       if (remainderIfApplied > 0 && remainderIfApplied < 50) {
-        actualDiscountCents = Math.max(0, priceCents - 50);
+        actualDiscountCents = Math.max(0, priceAfterVoucher - 50);
       }
       pointsToReserve = Math.ceil(actualDiscountCents / centsPerPoint);
       if (pointsToReserve <= 0) {
@@ -218,7 +279,7 @@ serve(async (req) => {
 
     // Provisional: assumes the reserve inside insert_marketplace_order takes the full
     // pointsToReserve. Recomputed from that RPC's authoritative result before any charge.
-    let remainderCents = priceCents - actualDiscountCents;
+    let remainderCents = priceAfterVoucher - actualDiscountCents;
 
     // ── Create the PENDING order row (mirrors bookings: the order exists before the
     // webhook so we never oversell and never pay-without-a-row). ────────────────
@@ -240,6 +301,8 @@ serve(async (req) => {
       unit_price_cents: unitPriceCents,
       gross_cents: priceCents,
       discount_cents: actualDiscountCents,
+      voucher_id: appliedVoucherId,
+      voucher_discount_cents: voucherDiscountCents,
       tax_rate: Number((item as any).tax_rate ?? 19),
       quantity,
       status: "pending",
@@ -389,7 +452,7 @@ serve(async (req) => {
     if (appliedPlay + appliedReward === 0) {
       actualDiscountCents = 0;
     }
-    remainderCents = priceCents - actualDiscountCents;
+    remainderCents = priceAfterVoucher - actualDiscountCents;
 
     // Atomic, idempotent rollback of a still-pending order: cancels it, refunds the reserved
     // points (from the row) and restores any reserved stock in one guarded step. Pending-only,
@@ -431,7 +494,7 @@ serve(async (req) => {
     }
 
     // ── FULL COVERAGE (logged-in): points cover the whole price → skip Stripe. ──
-    if (user && remainderCents <= 0) {
+    if (remainderCents <= 0) {
       const { data: flipped } = await supabaseAdmin
         .from("marketplace_redemptions")
         .update({ status: "success" })
@@ -447,7 +510,7 @@ serve(async (req) => {
       // (columns only exist once the July-2026 compliance migrations ran).
       const { error: snapshotError } = await supabaseAdmin
         .from("marketplace_redemptions")
-        .update({ discount_cents: priceCents, tax_cents: 0 })
+        .update({ discount_cents: actualDiscountCents, tax_cents: 0 })
         .eq("id", orderId);
       if (snapshotError) logStep("Free path: snapshot update failed (migration pending?)", { error: snapshotError.message });
 
@@ -456,7 +519,7 @@ serve(async (req) => {
       const { error: receiptError } = await supabaseAdmin.rpc("create_receipt", {
         p_receipt_type: "marketplace_order",
         p_source_id: orderId,
-        p_user_id: user.id,
+        p_user_id: user?.id ?? null,
         p_recipient_email: effectiveEmail,
         p_recipient_name: guestName ?? null,
         p_description: `${item.name} × ${quantity} (${referenceCode})`,
@@ -467,24 +530,38 @@ serve(async (req) => {
       });
       if (receiptError) logStep("Free path: receipt creation failed", { orderId, error: receiptError.message });
 
-      const { data: postWallet } = await supabaseAdmin
-        .from("wallets")
-        .select("play_credits, reward_credits")
-        .eq("user_id", user.id)
-        .single();
-      const balanceAfter = (postWallet?.play_credits ?? 0) + (postWallet?.reward_credits ?? 0);
+      // Nur mit Konto und nur, wenn tatsaechlich Punkte geflossen sind. Deckt ein
+      // Gutschein den ganzen Betrag, gibt es keine Punktebewegung zu buchen.
+      if (user && appliedPlay + appliedReward > 0) {
+        const { data: postWallet } = await supabaseAdmin
+          .from("wallets")
+          .select("play_credits, reward_credits")
+          .eq("user_id", user.id)
+          .single();
+        const balanceAfter = (postWallet?.play_credits ?? 0) + (postWallet?.reward_credits ?? 0);
 
-      const { error: ledgerError } = await supabaseAdmin.from("points_ledger").insert({
-        user_id: user.id,
-        credit_type: "REWARD",
-        delta_points: -(appliedPlay + appliedReward),
-        balance_after: balanceAfter,
-        entry_type: "REDEMPTION",
-        description: `Marketplace: ${item.name}`,
-        source_type: "REDEMPTION",
-        source_id: referenceCode,
-      });
-      if (ledgerError) logStep("Free path: ledger insert failed", { error: ledgerError.message });
+        const { error: ledgerError } = await supabaseAdmin.from("points_ledger").insert({
+          user_id: user.id,
+          credit_type: "REWARD",
+          delta_points: -(appliedPlay + appliedReward),
+          balance_after: balanceAfter,
+          entry_type: "REDEMPTION",
+          description: `Marketplace: ${item.name}`,
+          source_type: "REDEMPTION",
+          source_id: referenceCode,
+        });
+        if (ledgerError) logStep("Free path: ledger insert failed", { error: ledgerError.message });
+      }
+
+      // Einloesung dokumentieren, damit der Verbrauch des Codes nachvollziehbar ist.
+      if (appliedVoucherId) {
+        const { error: vrError } = await supabaseAdmin.from("voucher_redemptions").insert({
+          voucher_id: appliedVoucherId,
+          redemption_id: orderId,
+          user_id: user?.id ?? null,
+        });
+        if (vrError) logStep("Free path: Gutschein-Einloesung nicht protokolliert", { error: vrError.message });
+      }
 
       // Admin order alert for EVERY product type (previously physical-only, which left
       // digital/rental orders invisible until someone opened the admin queue).
@@ -492,12 +569,16 @@ serve(async (req) => {
         try {
           const resendApiKey = await resolveResendKey(supabaseAdmin);
           if (resendApiKey) {
-            const { data: userProfile } = await supabaseAdmin
-              .from("profiles")
-              .select("display_name, username")
-              .eq("user_id", user.id)
-              .single();
-            const displayName = userProfile?.display_name || userProfile?.username || "Unbekannt";
+            // Gast: kein Profil vorhanden, dann der angegebene Name.
+            const { data: userProfile } = user
+              ? await supabaseAdmin
+                  .from("profiles")
+                  .select("display_name, username")
+                  .eq("user_id", user.id)
+                  .maybeSingle()
+              : { data: null };
+            const displayName =
+              userProfile?.display_name || userProfile?.username || guestName || effectiveEmail || "Unbekannt";
             const formattedAddress = item.product_type === "purchase"
               ? `${shipping!.address_line1}\n${shipping!.postal_code} ${shipping!.city}\n${shipping!.country || "Deutschland"}`
               : "— (kein Versand nötig)";

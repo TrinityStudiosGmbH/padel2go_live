@@ -15,6 +15,7 @@ interface CheckoutParams {
   itemName: string;
   pointsToUse?: number;
   quantity?: number;
+  voucherId?: string | null;
   shipping?: ShippingAddress;
   guestEmail?: string;
   guestName?: string;
@@ -35,6 +36,7 @@ export const useMarketplaceCheckout = () => {
       itemId,
       pointsToUse,
       quantity,
+      voucherId,
       shipping,
       guestEmail,
       guestName,
@@ -44,6 +46,7 @@ export const useMarketplaceCheckout = () => {
           item_id: itemId,
           points_to_use: pointsToUse ?? 0,
           quantity: quantity ?? 1,
+          ...(voucherId ? { voucher_id: voucherId } : {}),
           ...(shipping ? { shipping } : {}),
           ...(guestEmail ? { guest_email: guestEmail } : {}),
           ...(guestName ? { guest_name: guestName } : {}),

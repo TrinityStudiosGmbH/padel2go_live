@@ -36,7 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Plus, Trash2, Pencil, Copy, Percent, Euro, Gift, Dices, AlertTriangle, Search, Ticket, CheckCheck, ClockAlert } from "lucide-react";
+import { Plus, Trash2, Pencil, Copy, Percent, Euro, Gift, Dices, AlertTriangle, Search, Ticket, CheckCheck, ClockAlert, CalendarDays, ShoppingBag, Layers } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -47,6 +47,7 @@ interface VoucherCode {
   id: string;
   code: string;
   description: string | null;
+  scope: string;           // 'booking' | 'marketplace' | 'both'
   discount_type: string;   // 'free' | 'percentage' | 'fixed'
   discount_value: number;  // percentage (1-100) or cents
   is_active: boolean;
@@ -113,6 +114,7 @@ export default function AdminVouchers() {
   const [formCode, setFormCode] = useState("");
   const [formDescription, setFormDescription] = useState("");
   const [formDiscountType, setFormDiscountType] = useState<"free" | "percentage" | "fixed">("free");
+  const [formScope, setFormScope] = useState<"booking" | "marketplace" | "both">("booking");
   const [formDiscountValue, setFormDiscountValue] = useState("");
   const [formMaxUses, setFormMaxUses] = useState("");
   const [formValidFrom, setFormValidFrom] = useState("");
@@ -218,6 +220,7 @@ export default function AdminVouchers() {
     setFormCode("");
     setFormDescription("");
     setFormDiscountType("free");
+    setFormScope("booking");
     setFormDiscountValue("");
     setFormMaxUses("");
     setFormValidFrom("");
@@ -236,6 +239,7 @@ export default function AdminVouchers() {
     setFormCode(v.code);
     setFormDescription(v.description || "");
     setFormDiscountType((v.discount_type as "free" | "percentage" | "fixed") || "free");
+    setFormScope((v.scope as "booking" | "marketplace" | "both") || "booking");
     setFormDiscountValue(
       v.discount_type === "fixed"
         ? ((v.discount_value || 0) / 100).toFixed(2)
@@ -263,6 +267,7 @@ export default function AdminVouchers() {
     createMutation.mutate({
       code: formCode.trim(),
       description: formDescription.trim() || null,
+      scope: formScope,
       discount_type: formDiscountType,
       discount_value: parseDiscountValue(),
       max_uses: formMaxUses ? parseInt(formMaxUses) : null,
@@ -282,6 +287,7 @@ export default function AdminVouchers() {
       id: editVoucher.id,
       code: formCode.trim(),
       description: formDescription.trim() || null,
+      scope: formScope,
       discount_type: formDiscountType,
       discount_value: parseDiscountValue(),
       max_uses: formMaxUses ? parseInt(formMaxUses) : null,
@@ -400,6 +406,29 @@ export default function AdminVouchers() {
           placeholder="z.B. Promo-Aktion März"
           className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13.5px]"
         />
+      </div>
+
+      {/* Geltungsbereich */}
+      <div className="flex flex-col gap-[7px]">
+        <Label className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+          Gilt für<span className="text-primary"> *</span>
+        </Label>
+        <Select value={formScope} onValueChange={(v) => setFormScope(v as "booking" | "marketplace" | "both")}>
+          <SelectTrigger className="h-10 rounded-[10px] border-[hsl(0_0%_15%)] bg-white/[0.04] text-[13.5px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="rounded-xl border-[hsl(0_0%_15%)] bg-[hsl(0_0%_6%)]">
+            <SelectItem value="booking">
+              <span className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-primary" /> Nur Platzbuchungen</span>
+            </SelectItem>
+            <SelectItem value="marketplace">
+              <span className="flex items-center gap-2"><ShoppingBag className="h-4 w-4 text-[#7FD4FF]" /> Nur Marketplace</span>
+            </SelectItem>
+            <SelectItem value="both">
+              <span className="flex items-center gap-2"><Layers className="h-4 w-4 text-[#FFC44D]" /> Beides</span>
+            </SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* Discount type + value */}

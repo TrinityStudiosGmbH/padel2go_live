@@ -10,6 +10,12 @@ interface SiteVisualProps {
   fallbackSrc?: string;
   /** Zielbreite des Storage-Derivats — Anzeigebreite × 2 (Retina). */
   renderWidth?: number;
+  /**
+   * Abdunkelung ueber dem Bild, damit Text darauf lesbar bleibt. Wird NUR
+   * gerendert, wenn es tatsaechlich ein Bild gibt: ohne Bild wuerde der Schleier
+   * sonst die Kachel darunter grundlos verdunkeln.
+   */
+  overlayClassName?: string;
 }
 
 export function SiteVisual({
@@ -18,7 +24,8 @@ export function SiteVisual({
   className,
   fallbackClassName,
   fallbackSrc,
-  renderWidth = 1200
+  renderWidth = 1200,
+  overlayClassName,
 }: SiteVisualProps) {
   const { data: visual, isLoading } = useSiteVisual(visualKey);
 
@@ -60,12 +67,26 @@ export function SiteVisual({
     );
   }
 
+  if (!overlayClassName) {
+    return (
+      <StorageImage
+        src={imageUrl}
+        renderWidth={renderWidth}
+        alt={alt}
+        className={cn("object-cover", className)}
+      />
+    );
+  }
+
   return (
-    <StorageImage
-      src={imageUrl}
-      renderWidth={renderWidth}
-      alt={alt}
-      className={cn("object-cover", className)}
-    />
+    <>
+      <StorageImage
+        src={imageUrl}
+        renderWidth={renderWidth}
+        alt={alt}
+        className={cn("object-cover", className)}
+      />
+      <div aria-hidden className={cn("absolute inset-0", overlayClassName)} />
+    </>
   );
 }

@@ -161,7 +161,7 @@ const Index = () => {
         <SectionDivider variant="glow" />
 
         {/* ── EIN NETWORK. ALLE VORTEILE. (Bento) ───────────────── */}
-        <section id="plattform" className="py-16 md:py-24 relative overflow-hidden bg-gradient-hero">
+        <section id="plattform" className="py-16 md:py-24 relative overflow-hidden">
           <div className="mx-auto max-w-[1200px] px-5">
             <motion.div {...revealProps()} className="flex flex-col items-center gap-4 text-center max-w-2xl mx-auto mb-14">
               <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 border border-primary/20 text-primary">
@@ -198,6 +198,16 @@ const Index = () => {
 
               {/* Payback +250 */}
               <motion.div {...revealProps(0.1)} className="lg:col-span-5 relative overflow-hidden min-h-[400px] flex flex-col justify-between gap-7 p-7 rounded-2xl bg-gradient-card border border-border/60 hover:border-primary/30 transition-colors duration-300">
+                {/* Hintergrundbild, im Admin unter Visuals pflegbar. Ohne Bild
+                    bleibt die Kachel wie bisher: SiteVisual rendert dann nichts. */}
+                <div className="absolute inset-0">
+                  <SiteVisual
+                    visualKey="home.network.payback"
+                    alt={t("network.paybackTitle")}
+                    className="w-full h-full"
+                    overlayClassName="bg-[linear-gradient(200deg,hsl(0_0%_0%/0.35),hsl(0_0%_0%/0.9)_78%)]"
+                  />
+                </div>
                 <div className="pointer-events-none absolute -right-24 -top-24 w-64 h-64 rounded-full bg-[radial-gradient(circle,hsl(71_91%_51%/0.14),transparent_70%)]" />
                 <div className="relative w-[54px] h-[54px] rounded-[14px] border border-primary/35 flex items-center justify-center bg-[linear-gradient(135deg,hsl(71_91%_51%/0.18),hsl(71_91%_51%/0.04))] animate-float">
                   <Coins className="w-6 h-6 text-primary" />
@@ -218,10 +228,18 @@ const Index = () => {
 
               {/* Marketplace */}
               <motion.div {...revealProps(0.15)} className="lg:col-span-5 relative overflow-hidden min-h-[360px] flex flex-col justify-between gap-7 p-7 rounded-2xl bg-gradient-card border border-border/60 hover:border-primary/30 transition-colors duration-300">
-                <div className="w-[54px] h-[54px] rounded-[14px] border border-primary/35 flex items-center justify-center bg-[linear-gradient(135deg,hsl(71_91%_51%/0.18),hsl(71_91%_51%/0.04))] animate-float" style={{ animationDelay: "0.5s" }}>
+                <div className="absolute inset-0">
+                  <SiteVisual
+                    visualKey="home.network.market"
+                    alt={t("network.marketTitle")}
+                    className="w-full h-full"
+                    overlayClassName="bg-[linear-gradient(200deg,hsl(0_0%_0%/0.35),hsl(0_0%_0%/0.9)_78%)]"
+                  />
+                </div>
+                <div className="relative w-[54px] h-[54px] rounded-[14px] border border-primary/35 flex items-center justify-center bg-[linear-gradient(135deg,hsl(71_91%_51%/0.18),hsl(71_91%_51%/0.04))] animate-float" style={{ animationDelay: "0.5s" }}>
                   <ShoppingBag className="w-6 h-6 text-primary" />
                 </div>
-                <div className="flex flex-col gap-3.5">
+                <div className="relative flex flex-col gap-3.5">
                   <h3 className="font-display text-xl md:text-2xl font-bold text-foreground" style={{ lineHeight: 1.15 }}>
                     {t("network.marketTitle")}
                   </h3>

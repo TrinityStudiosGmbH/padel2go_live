@@ -271,7 +271,7 @@ serve(async (req) => {
 
             const { data: order, error: orderReadError } = await supabaseAdmin
               .from("marketplace_redemptions")
-              .select("user_id, item_id, quantity, play_spent, reward_spent, amount_cents, reference_code, guest_email, guest_name, shipping_address_line1, shipping_postal_code, shipping_city, shipping_country, fulfillment_notified_at")
+              .select("user_id, item_id, quantity, play_spent, reward_spent, amount_cents, reference_code, guest_email, guest_name, shipping_address_line1, shipping_postal_code, shipping_city, shipping_country, fulfillment_notified_at, voucher_id")
               .eq("id", redemptionId)
               .single();
 
@@ -295,6 +295,20 @@ serve(async (req) => {
                 .eq("id", order.item_id)
                 .single();
               item = itemRow as typeof item;
+            }
+
+            // Gutschein-Einloesung dokumentieren. Die Nutzung wurde schon beim
+            // Checkout reserviert; hier wird festgehalten, wofuer. Eindeutiger
+            // Index auf redemption_id macht eine erneute Zustellung harmlos.
+            if (settled === true && (order as { voucher_id?: string }).voucher_id) {
+              const { error: vrError } = await supabaseAdmin.from("voucher_redemptions").insert({
+                voucher_id: (order as { voucher_id?: string }).voucher_id,
+                redemption_id: redemptionId,
+                user_id: order.user_id ?? null,
+              });
+              if (vrError && !/duplicate|unique/i.test(vrError.message)) {
+                logStep("Gutschein-Einloesung nicht protokolliert", { redemptionId, error: vrError.message });
+              }
             }
 
             // GoBD: sequential receipt for the settled order (idempotent per source).

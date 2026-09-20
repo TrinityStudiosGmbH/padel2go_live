@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  ArrowLeft, MapPin, CreditCard, Wallet, Check, Coins, Gift, Lock,
+  ArrowLeft, MapPin, CreditCard, Wallet, Check, Coins, Gift, Lock, Tag,
   ShieldCheck, Truck, Loader2,
 } from "lucide-react";
 import { useMarketplaceProduct } from "@/hooks/useMarketplaceProduct";
@@ -17,6 +17,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { useP2GPoints } from "@/hooks/useP2GPoints";
 import { usePointsValue } from "@/hooks/usePointsValue";
 import { eur, ptsFmt, maxRedeemablePoints, productPointsCap } from "@/lib/marketplace";
+import { VoucherField, type AppliedVoucher } from "@/components/VoucherField";
+import { applyVoucherDiscount } from "@/lib/pricing";
 import { localized } from "@/lib/localized";
 import { StorageImage } from "@/components/StorageImage";
 
@@ -44,6 +46,7 @@ const MarketplaceCheckout = () => {
   const [aCity, setACity] = useState("");
   const [payMethod, setPayMethod] = useState(0);
   const [pointsUse, setPointsUse] = useState(0);
+  const [voucher, setVoucher] = useState<AppliedVoucher | null>(null);
 
   useEffect(() => {
     if (user?.email && !aMail) setAMail(user.email);
@@ -54,11 +57,20 @@ const MarketplaceCheckout = () => {
   const subtotal = price * qty;
   const balance = summary?.redeemable_balance ?? 0;
   const canUsePoints = !!user && pointsEnabled;
-  const pointsCap = productPointsCap(subtotal, centsPerPoint, maxPercent);
-  const maxRedeem = canUsePoints ? maxRedeemablePoints(subtotal, balance, centsPerPoint, maxPercent) : 0;
+  // Reihenfolge wie auf dem Server: erst der Gutschein, dann die Punkte auf
+  // den Rest. Andersherum liessen sich beide Rabatte uebereinander stapeln.
+  const afterVoucher = voucher
+    ? applyVoucherDiscount(subtotal, voucher.discountType, voucher.discountValue)
+    : subtotal;
+  const voucherCents = subtotal - afterVoucher;
+  const pointsCap = productPointsCap(afterVoucher, centsPerPoint, maxPercent);
+  const maxRedeem = canUsePoints ? maxRedeemablePoints(afterVoucher, balance, centsPerPoint, maxPercent) : 0;
   const redeem = Math.min(pointsUse, maxRedeem);
   const discountCents = Math.floor(redeem * centsPerPoint);
-  const total = Math.max(50, subtotal - discountCents);
+  // Deckt alles ab, laeuft die Bestellung ohne Stripe durch; sonst gilt dessen
+  // Mindestbetrag von 50 Cent.
+  const remainder = afterVoucher - discountCents;
+  const total = remainder <= 0 ? 0 : Math.max(50, remainder);
 
   const emailOk = EMAIL_RE.test(aMail.trim());
   const addrValid =
@@ -96,6 +108,7 @@ const MarketplaceCheckout = () => {
         itemName: product.name,
         quantity: qty,
         pointsToUse: canUsePoints ? redeem : 0,
+        voucherId: voucher?.id ?? null,
         shipping: { address_line1: aStreet.trim(), postal_code: aZip.trim(), city: aCity.trim(), country: "DE" },
         guestEmail: aMail.trim(),
         guestName: aName.trim() || undefined,
@@ -252,6 +265,14 @@ const MarketplaceCheckout = () => {
 
                 <div className="h-px bg-border" />
 
+                {/* Gutschein — fuer Angemeldete wie Gaeste */}
+                <VoucherField
+                  context="marketplace"
+                  applied={voucher}
+                  onApply={(v) => { setVoucher(v); setPointsUse(0); }}
+                  onClear={() => { setVoucher(null); setPointsUse(0); }}
+                />
+
                 {/* Points */}
                 {canUsePoints && (
                   <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/[0.06] px-4 py-3.5">
@@ -309,6 +330,15 @@ const MarketplaceCheckout = () => {
                 {/* Totals */}
                 <div className="flex flex-col gap-2.5">
                   <Row label={t("checkout.subtotal")} value={eur(subtotal)} />
+                  {voucherCents > 0 && (
+                    <div className="flex justify-between text-[13.5px] text-primary">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Tag className="w-3.5 h-3.5" />
+                        Gutschein {voucher?.code}
+                      </span>
+                      <span className="font-stat">−{eur(voucherCents)}</span>
+                    </div>
+                  )}
                   {discountCents > 0 && (
                     <div className="flex justify-between text-[13.5px] text-primary">
                       <span className="inline-flex items-center gap-1.5">

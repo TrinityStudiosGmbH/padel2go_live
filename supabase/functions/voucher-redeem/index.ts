@@ -18,26 +18,20 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
 
-    // Auth check
+    // Anmeldung optional. Eine Gastbuchung hat user_id = null und weist sich
+    // ueber den Besitz der Buchungs-UUID aus — dasselbe Modell wie in
+    // create-checkout-session. Ist jemand angemeldet, muss die Buchung ihm
+    // gehoeren; das wird weiter unten geprueft.
+    let user: { id: string } | null = null;
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Nicht authentifiziert" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
-      });
-    }
-
-    const supabaseClient = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_ANON_KEY") ?? ""
-    );
-    const token = authHeader.replace("Bearer ", "");
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Nicht authentifiziert" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 401,
-      });
+    if (authHeader) {
+      const supabaseClient = createClient(
+        Deno.env.get("SUPABASE_URL") ?? "",
+        Deno.env.get("SUPABASE_ANON_KEY") ?? ""
+      );
+      const token = authHeader.replace("Bearer ", "");
+      const { data: authData } = await supabaseClient.auth.getUser(token);
+      user = authData?.user ? { id: authData.user.id } : null;
     }
 
     const { code, booking_id } = await req.json();
@@ -59,6 +53,15 @@ serve(async (req) => {
 
     if (voucherError || !voucher) {
       return new Response(JSON.stringify({ error: "Ungültiger Code" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 400,
+      });
+    }
+
+    // Geltungsbereich: ein reiner Marketplace-Code darf keine Buchung freischalten.
+    const scope: string = voucher.scope ?? "booking";
+    if (scope !== "booking" && scope !== "both") {
+      return new Response(JSON.stringify({ error: "Dieser Code gilt nur für den Marketplace" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 400,
       });
@@ -106,7 +109,8 @@ serve(async (req) => {
       });
     }
 
-    if (booking.user_id !== user.id) {
+    const isGuestBooking = booking.user_id === null;
+    if (!isGuestBooking && booking.user_id !== user?.id) {
       return new Response(JSON.stringify({ error: "Kein Zugriff auf diese Buchung" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 403,
@@ -230,7 +234,7 @@ serve(async (req) => {
       .insert({
         voucher_id: voucher.id,
         booking_id: booking_id,
-        user_id: user.id,
+        user_id: user?.id ?? null,
       });
 
     if (redemptionError) {

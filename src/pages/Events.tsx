@@ -463,7 +463,7 @@ const Events = () => {
         <SectionDivider variant="glow" />
 
         {/* Benefits Section */}
-        <section className="py-14 md:py-24 bg-gradient-hero">
+        <section className="py-14 md:py-24">
           <div className="mx-auto max-w-[1200px] px-5 flex flex-col gap-11">
             <motion.div
               initial={{ opacity: 0, y: 30 }}

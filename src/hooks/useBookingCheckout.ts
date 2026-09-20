@@ -189,7 +189,7 @@ export function useBookingCheckout(): UseBookingCheckoutReturn {
       discount_value?: number;
       discount_label?: string;
     }>("voucher-validate", {
-      body: { code: voucher.code.trim() },
+      body: { code: voucher.code.trim(), context: "booking" },
       maxRetries: 1,
     });
 
@@ -362,7 +362,7 @@ export function useBookingCheckout(): UseBookingCheckoutReturn {
     }
 
     toast.success("Buchung kostenlos bestätigt! 🎉");
-    navigate("/booking/success");
+    navigate(isGuest ? "/booking/success?guest=1" : "/booking/success");
     return true;
   };
 
