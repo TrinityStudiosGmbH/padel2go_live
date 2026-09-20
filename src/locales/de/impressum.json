@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Impressum | Padel2Go",
-    "description": "Impressum der PADEL2GO UG (haftungsbeschränkt) - Rechtliche Informationen, Kontaktdaten und Angaben gemäß § 5 DDG."
+    "description": "Impressum der PADEL2GO OpCo UG (haftungsbeschränkt) - Rechtliche Informationen, Kontaktdaten und Angaben gemäß § 5 DDG."
   },
   "header": {
     "title": "Impressum",
@@ -27,7 +27,9 @@
     "courtLabel": "Registergericht:",
     "court": "Amtsgericht München",
     "numberLabel": "Registernummer:",
-    "number": "HRB 306377"
+    "number": "HRB 312382",
+    "vatLabel": "Umsatzsteuer-Identifikationsnummer:",
+    "vat": "DE464441826"
   },
   "consumerDispute": {
     "text": "Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen."

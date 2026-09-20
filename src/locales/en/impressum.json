@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "Legal Notice | Padel2Go",
-    "description": "Legal notice (Impressum) of PADEL2GO UG (haftungsbeschränkt) — company information, contact details and statutory disclosures under § 5 DDG."
+    "description": "Legal notice (Impressum) of PADEL2GO OpCo UG (haftungsbeschränkt) — company information, contact details and statutory disclosures under § 5 DDG."
   },
   "header": {
     "title": "Legal Notice",
@@ -27,7 +27,9 @@
     "courtLabel": "Registering court:",
     "court": "Munich Local Court (Amtsgericht München)",
     "numberLabel": "Registration number:",
-    "number": "HRB 306377"
+    "number": "HRB 312382",
+    "vatLabel": "VAT identification number:",
+    "vat": "DE464441826"
   },
   "consumerDispute": {
     "text": "We are neither willing nor obliged to participate in dispute resolution proceedings before a consumer arbitration board."
