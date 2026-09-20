@@ -28,10 +28,23 @@ export interface VisualSize {
   note?: string;
 }
 
+/**
+ * Lesbares Seitenverhaeltnis. Der gekuerzte Bruch hilft nicht immer weiter:
+ * 1340 × 800 kuerzt zu 67:40, was niemand im Kopf hat, obwohl es faktisch 5:3
+ * ist. Deshalb erst auf ein gaengiges Verhaeltnis einrasten (bis 1,5 Prozent
+ * Abweichung), sonst als Dezimalzahl ausgeben.
+ */
+const COMMON: [number, number][] = [
+  [1, 1], [5, 4], [4, 3], [3, 2], [5, 3], [16, 9], [2, 1], [5, 2], [21, 9],
+  [6, 5], [4, 5], [3, 4], [2, 3], [9, 16],
+];
+
 const r = (w: number, h: number): string => {
-  const g = (a: number, b: number): number => (b === 0 ? a : g(b, a % b));
-  const d = g(w, h);
-  return `${w / d}:${h / d}`;
+  const target = w / h;
+  for (const [a, b] of COMMON) {
+    if (Math.abs(a / b - target) / target <= 0.015) return `${a}:${b}`;
+  }
+  return `${target.toFixed(2).replace(".", ",")} : 1`;
 };
 
 const size = (w: number, h: number, note?: string): VisualSize => ({ w, h, ratio: r(w, h), note });
