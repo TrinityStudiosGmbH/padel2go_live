@@ -6,6 +6,56 @@ import { toast } from "sonner";
 import type { Lobby, LobbyFilters } from "@/types/lobby";
 import { QUERY_KEYS } from "@/lib/queryKeys";
 
+/**
+ * Ein einziges Realtime-Abo je Browsertab, mit Zaehler.
+ *
+ * useLobbies wird von sechs Komponenten aufgerufen, darunter
+ * LobbyActionButton — die pro Buchungskarte gerendert wird. Vorher legte
+ * JEDER Aufruf einen eigenen Kanal an, alle mit demselben Namen: bei fuenf
+ * sichtbaren Buchungen also fuenf Verbindungen, und jedes Lobby-Ereignis
+ * loeste fuenfmal dieselbe Neuabfrage aus. Die Liste laedt ueber die Edge
+ * Function lobby-api, das waren also auch fuenf Funktionsaufrufe.
+ *
+ * Dazu gebuendelt: Ereignisse kommen in Schueben (wer eine Lobby betritt,
+ * erzeugt zwei), deshalb wird die Neuabfrage um 300 ms verzoegert und
+ * zusammengefasst.
+ */
+let lobbyChannel: ReturnType<typeof supabase.channel> | null = null;
+let lobbyRefCount = 0;
+let lobbyTimer: ReturnType<typeof setTimeout> | null = null;
+
+function useLobbyRealtime(queryClient: ReturnType<typeof useQueryClient>) {
+  useEffect(() => {
+    lobbyRefCount += 1;
+
+    if (!lobbyChannel) {
+      const nudge = (alsoDetail: boolean) => () => {
+        if (lobbyTimer) clearTimeout(lobbyTimer);
+        lobbyTimer = setTimeout(() => {
+          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lobbies] });
+          if (alsoDetail) queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lobbyDetail] });
+          lobbyTimer = null;
+        }, 300);
+      };
+
+      lobbyChannel = supabase
+        .channel("lobbies-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "lobbies" }, nudge(false))
+        .on("postgres_changes", { event: "*", schema: "public", table: "lobby_members" }, nudge(true))
+        .subscribe();
+    }
+
+    return () => {
+      lobbyRefCount -= 1;
+      if (lobbyRefCount <= 0) {
+        lobbyRefCount = 0;
+        if (lobbyTimer) { clearTimeout(lobbyTimer); lobbyTimer = null; }
+        if (lobbyChannel) { supabase.removeChannel(lobbyChannel); lobbyChannel = null; }
+      }
+    };
+  }, [queryClient]);
+}
+
 export function useLobbies(filters: LobbyFilters = {}) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -24,31 +74,7 @@ export function useLobbies(filters: LobbyFilters = {}) {
     enabled: !!user,
   });
 
-  // Realtime subscription for lobby changes
-  useEffect(() => {
-    const channel = supabase
-      .channel("lobbies-realtime")
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "lobbies" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lobbies] });
-        }
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "lobby_members" },
-        () => {
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lobbies] });
-          queryClient.invalidateQueries({ queryKey: [QUERY_KEYS.lobbyDetail] });
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [queryClient]);
+  useLobbyRealtime(queryClient);
 
   return query;
 }

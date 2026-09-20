@@ -31,22 +31,18 @@ export function SiteVisual({
 
   const imageUrl = visual?.image_url || visual?.placeholder_url || fallbackSrc;
 
-  // Loading state: show fallback if provided, otherwise transparent container
+  // Waehrend die Abfrage laeuft: NICHTS laden.
+  //
+  // Vorher stand hier der Fallback. Der ist ein gebuendeltes Bild aus
+  // src/assets — bei der Events-Kachel 1,8 MB. Der Browser lud es also bei
+  // JEDEM Seitenaufruf herunter und ersetzte es eine Sekunde spaeter durch die
+  // 170 KB grosse Fassung aus dem Storage. Auf der Startseite waren das allein
+  // 2,9 MB pro Besuch, die sofort weggeworfen wurden.
+  //
+  // Der Fallback greift weiterhin — aber erst, wenn feststeht, dass es kein
+  // gepflegtes Bild gibt (unten).
   if (isLoading) {
-    if (fallbackSrc) {
-      return (
-        <img
-          src={fallbackSrc}
-          alt={alt}
-          loading="lazy"
-          decoding="async"
-          className={cn("object-cover", className)}
-        />
-      );
-    }
-    return (
-      <div className={cn("bg-transparent", className, fallbackClassName)} />
-    );
+    return <div className={cn("bg-transparent", className, fallbackClassName)} />;
   }
 
   // No image available: show fallback if provided, otherwise transparent container

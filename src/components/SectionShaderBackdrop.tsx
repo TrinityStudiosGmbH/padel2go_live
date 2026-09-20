@@ -1,4 +1,12 @@
-import { NewsHeroShader } from "@/components/news/NewsHeroShader";
+import { lazy, Suspense } from "react";
+
+// three.js wiegt rund 835 KB und zeichnet hier nur einen Hintergrund. Statisch
+// importiert lag es im kritischen Pfad von 15 Seiten. Nachgeladen erscheint
+// zuerst die dunkle Flaeche, der Shader kommt danach — sichtbar ist der
+// Unterschied kaum, messbar deutlich.
+const NewsHeroShader = lazy(() =>
+  import("@/components/news/NewsHeroShader").then((m) => ({ default: m.NewsHeroShader })),
+);
 
 /**
  * Vollflächiger Shader-Hintergrund einer Section (Gäste wie eingeloggte User):
@@ -9,7 +17,9 @@ import { NewsHeroShader } from "@/components/news/NewsHeroShader";
 export function SectionShaderBackdrop({ color }: { color: string }) {
   return (
     <div aria-hidden className="pointer-events-none fixed inset-0 z-0">
-      <NewsHeroShader color={color} />
+      <Suspense fallback={null}>
+        <NewsHeroShader color={color} />
+      </Suspense>
       <div className="absolute inset-0 bg-background/70" />
       <div
         className="absolute inset-0"

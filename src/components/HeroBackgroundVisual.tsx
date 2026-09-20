@@ -30,11 +30,17 @@ const vimeoId = (url: string): string | null => {
  * `className` should position/size the element (e.g. absolute inset-0 object-cover).
  */
 export function HeroBackgroundVisual({ videoKey, imageKey, alt, fallbackSrc, className }: Props) {
-  const { data: video } = useSiteVisual(videoKey);
-  const { data: image } = useSiteVisual(imageKey);
+  const { data: video, isLoading: videoLoading } = useSiteVisual(videoKey);
+  const { data: image, isLoading: imageLoading } = useSiteVisual(imageKey);
 
   const videoUrl = isRealUrl(video?.image_url) ? video!.image_url! : null;
-  const imageUrl = (isRealUrl(image?.image_url) ? image!.image_url! : null) ?? fallbackSrc;
+  const stored = isRealUrl(image?.image_url) ? image!.image_url! : null;
+
+  // Solange die Abfrage laeuft, NICHT auf den Fallback ausweichen: der ist ein
+  // gebuendeltes Bild (bei „Fuer Spieler" 2,99 MB) und wuerde bei jedem Aufruf
+  // geladen, nur um Sekundenbruchteile spaeter durch das gepflegte Bild
+  // ersetzt zu werden. Erst wenn feststeht, dass keines hinterlegt ist.
+  const imageUrl = stored ?? (videoLoading || imageLoading ? null : fallbackSrc);
 
   if (videoUrl) {
     const yt = youtubeId(videoUrl);
@@ -65,7 +71,7 @@ export function HeroBackgroundVisual({ videoKey, imageKey, alt, fallbackSrc, cla
         loop
         muted
         playsInline
-        poster={imageUrl}
+        poster={imageUrl ?? undefined}
         className={cn("object-cover", className)}
       >
         <source src={videoUrl} />
