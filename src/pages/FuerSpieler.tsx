@@ -144,7 +144,7 @@ const FuerSpieler = () => {
                 <motion.div key={p.title} {...reveal(i * 0.1)}
                   className="flex flex-col rounded-2xl border border-border/60 bg-gradient-card overflow-hidden">
                   <div className="relative">
-                    <img src={p.img} alt={p.title} className="w-full h-[180px] object-cover" />
+                    <img src={p.img} alt={p.title} loading="lazy" decoding="async" className="w-full h-[180px] object-cover" />
                     <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, transparent 40%, rgba(0,0,0,0.7))" }} />
                     <span className="absolute top-3.5 left-3.5 font-stat text-[11px] text-primary bg-black/70 backdrop-blur border border-primary/35 rounded-full px-3 py-1.5 whitespace-nowrap">{p.tag}</span>
                   </div>
@@ -276,7 +276,7 @@ const FuerSpieler = () => {
         {/* ④ KI-Analyse Teaser */}
         <section id="ki" className="pt-[clamp(64px,9vw,104px)] px-5">
           <motion.div {...reveal()} className="relative mx-auto max-w-[1100px] rounded-[22px] overflow-hidden border" style={{ borderColor: "hsl(199 89% 60% / 0.25)" }}>
-            <img src={fuerVereineHero} alt="" className="absolute inset-0 w-full h-full object-cover opacity-[0.22]" />
+            <img src={fuerVereineHero} alt="" loading="lazy" decoding="async" className="absolute inset-0 w-full h-full object-cover opacity-[0.22]" />
             <div className="absolute inset-0" style={{ background: "radial-gradient(ellipse 70% 80% at 50% 0%, hsl(199 89% 60% / 0.14), transparent 60%), linear-gradient(180deg, hsl(210 60% 3% / 0.82), rgba(0,0,0,0.94))" }} />
             <div className="relative flex flex-col items-center gap-4 text-center p-[clamp(36px,6vw,60px)_clamp(20px,4vw,48px)]">
               <div className="flex items-center gap-3 flex-wrap justify-center">

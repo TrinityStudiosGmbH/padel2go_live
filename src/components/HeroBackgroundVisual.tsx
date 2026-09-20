@@ -1,6 +1,7 @@
 import { useSiteVisual } from "@/hooks/useSiteVisuals";
 import { cn } from "@/lib/utils";
 import { StorageImage } from "@/components/StorageImage";
+import { storageImage } from "@/lib/imageUrl";
 
 interface Props {
   videoKey: string;
@@ -71,7 +72,10 @@ export function HeroBackgroundVisual({ videoKey, imageKey, alt, fallbackSrc, cla
         loop
         muted
         playsInline
-        poster={imageUrl ?? undefined}
+        // Das Standbild lief roh aus dem Storage: 2,3 MB, nur um die erste
+        // Sekunde des Videos zu ueberbruecken. Durch die Transformation sind
+        // es rund hundert Kilobyte.
+        poster={imageUrl ? (storageImage(imageUrl, { width: 1600 }) ?? imageUrl) : undefined}
         className={cn("object-cover", className)}
       >
         <source src={videoUrl} />
