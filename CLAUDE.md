@@ -133,10 +133,18 @@ supabase/
 - **Expert Levels sind entfernt.** Kein Level-Multiplikator, keine Stufen im Frontend, kein `expert-levels`-Endpunkt.
 - Admin: alles unter `/admin/pricing` („Preise & Punkte") in den Reitern Preise / Punkte / Wallets / Übersicht. `/admin/p2g-points` leitet dorthin um.
 
+## Rechnungen
+- Belege liegen in `receipts` (lückenlose Nummer `P2G-<Jahr>-<nnnnnn>`, Netto/Steuer getrennt). `create_receipt()` löst Empfängername, E-Mail und Anschrift **selbst** aus Bestellung, Buchung und Profil auf — Aufrufer müssen nichts mitgeben.
+- Absenderangaben (Firma, USt-IdNr., Registergericht, Bank) stehen in `billing_profile` (eine Zeile, `id = 'global'`), gepflegt unter Admin → Einstellungen → Rechnungsangaben. **Nicht** im Impressum-Text nachpflegen.
+- Das PDF erzeugt die Edge Function `receipt-pdf` bei jedem Abruf neu (`verify_jwt = false`, prüft selbst: eigenes JWT oder `receipts.access_token` aus dem Mail-Link). Nichts wird abgelegt.
+- Bis 250 € ohne Empfängeranschrift läuft das Dokument als Kleinbetragsrechnung nach § 33 UStDV — das deckt praktisch jede Platzbuchung ab.
+- Kunden laden sie unter Konto → Bestellungen und bei den Buchungen; der Link steht zusätzlich in beiden Bestätigungsmails.
+
 ## Pending Migrations (not yet run in production)
 - `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed
 - `20260919140000_integration_config_merge.sql` — am 19.09.2026 gelaufen und verifiziert
 - `20260920100000_drop_item_credit_cost.sql` — NACH dem Deploy ausführen. Zwischen Deploy und Migration kein neues Produkt anlegen (die Spalte ist noch NOT NULL, das neue Bundle schreibt sie nicht mehr)
+- `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
 `20260918120200_drop_expert_levels.sql`) sind am 18.09.2026 in Produktion gelaufen

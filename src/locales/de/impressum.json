@@ -27,7 +27,9 @@
     "courtLabel": "Registergericht:",
     "court": "Amtsgericht München",
     "numberLabel": "Registernummer:",
-    "number": "HRB 306377"
+    "number": "HRB 306377",
+    "vatLabel": "Umsatzsteuer-Identifikationsnummer:",
+    "vat": "DE464441826"
   },
   "consumerDispute": {
     "text": "Wir sind nicht bereit oder verpflichtet, an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle teilzunehmen."

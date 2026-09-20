@@ -77,6 +77,20 @@ const dateDE = (iso: string | null): string =>
 
 const isRefund = (t: string) => t.endsWith("_refund");
 
+// Die Lieferadresse speichert das Land als ISO-Kuerzel. Auf einer Rechnung
+// sieht "DE" nach Formularrest aus; alles Unbekannte bleibt unveraendert.
+const COUNTRY_NAMES: Record<string, string> = {
+  DE: "Deutschland", AT: "Österreich", CH: "Schweiz", NL: "Niederlande",
+  BE: "Belgien", FR: "Frankreich", IT: "Italien", ES: "Spanien",
+  LU: "Luxemburg", PL: "Polen", CZ: "Tschechien", DK: "Dänemark",
+};
+
+const countryName = (v: string | null): string | null => {
+  const t = (v ?? "").trim();
+  if (!t) return null;
+  return COUNTRY_NAMES[t.toUpperCase()] ?? t;
+};
+
 function buildPdf(r: Receipt, b: Biller): Promise<Uint8Array> {
   return (async () => {
     const doc = await PDFDocument.create();
@@ -132,7 +146,7 @@ function buildPdf(r: Receipt, b: Biller): Promise<Uint8Array> {
       r.recipient_name,
       r.recipient_address_line1,
       [r.recipient_postal_code, r.recipient_city].filter(Boolean).join(" ") || null,
-      r.recipient_address_line1 ? r.recipient_country : null,
+      r.recipient_address_line1 ? countryName(r.recipient_country) : null,
       r.recipient_email,
     ].filter((v): v is string => !!v && v.trim().length > 0);
     if (to.length === 0) to.push("-");
