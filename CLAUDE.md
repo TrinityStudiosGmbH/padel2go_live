@@ -148,11 +148,21 @@ supabase/
 - Ein Abbruch gibt die Nutzung zurück: `release_order_voucher()` hängt in `release_marketplace_order` und `expire_marketplace_hold`. Die Nutzung wird beim Anlegen der Bestellung reserviert, nicht bei der Zahlung.
 - `voucher_redemptions` hält entweder `booking_id` oder `redemption_id` (Prüfregel), `user_id` darf für Gäste NULL sein.
 
+## Performance & Skalierung
+- **Bilder nie roh ausliefern.** Storage-Bilder laufen über `StorageImage`/`storageImage()` (Transformations-Endpunkt). Ein Original wiegt schnell 1,5 MB, die transformierte Fassung 60 KB.
+- **`fallbackSrc` lädt erst, wenn feststeht, dass kein Bild gepflegt ist.** `SiteVisual` und `HeroBackgroundVisual` zeigen während der Abfrage bewusst nichts — vorher luden sie bei jedem Aufruf ein gebündeltes Bild, das Sekundenbruchteile später ersetzt wurde.
+- **three.js darf nie statisch importiert werden.** Der Hero-Canvas liegt in `synthetic-hero-canvas.tsx`, der Seiten-Shader wird in `SectionShaderBackdrop` nachgeladen. Beide über `lazy` + `Suspense`.
+- **Routen laufen über `lazyWithReload`** (`src/lib/lazyWithReload.ts`), nicht über `lazy` direkt: sonst sieht jeder, der die Seite während eines Deploys offen hat, beim nächsten Routenwechsel einen Fehlerbildschirm.
+- **Gemessene Werte (20.09.2026, nach der Optimierung):** Startseite 2,1 s / 1,8 MB · Buchen 1,0 s / 120 KB · Marketplace 1,5 s / 415 KB. Vorher Startseite 3,2 s / 4,3 MB.
+- **Ein Realtime-Kanal je Browsertab**, nicht je Komponente — siehe `useLobbyRealtime` in `useLobbies.ts`. Hooks, die mehrfach gerendert werden, dürfen keine eigenen Kanäle öffnen.
+- **Vercel** ist eine statische Auslieferung ohne Serverless-Funktionen; dort skaliert nur Bandbreite. Der Engpass liegt bei der **Supabase-Compute-Instanz** (Buchungen serialisieren über Advisory Locks). Vor einem Upgrade die CPU-Auslastung unter *Reports → Database* ansehen.
+
 ## Pending Migrations (not yet run in production)
 - `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed
 - `20260919140000_integration_config_merge.sql` — am 19.09.2026 gelaufen und verifiziert
 - `20260920100000_drop_item_credit_cost.sql` — am 20.09.2026 gelaufen
 - `20260920160000_voucher_scope_marketplace.sql` — am 20.09.2026 gelaufen und Ende-zu-Ende verifiziert
+- `20260921100000_cron_hygiene.sql` — OFFEN: meldet doppelte Cron-Jobs ab und plant die beiden nie eingeplanten Aufräumer (`cleanup_rate_limit_log`, `cleanup_expired_notifications`)
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
