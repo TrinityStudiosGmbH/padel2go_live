@@ -159,8 +159,8 @@ export function emailShell(o: EmailShellOpts): string {
           <tr>
             <td align="center" bgcolor="${BRAND.black}" class="p2g-px" style="background-color:${BRAND.black};padding:26px 40px 30px;border-radius:0 0 16px 16px;border-top:1px solid ${BRAND.border};font-family:${FONT_BODY};">
               <p style="margin:0 0 12px;font-size:12px;line-height:1.7;color:${BRAND.faint};">
-                PADEL2GO UG (haftungsbeschränkt) · Am Neudeck 12 · 81541 München<br>
-                Geschäftsführer: Florian Steinfelder, David Klemm · Amtsgericht München, HRB 306377
+                PADEL2GO OpCo UG (haftungsbeschränkt) · Am Neudeck 12 · 81541 München<br>
+                Geschäftsführer: Florian Steinfelder, David Klemm · Amtsgericht München, HRB 312382
               </p>
               <p style="margin:0 0 12px;font-size:12px;line-height:1.7;">
                 <a href="${APP_URL}/impressum" style="color:${BRAND.muted};text-decoration:none;">Impressum</a>
