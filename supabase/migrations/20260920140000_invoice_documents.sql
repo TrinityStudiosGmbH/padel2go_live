@@ -54,7 +54,7 @@ INSERT INTO public.billing_profile (
   id, company_name, address_line1, postal_code, city, country, vat_id,
   managing_directors, email, phone, website
 ) VALUES (
-  'global', 'PADEL2GO UG (haftungsbeschränkt)', 'Am Neudeck 12', '81541', 'München',
+  'global', 'PADEL2GO OpCo UG (haftungsbeschränkt)', 'Am Neudeck 12', '81541', 'München',
   'Deutschland', 'DE464441826', 'Florian Steinfelder, David Klemm', 'contact@padel2go.eu',
   '+49 176 32350759', 'www.padel2go-official.com'
 ) ON CONFLICT (id) DO NOTHING;

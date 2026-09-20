@@ -90,10 +90,6 @@ const Impressum = () => {
                   <span className="text-muted-foreground">{t("registration.numberLabel")}</span>{" "}
                   {t("registration.number")}
                 </p>
-                <p>
-                  <span className="text-muted-foreground">{t("registration.vatLabel")}</span>{" "}
-                  {t("registration.vat")}
-                </p>
               </div>
             </section>
 
