@@ -300,7 +300,11 @@ serve(async (req) => {
       reward_spent: 0,
       unit_price_cents: unitPriceCents,
       gross_cents: priceCents,
-      discount_cents: actualDiscountCents,
+      // Vorlaeufig: discount_cents traegt am Ende den GESAMTEN Rabatt
+      // (Punkte + Gutschein) und wird nach der Sitzungserstellung neu gesetzt.
+      // voucher_discount_cents ist der darin enthaltene Gutscheinanteil — die
+      // beiden duerfen also nicht addiert werden.
+      discount_cents: actualDiscountCents + voucherDiscountCents,
       voucher_id: appliedVoucherId,
       voucher_discount_cents: voucherDiscountCents,
       tax_rate: Number((item as any).tax_rate ?? 19),
@@ -510,7 +514,10 @@ serve(async (req) => {
       // (columns only exist once the July-2026 compliance migrations ran).
       const { error: snapshotError } = await supabaseAdmin
         .from("marketplace_redemptions")
-        .update({ discount_cents: actualDiscountCents, tax_cents: 0 })
+        // discount_cents ist der GESAMT gewaehrte Rabatt (Punkte + Gutschein),
+        // wie im Stripe-Weg weiter unten. Hier deckt er den vollen Warenwert,
+        // sonst waere dies nicht der Gratis-Weg.
+        .update({ discount_cents: priceCents, tax_cents: 0 })
         .eq("id", orderId);
       if (snapshotError) logStep("Free path: snapshot update failed (migration pending?)", { error: snapshotError.message });
 

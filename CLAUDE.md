@@ -140,10 +140,19 @@ supabase/
 - Bis 250 € ohne Empfängeranschrift läuft das Dokument als Kleinbetragsrechnung nach § 33 UStDV — das deckt praktisch jede Platzbuchung ab.
 - Kunden laden sie unter Konto → Bestellungen und bei den Buchungen; der Link steht zusätzlich in beiden Bestätigungsmails.
 
+## Gutscheine
+- `voucher_codes.scope` ∈ `booking` | `marketplace` | `both` — wird beim Anlegen gesetzt (Admin → Gutscheine, Feld „Gilt für").
+- `voucher-validate` ist **offen** (kein Login nötig, Gäste inklusive) und prüft den Geltungsbereich gegen `context` (`booking`/`marketplace`). Bremse: 15 **Fehlversuche** je Stunde und IP über `rate_limit_log`, Treffer kosten nichts.
+- Marketplace: Rabatt **vor** den Punkten. Der 50-%-Punktedeckel greift auf den bereits rabattierten Betrag — andersherum ließe er sich aushebeln.
+- `marketplace_redemptions.discount_cents` ist der **gesamte** gewährte Rabatt (Punkte + Gutschein), `voucher_discount_cents` der darin enthaltene Gutscheinanteil. **Nicht addieren.**
+- Ein Abbruch gibt die Nutzung zurück: `release_order_voucher()` hängt in `release_marketplace_order` und `expire_marketplace_hold`. Die Nutzung wird beim Anlegen der Bestellung reserviert, nicht bei der Zahlung.
+- `voucher_redemptions` hält entweder `booking_id` oder `redemption_id` (Prüfregel), `user_id` darf für Gäste NULL sein.
+
 ## Pending Migrations (not yet run in production)
 - `20260917130100_drop_dead_visibility_columns.sql` — run AFTER the web app with the new visibility system is deployed
 - `20260919140000_integration_config_merge.sql` — am 19.09.2026 gelaufen und verifiziert
-- `20260920100000_drop_item_credit_cost.sql` — NACH dem Deploy ausführen. Zwischen Deploy und Migration kein neues Produkt anlegen (die Spalte ist noch NOT NULL, das neue Bundle schreibt sie nicht mehr)
+- `20260920100000_drop_item_credit_cost.sql` — am 20.09.2026 gelaufen
+- `20260920160000_voucher_scope_marketplace.sql` — am 20.09.2026 gelaufen und Ende-zu-Ende verifiziert
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
