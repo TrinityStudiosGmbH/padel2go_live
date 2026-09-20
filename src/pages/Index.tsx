@@ -26,10 +26,7 @@ import {
   Handshake,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
-import { useLaunchDate } from "@/hooks/useLaunchDate";
 import { usePartnerTiles } from "@/hooks/usePartnerTiles";
-import { format } from "date-fns";
-import { de } from "date-fns/locale";
 import { Navigate } from "react-router-dom";
 import skypadelOutdoor from "@/assets/courts/skypadel-outdoor.jpg";
 import eventsHero from "@/assets/events-hero.jpg";
@@ -100,7 +97,6 @@ const Index = () => {
   const sectionColor = useSectionTheme("home");
   const { user, isLoading } = useAuth();
   const { t } = useTranslation("index");
-  const { launchDate, hasLaunched } = useLaunchDate();
 
   if (!isLoading && user) {
     return <Navigate to="/dashboard" replace />;
@@ -130,10 +126,6 @@ const Index = () => {
               {t("hero.descriptionLine2")}
             </>
           }
-          badgeLabel={t("hero.badgeLabel")}
-          badgeText={format(launchDate, "d. MMMM yyyy", { locale: de })}
-          showCountdown={!hasLaunched}
-          countdownTargetDate={launchDate}
           showLogo={true}
         >
           <div className="flex flex-col sm:flex-row gap-3 md:gap-4 mt-8">

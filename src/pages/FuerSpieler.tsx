@@ -16,7 +16,6 @@ import {
   Coins, Video, Bell, Check,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLaunchDate } from "@/hooks/useLaunchDate";
 import leagueHero from "@/assets/league-hero.jpg";
 import skypadelOutdoor from "@/assets/courts/skypadel-outdoor.jpg";
 import eventsHero from "@/assets/events-hero.jpg";
@@ -31,7 +30,6 @@ const reveal = (delay = 0) => ({
 
 const FuerSpieler = () => {
   const { t } = useTranslation("spieler");
-  const { launchDate } = useLaunchDate();
 
   const { data: rates } = useQuery({
     queryKey: ["payback-rates-public"],
@@ -68,7 +66,6 @@ const FuerSpieler = () => {
     setNlDone(true);
   };
 
-  const launchLabel = format(launchDate, "dd.MM.yyyy", { locale: de });
 
   const pillars = [
     { img: skypadelOutdoor, tag: t("networkNew.pillars.0.tag"), title: t("networkNew.pillars.0.title"), text: t("networkNew.pillars.0.text"), cta: t("networkNew.pillars.0.cta"), to: "/booking" },
@@ -119,7 +116,6 @@ const FuerSpieler = () => {
             </div>
             <div className="flex flex-wrap gap-2.5 justify-center">
               {[
-                <>{t("heroNew.chipLaunch")} <span className="text-primary font-bold">{launchLabel}</span></>,
                 <>{t("heroNew.chipRegistration")} <span className="text-primary font-bold">0 €</span></>,
                 <>{t("heroNew.chipBooking")} <span className="text-primary font-bold">&lt;30 Sek</span></>,
                 <><span className="text-primary font-bold">+{p1}/+{p2} P</span> {t("heroNew.chipPointsSuffix")}</>,
@@ -325,7 +321,7 @@ const FuerSpieler = () => {
               <Button variant="hero" size="xl" asChild><NavLink to="/booking"><Calendar className="w-[18px] h-[18px] mr-1" />{t("ctaNew.primaryCta")}</NavLink></Button>
               <Button variant="heroOutline" size="xl" asChild><NavLink to="/app-booking"><Smartphone className="w-[18px] h-[18px] mr-1" />{t("ctaNew.secondaryCta")}</NavLink></Button>
             </div>
-            <span className="font-stat text-[12.5px] text-muted-foreground">{t("ctaNew.note", { date: launchLabel })}</span>
+            <span className="font-stat text-[12.5px] text-muted-foreground">{t("ctaNew.note")}</span>
           </motion.div>
         </section>
       </main>

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useRef, useState, useEffect } from "react";
+import { lazy, Suspense, useRef } from "react";
 
 // Nachgeladen statt mitgeliefert: der Shader ist Dekoration, kein Inhalt.
 const HeroShaderCanvas = lazy(() => import("./synthetic-hero-canvas"));
@@ -7,20 +7,6 @@ import gsap from "gsap";
 import p2gIconLogo from "@/assets/p2g-icon-logo.png";
 
 gsap.registerPlugin(useGSAP);
-
-// Countdown calculation helper
-function calculateTimeLeft(targetDate: Date) {
-  const diff = targetDate.getTime() - Date.now();
-  if (diff <= 0) {
-    return { days: 0, hours: 0, minutes: 0, seconds: 0 };
-  }
-  return {
-    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-    hours: Math.floor((diff / (1000 * 60 * 60)) % 24),
-    minutes: Math.floor((diff / (1000 * 60)) % 60),
-    seconds: Math.floor((diff / 1000) % 60),
-  };
-}
 
 
 
@@ -63,10 +49,6 @@ const animateLines = (element: HTMLElement) => {
 interface HeroProps {
   title: string;
   description: string | React.ReactNode;
-  badgeText?: string;
-  badgeLabel?: string;
-  showCountdown?: boolean;
-  countdownTargetDate?: Date;
   microDetails?: Array<string>;
   showLogo?: boolean;
   /** false → kein eigener Canvas/Overlay; der Seiten-Backdrop (SectionShaderBackdrop) übernimmt */
@@ -77,34 +59,17 @@ interface HeroProps {
 const SyntheticHero = ({
   title = "An experiment in light, motion, and the quiet chaos between.",
   description = "Experience a new dimension of interaction — fluid, tactile, and alive.",
-  badgeText = "React Three Fiber",
-  badgeLabel = "Experience",
-  showCountdown = false,
-  countdownTargetDate = new Date("2026-07-01T00:00:00"),
   microDetails = [],
   showLogo = false,
   showShader = true,
   children,
 }: HeroProps) => {
   const sectionRef = useRef<HTMLElement>(null);
-  const badgeWrapperRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const paragraphRef = useRef<HTMLParagraphElement>(null);
-  const countdownRef = useRef<HTMLDivElement>(null);
   const microRef = useRef<HTMLUListElement>(null);
   const logoRef = useRef<HTMLDivElement>(null);
 
-  // Countdown state
-  const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft(countdownTargetDate));
-
-  useEffect(() => {
-    if (!showCountdown) return;
-    const timer = setInterval(() => {
-      setTimeLeft(calculateTimeLeft(countdownTargetDate));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [showCountdown, countdownTargetDate]);
-  
   useGSAP(
     () => {
       if (!headingRef.current) return;
@@ -115,14 +80,8 @@ const SyntheticHero = ({
       if (logoRef.current) {
         gsap.set(logoRef.current, { autoAlpha: 0, scale: 0.8 });
       }
-      if (badgeWrapperRef.current) {
-        gsap.set(badgeWrapperRef.current, { autoAlpha: 0, y: -8 });
-      }
       if (paragraphRef.current) {
         gsap.set(paragraphRef.current, { autoAlpha: 0, y: 8 });
-      }
-      if (countdownRef.current) {
-        gsap.set(countdownRef.current, { autoAlpha: 0, y: 8 });
       }
 
       const microItems = microRef.current
@@ -138,17 +97,10 @@ const SyntheticHero = ({
         tl.to(logoRef.current, { autoAlpha: 1, scale: 1, duration: 0.6 }, 0);
       }
 
-      if (badgeWrapperRef.current) {
-        tl.to(badgeWrapperRef.current, { autoAlpha: 1, y: 0, duration: 0.5 }, 0.1);
-      }
-
       if (paragraphRef.current) {
         tl.to(paragraphRef.current, { autoAlpha: 1, y: 0, duration: 0.5 }, 0.8);
       }
 
-      if (countdownRef.current) {
-        tl.to(countdownRef.current, { autoAlpha: 1, y: 0, duration: 0.5 }, 1.0);
-      }
 
       if (microItems.length > 0) {
         tl.to(microItems, { autoAlpha: 1, y: 0, duration: 0.5, stagger: 0.1 }, 1.2);
@@ -190,20 +142,6 @@ const SyntheticHero = ({
             </div>
           )}
 
-          {/* Badge */}
-          <div ref={badgeWrapperRef} className="flex flex-wrap items-center justify-center gap-3">
-            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary/10 border border-primary/20 text-primary backdrop-blur-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-              {badgeLabel}
-            </span>
-            <span className="h-4 w-px bg-border" />
-            <span className="text-sm text-muted-foreground font-stat tracking-wide">
-              {badgeText}
-            </span>
-          </div>
 
           {/* Heading */}
           <h1
@@ -221,29 +159,6 @@ const SyntheticHero = ({
             {description}
           </p>
 
-          {/* Launch Countdown */}
-          {showCountdown && (
-            <div ref={countdownRef} className="flex flex-wrap items-center justify-center gap-3 md:gap-6">
-              {[
-                { value: timeLeft.days, label: "Tage" },
-                { value: timeLeft.hours, label: "Stunden" },
-                { value: timeLeft.minutes, label: "Minuten" },
-                { value: timeLeft.seconds, label: "Sekunden" },
-              ].map((item, index) => (
-                <div
-                  key={item.label}
-                  className="flex flex-col items-center gap-1 p-3 md:p-4 rounded-2xl bg-white/[0.04] backdrop-blur-sm border border-primary/30 min-w-[56px] sm:min-w-[64px] md:min-w-[80px]"
-                >
-                  <span className="font-stat text-2xl md:text-3xl font-bold text-primary">
-                    {String(item.value).padStart(2, "0")}
-                  </span>
-                  <span className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-[0.14em]">
-                    {item.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Micro Details - only show if not empty */}
           {microDetails && microDetails.length > 0 && (

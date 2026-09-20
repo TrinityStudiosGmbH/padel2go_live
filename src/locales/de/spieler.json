@@ -12,7 +12,6 @@
     "description": "Courts in ganz Deutschland, Events & Community — und Payback-Points bei jeder Buchung.",
     "primaryCta": "Court buchen",
     "secondaryCta": "App herunterladen",
-    "chipLaunch": "Launch",
     "chipRegistration": "Registrierung",
     "chipBooking": "Buchung",
     "chipPointsSuffix": "pro Buchung"
@@ -92,7 +91,7 @@
     "titleHighlight": "erste Match?",
     "primaryCta": "Court buchen",
     "secondaryCta": "App herunterladen",
-    "note": "Launch {{date}} · Registrierung kostenlos"
+    "note": "Registrierung kostenlos"
   },
   "meta": {
     "title": "Für Spieler | PADEL2GO – Buche Courts, sammle P2G-Credits, löse Rewards ein",

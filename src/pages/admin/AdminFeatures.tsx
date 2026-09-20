@@ -8,8 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Rocket, Trophy, Calendar, Loader2, Coins, ShoppingCart, Save, DoorOpen, Users, Info,
+import { Trophy, Calendar, Loader2, Coins, ShoppingCart, DoorOpen, Users, Info,
   CalendarCheck, MapPin, Newspaper, ArrowRight, Eye, EyeOff, ShieldCheck,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
@@ -99,12 +98,6 @@ const STATE_INFO: { state: FeatureState; label: string; text: string }[] = [
 ];
 
 // ISO-Timestamp → Wert für <input type="datetime-local"> (lokale Zeit, "YYYY-MM-DDTHH:mm")
-function toLocalInput(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
-
 interface ContentStatus {
   locationsOnline: number;
   locationsOffline: number;
@@ -144,8 +137,6 @@ async function loadContentStatus(): Promise<ContentStatus> {
 
 export default function AdminFeatures() {
   const queryClient = useQueryClient();
-  const [launchDate, setLaunchDate] = useState<string>("");
-  const [isSavingLaunch, setIsSavingLaunch] = useState(false);
   const [featureVisibility, setFeatureVisibility] = useState<Record<FeatureName, FeatureState>>(
     Object.fromEntries(FEATURE_NAMES.map((n) => [n, "hidden"])) as Record<FeatureName, FeatureState>,
   );
@@ -175,35 +166,11 @@ export default function AdminFeatures() {
           }),
         ) as Record<FeatureName, FeatureState>,
       );
-      setLaunchDate(data.launch_date ? toLocalInput(data.launch_date) : "");
     } catch (error) {
       console.error("Error fetching feature states:", error);
       toast.error("Fehler beim Laden der Sichtbarkeit");
     } finally {
       setIsLoading(false);
-    }
-  };
-
-  const saveLaunchDate = async () => {
-    if (!launchDate) {
-      toast.error("Bitte ein Launch-Datum wählen");
-      return;
-    }
-    setIsSavingLaunch(true);
-    try {
-      const { data: userData } = await supabase.auth.getUser();
-      const { error } = await supabase
-        .from("site_settings")
-        .update({ launch_date: new Date(launchDate).toISOString(), updated_at: new Date().toISOString(), updated_by: userData.user?.id })
-        .eq("id", "global");
-      if (error) throw error;
-      queryClient.invalidateQueries({ queryKey: ["site-settings", "launch_date"] });
-      toast.success("Launch-Datum gespeichert – gilt für Countdown & Placeholder");
-    } catch (error) {
-      console.error("Error saving launch date:", error);
-      toast.error("Fehler beim Speichern des Launch-Datums");
-    } finally {
-      setIsSavingLaunch(false);
     }
   };
 
@@ -387,40 +354,6 @@ export default function AdminFeatures() {
           )}
         </Card>
 
-        {/* ── Launch-Datum ─────────────────────────────────── */}
-        <Card className="rounded-2xl border-border bg-gradient-card p-5 sm:p-6">
-          <div className="flex flex-col gap-4">
-            <div className="flex items-center gap-3">
-              <span className="flex h-[34px] w-[34px] flex-none items-center justify-center rounded-[10px] border border-primary/30 bg-primary/10 text-primary">
-                <Rocket className="h-4 w-4" />
-              </span>
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="font-display text-base font-bold tracking-tight text-foreground">Launch-Datum</span>
-                <span className="text-xs leading-snug text-muted-foreground">
-                  Nur Anzeige: Countdown auf der Startseite (verschwindet nach dem Datum) und „Events kommen bald“-Text. Schaltet nichts frei.
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-end gap-3">
-              <div className="flex min-w-[220px] flex-col gap-[7px]">
-                <Label htmlFor="launch-date" className="font-mono text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                  Datum &amp; Uhrzeit
-                </Label>
-                <Input
-                  id="launch-date"
-                  type="datetime-local"
-                  value={launchDate}
-                  onChange={(e) => setLaunchDate(e.target.value)}
-                  className="h-[42px] rounded-[11px] border-[hsl(0_0%_15%)] bg-white/[0.04] font-mono text-sm font-bold"
-                />
-              </div>
-              <Button onClick={saveLaunchDate} disabled={isSavingLaunch} className="h-[42px] rounded-[11px] font-bold">
-                {isSavingLaunch ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
-                Speichern
-              </Button>
-            </div>
-          </div>
-        </Card>
       </div>
     </AdminLayout>
   );

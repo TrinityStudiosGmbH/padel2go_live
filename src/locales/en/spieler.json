@@ -12,7 +12,6 @@
     "description": "Courts all across Germany, events & community — and payback points on every booking.",
     "primaryCta": "Book a court",
     "secondaryCta": "Download the app",
-    "chipLaunch": "Launch",
     "chipRegistration": "Registration",
     "chipBooking": "Booking",
     "chipPointsSuffix": "per booking"
@@ -92,7 +91,7 @@
     "titleHighlight": "first match?",
     "primaryCta": "Book a court",
     "secondaryCta": "Download the app",
-    "note": "Launch {{date}} · Registration free"
+    "note": "Registration free"
   },
   "meta": {
     "title": "For Players | PADEL2GO – Book courts, earn P2G credits, redeem rewards",

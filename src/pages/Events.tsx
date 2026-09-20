@@ -31,7 +31,6 @@ import {
   Gamepad2,
 } from "lucide-react";
 import { EventCard, FeaturedEvent, EventFilters, NewsletterCTA } from "@/components/events";
-import { useLaunchDate } from "@/hooks/useLaunchDate";
 import { isToday, isThisWeek, isThisMonth, isPast, format } from "date-fns";
 import { de, enUS } from "date-fns/locale";
 import { localized } from "@/lib/localized";
@@ -103,7 +102,6 @@ const Events = () => {
   const sectionColor = useSectionTheme("events");
   const { t, i18n } = useTranslation(["events", "common"]);
   const dateLocale = i18n.language.startsWith("en") ? enUS : de;
-  const { launchDate } = useLaunchDate();
   const [search, setSearch] = useState("");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
@@ -396,11 +394,7 @@ const Events = () => {
                     {t("list.comingSoonTitle")}
                   </h3>
                   <p className="text-[14.5px] leading-relaxed text-[hsl(0_0%_60%)]">
-                    <Trans
-                      i18nKey="events:list.comingSoonText"
-                      values={{ date: format(launchDate, "d. MMMM yyyy", { locale: dateLocale }) }}
-                      components={[<span className="font-stat text-foreground" />]}
-                    />
+                    {t("list.comingSoonText")}
                   </p>
                 </div>
                 <Button variant="hero" asChild>

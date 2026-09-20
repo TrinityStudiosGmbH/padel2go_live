@@ -28,7 +28,7 @@
     "emptyTextPast": "Es gibt noch keine vergangenen Events zum Anzeigen.",
     "resetFilters": "Filter zurücksetzen",
     "comingSoonTitle": "Events kommen bald",
-    "comingSoonText": "Die ersten P2G Events gehen zum Launch am <1>{{date}}</1> live. Trag dich in den Newsletter ein, um nichts zu verpassen.",
+    "comingSoonText": "Die ersten P2G Events gehen in Kürze live. Trag dich in den Newsletter ein, um nichts zu verpassen.",
     "countSingular": "Event",
     "countPlural": "Events",
     "newsletterCta": "Newsletter abonnieren"
