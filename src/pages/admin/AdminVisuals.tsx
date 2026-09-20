@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, Trash2, Loader2, Image as ImageIcon, Check, Play, Link as LinkIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { visualSize, formatVisualSize } from "@/lib/visualSizes";
 
 // Keys that accept a URL (YouTube / Vimeo / direct video) instead of / in addition to file upload
 // (matches only ".video"/".video-N" as last segment, not keys that merely contain "video")
@@ -68,7 +69,10 @@ export default function AdminVisuals() {
       <div className="flex animate-fade-up flex-col gap-[18px]">
         <p className="max-w-[700px] text-sm leading-normal text-muted-foreground">
           Alle Bilder auf der Website verwalten. Lade neue Bilder hoch oder setze sie auf den
-          Placeholder zurück. Farbwelten liegen unter{" "}
+          Placeholder zurück. Bei jedem Slot steht die empfohlene Größe und das Seitenverhältnis —
+          die Maße entsprechen der tatsächlich gerenderten Fläche, doppelt aufgelöst für scharfe
+          Darstellung. Bilder werden mittig eingepasst und an den Rändern beschnitten, wenn das
+          Verhältnis abweicht. Farbwelten liegen unter{" "}
           <Link to="/admin/farben" className="text-primary transition-colors hover:text-primary/80">
             Farben
           </Link>
@@ -92,6 +96,13 @@ export default function AdminVisuals() {
                   const isUploading = uploadingKey === visual.key;
                   const hasImage = !!visual.image_url;
                   const imageUrl = visual.image_url || visual.placeholder_url;
+                  const spec = visualSize(visual.key);
+                  // Die Maßangabe stand frueher im Beschreibungstext. Steht dort
+                  // noch eine, wird sie entfernt, damit sie nicht doppelt und
+                  // womoeglich widersprüchlich erscheint.
+                  const cleanDescription = (visual.description ?? "")
+                    .replace(/Empfohlene\s+Gr(ö|oe)(ß|ss)e:\s*[^.]*\.?/i, "")
+                    .trim();
 
                   return (
                     <div key={visual.id} className="flex flex-col gap-2.5">
@@ -145,24 +156,26 @@ export default function AdminVisuals() {
                           {visual.label}
                         </h4>
                         <div className="flex flex-wrap items-center gap-[7px]">
-                          {/* Extract recommended size from description */}
-                          {visual.description?.includes("Empfohlene Größe:") && (
+                          {spec && (
+                            <span
+                              title={spec.note}
+                              className="whitespace-nowrap rounded-md border border-primary/30 bg-primary/10 px-[7px] py-0.5 font-mono text-[9.5px] font-bold tracking-[0.06em] text-primary"
+                            >
+                              {formatVisualSize(spec)}
+                            </span>
+                          )}
+                          {spec && (
                             <span className="whitespace-nowrap rounded-md border border-[hsl(0_0%_15%)] bg-white/5 px-[7px] py-0.5 font-mono text-[9.5px] tracking-[0.06em] text-[hsl(0_0%_72%)]">
-                              {visual.description.match(/Empfohlene Größe:\s*([^)]+\))/)?.[1] ||
-                                visual.description.match(/Empfohlene Größe:\s*(\d+[×x]\d+\s*px)/i)?.[1] ||
-                                "Größe in Beschreibung"}
+                              {spec.ratio}
                             </span>
                           )}
                           <span className="max-w-full truncate font-mono text-[9.5px] text-muted-foreground/70">
                             {visual.key}
                           </span>
                         </div>
-                        {visual.description && (
-                          <p className="line-clamp-2 text-xs leading-snug text-muted-foreground">
-                            {visual.description.includes("Empfohlene Größe:")
-                              ? visual.description.replace(/Empfohlene Größe:\s*[^.]+\.?\s*/i, "").trim() ||
-                                visual.description
-                              : visual.description}
+                        {(spec?.note || cleanDescription) && (
+                          <p className="line-clamp-3 text-xs leading-snug text-muted-foreground">
+                            {spec?.note || cleanDescription}
                           </p>
                         )}
                       </div>
