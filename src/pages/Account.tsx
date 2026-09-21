@@ -37,7 +37,6 @@ const Account = () => {
   const [checkingUsername, setCheckingUsername] = useState(false);
   const [usernameAvailable, setUsernameAvailable] = useState<boolean | null>(null);
 
-  const playCredits = wallet?.play_credits ?? 0;
 
   // Combined, redeemable P2G points total + its euro worth.
   const redeemableCredits = (wallet?.play_credits ?? 0) + (wallet?.reward_credits ?? 0);
@@ -222,13 +221,6 @@ const Account = () => {
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-3 flex-wrap">
                   <h1 className="text-3xl font-bold text-white">{t("page.title")}</h1>
-                  {/* Punktestand — das Einzige, was hier zaehlt. */}
-                  <div className="flex items-center gap-1.5 rounded-full border border-white/25 bg-white/15 px-3 py-1.5">
-                    <Coins className="w-3.5 h-3.5 text-white" />
-                    <span className="font-stat text-sm font-semibold text-white">
-                      {playCredits.toLocaleString(numberLocale)} Punkte
-                    </span>
-                  </div>
                 </div>
                 <Button variant="ghost" onClick={handleLogout} className="text-white/80 hover:text-white hover:bg-white/10">
                   <LogOut className="w-4 h-4 mr-2" /> {t("page.logout")}
@@ -288,34 +280,33 @@ const Account = () => {
                   <Coins className="w-5 h-5 text-primary" /> {t("points.title")}
                 </h2>
 
-                <div className="bg-gradient-to-r from-emerald-500/20 to-emerald-500/5 rounded-xl p-4 border border-emerald-500/30">
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          {t("points.redeemableBadge")}
-                        </span>
-                      </div>
-                      <p className="text-sm text-muted-foreground">{t("points.balance")}</p>
-                      <p className="text-4xl font-bold text-emerald-400">{redeemableCredits.toLocaleString(numberLocale)}</p>
-                      <p className="text-sm text-muted-foreground mt-1">≈ {euroWorth}</p>
-                    </div>
-                    <div className="w-14 h-14 rounded-full bg-emerald-500/20 flex items-center justify-center shrink-0">
-                      <Coins className="w-7 h-7 text-emerald-400" />
-                    </div>
+                <div className="flex flex-col gap-3 rounded-2xl border border-primary/25 bg-primary/[0.06] px-4 py-3.5">
+                  <div className="flex items-center gap-2.5">
+                    <Coins className="w-4 h-4 text-primary" />
+                    <span className="text-[13.5px] font-bold flex-1">{t("points.balance")}</span>
+                    <span className="font-stat text-[11.5px] text-primary">
+                      {t("points.redeemableBadge")}
+                    </span>
                   </div>
 
-                  <p className="text-xs text-muted-foreground mt-3">{t("points.redeemableNote")}</p>
-
-                  <div className="mt-4 pt-3 border-t border-emerald-500/20">
-                    <Button asChild className="w-full bg-emerald-600 hover:bg-emerald-700 text-white">
-                      <Link to="/marketplace" className="flex items-center justify-center gap-2">
-                        <ShoppingBag className="w-4 h-4" />
-                        <span>{t("points.redeemCta")}</span>
-                        <ArrowRight className="w-4 h-4" />
-                      </Link>
-                    </Button>
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="font-stat text-[34px] font-bold leading-none text-primary">
+                      {redeemableCredits.toLocaleString(numberLocale)}
+                    </span>
+                    <span className="font-stat text-sm text-foreground/70">≈ {euroWorth}</span>
                   </div>
+
+                  <span className="text-[11.5px] leading-relaxed text-muted-foreground">
+                    {t("points.redeemableNote")}
+                  </span>
+
+                  <Button asChild variant="lime" className="w-full gap-2">
+                    <Link to="/marketplace" className="flex items-center justify-center gap-2">
+                      <ShoppingBag className="w-4 h-4" />
+                      <span>{t("points.redeemCta")}</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </Link>
+                  </Button>
                 </div>
               </motion.div>
             </TabsContent>
