@@ -304,3 +304,46 @@ END;
 $create_receipt$;
 
 COMMIT;
+
+-- ---------------------------------------------------------------------------
+-- 6. Sauberer Start vor dem Launch
+-- ---------------------------------------------------------------------------
+-- Alles, was bisher entstanden ist, stammt aus der Erprobung. Es wird als Test
+-- gestempelt, die zugehoerigen Belege verschwinden und der Nummernkreis faengt
+-- wieder bei null an — der erste echte Verkauf traegt dann P2G-<Jahr>-000001.
+--
+-- Nur vor dem Launch zulaessig. Danach waere es Belegvernichtung.
+--
+-- Die Sicherung steckt in der WHERE-Bedingung: geloescht wird ausschliesslich,
+-- was zu einem als Test markierten Vorgang gehoert (oder zu einem, den es gar
+-- nicht mehr gibt). Ein echter Verkauf kann hier nicht erwischt werden, auch
+-- bei einem versehentlichen zweiten Lauf nicht.
+
+BEGIN;
+
+UPDATE public.marketplace_redemptions SET is_test = true WHERE is_test = false;
+UPDATE public.bookings                SET is_test = true WHERE is_test = false;
+
+DELETE FROM public.receipts rc
+WHERE
+  (rc.receipt_type IN ('marketplace_order', 'marketplace_refund')
+   AND COALESCE((SELECT o.is_test FROM public.marketplace_redemptions o WHERE o.id = rc.source_id), true))
+  OR
+  (rc.receipt_type IN ('booking', 'booking_refund')
+   AND COALESCE((SELECT b.is_test FROM public.bookings b WHERE b.id = rc.source_id), true));
+
+-- Zaehler auf den hoechsten verbliebenen Wert setzen; ohne Belege also auf 0.
+UPDATE public.receipt_counters c
+SET last_number = COALESCE((
+  SELECT MAX(split_part(r.receipt_number, '-', 3)::int)
+  FROM public.receipts r
+  WHERE r.receipt_number LIKE 'P2G-' || c.year || '-%'
+), 0);
+
+COMMIT;
+
+SELECT
+  (SELECT count(*) FROM public.receipts)                              AS belege_uebrig,
+  (SELECT last_number FROM public.receipt_counters WHERE year = EXTRACT(YEAR FROM now())::int) AS zaehler,
+  (SELECT count(*) FROM public.marketplace_redemptions WHERE is_test) AS test_bestellungen,
+  (SELECT count(*) FROM public.bookings WHERE is_test)                AS test_buchungen;
