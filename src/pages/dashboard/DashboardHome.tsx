@@ -9,7 +9,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Button } from "@/components/ui/button";
 import {
   Star, Gift, History, MapPin, CalendarCheck, Trophy, ShoppingBag, User as UserIcon,
-  ArrowRight, Calendar, ShieldCheck, CalendarPlus, Sparkles, Medal, Coins,
+  ArrowRight, Calendar, ShieldCheck, CalendarPlus, Sparkles, Coins,
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -41,6 +41,7 @@ const DashboardHome = () => {
   const { data: articles } = useArticles("logged_in");
   const sectionColor = useSectionTheme("home");
   const sectionThemes = useSectionThemes();
+  const eventsColor = sectionThemes.events;
 
   // Live P2G points = the single spendable balance (play + reward), same as "Mein P2G",
   // the nav and Account. (DashboardHome previously showed only play_credits → the 1.200 vs
@@ -49,7 +50,6 @@ const DashboardHome = () => {
     summary?.redeemable_balance ??
     summary?.reward_balance ??
     ((wallet?.play_credits ?? 0) + (wallet?.reward_credits ?? 0));
-  const lifetime = summary?.lifetime_credits ?? wallet?.lifetime_credits ?? balance;
   const pointsPerEuro = Math.round(100 / centsPerPoint);
   const userName = (profile?.display_name || user?.email?.split("@")[0] || "Spieler").trim();
 
@@ -146,9 +146,6 @@ const DashboardHome = () => {
               <p className="text-[15.5px] text-muted-foreground">{dateLabel} — bereit für dein nächstes Match?</p>
             </div>
             <div className="flex flex-col items-end gap-2">
-              <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/[0.08] px-3.5 py-1.5 font-stat text-[12.5px] font-bold text-primary">
-                <Medal className="w-3.5 h-3.5" />{ptsFmt(lifetime)} P gesammelt
-              </span>
               {memberSince && <span className="font-stat text-[11.5px] text-muted-foreground/70">{memberSince}</span>}
             </div>
           </motion.div>
@@ -328,15 +325,33 @@ const DashboardHome = () => {
                     </div>
                   </>
                 ) : (
-                  <div className="flex flex-col gap-3 p-5 flex-1 justify-center items-start">
-                    <span className="inline-flex items-center gap-2 font-stat text-[11px] tracking-[0.18em] text-primary">
+                  <div
+                    className="relative flex flex-1 flex-col items-start justify-center gap-3 p-5"
+                    style={{
+                      // Violett der Events-Section statt des Lime der uebrigen
+                      // Kacheln — nur hier, damit der Platzhalter als eigener
+                      // Bereich lesbar ist und nicht wie eine leere Buchung wirkt.
+                      background: `radial-gradient(120% 100% at 0% 0%, ${eventsColor}22, transparent 70%)`,
+                    }}
+                  >
+                    <span
+                      className="inline-flex items-center gap-2 font-stat text-[11px] tracking-[0.18em]"
+                      style={{ color: eventsColor }}
+                    >
                       <Trophy className="w-3.5 h-3.5" />EVENTS
                     </span>
                     <h3 className="font-display font-extrabold text-[22px] leading-tight tracking-tight">
                       {bookableEvents.length > 0 ? `${bookableEvents.length} Events buchbar` : "Bald neue Events"}
                     </h3>
                     <p className="text-[13.5px] text-muted-foreground">Sichere dir deinen Spot bei kommenden P2G Events.</p>
-                    <Button variant="lime" size="sm" asChild className="mt-1"><Link to="/dashboard/events">Zu den Events</Link></Button>
+                    <Button
+                      size="sm"
+                      asChild
+                      className="mt-1 font-semibold text-black hover:brightness-110"
+                      style={{ backgroundColor: eventsColor }}
+                    >
+                      <Link to="/dashboard/events">Zu den Events</Link>
+                    </Button>
                   </div>
                 )}
               </div>
