@@ -196,6 +196,7 @@ export interface MarketplaceOrder {
   shipping_postal_code: string | null;
   shipping_city: string | null;
   shipping_country: string | null;
+  is_test?: boolean;
   tracking_number?: string | null;
   carrier?: string | null;
   shipped_at?: string | null;
@@ -213,7 +214,7 @@ export const useAdminMarketplaceOrders = () => {
           amount_cents, play_spent, reward_spent, points_balance_before, points_balance_after,
           guest_email, guest_name, user_id,
           shipping_address_line1, shipping_postal_code, shipping_city, shipping_country,
-          tracking_number, carrier, shipped_at,
+          tracking_number, carrier, shipped_at, is_test,
           item:marketplace_items(name, image_url)
         `)
         // 'pending' gehoert dazu: eine angefangene, unbezahlte Bestellung war
@@ -266,6 +267,30 @@ export const useAdminOrdersRealtime = () => {
       }
     };
   }, [queryClient]);
+};
+
+/**
+ * Loescht eine Testbestellung.
+ *
+ * Nur Testvorgaenge — die Datenbankfunktion weist alles andere ab. Ein echter
+ * Geschaeftsvorfall gehoert storniert, nicht geloescht.
+ */
+export const useDeleteTestOrder = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (orderId: string) => {
+      const { error } = await (supabase.rpc as any)("delete_test_order", { p_order_id: orderId });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-marketplace-orders"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-marketplace-receipts"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-marketplace-analytics"] });
+      toast.success("Testbestellung gelöscht");
+    },
+    onError: (e: Error) => toast.error("Löschen fehlgeschlagen", { description: e.message }),
+  });
 };
 
 // Admin-initiated cancellation + refund (Stripe money back + points + stock reversal)

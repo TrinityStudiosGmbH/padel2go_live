@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Coins, Image as ImageIcon, Loader2, Package, RotateCcw, Send, Truck, Undo2 } from "lucide-react";
+import { AlertTriangle, Coins, Image as ImageIcon, Loader2, Package, RotateCcw, Send, Trash2, Truck, Undo2 } from "lucide-react";
 import {
   useAdminMarketplaceOrders,
   useUpdateFulfillmentStatus,
@@ -25,6 +25,7 @@ import {
   type ReturnStatus,
   useMarketplaceReceipts,
   useAdminOrdersRealtime,
+  useDeleteTestOrder,
 } from "@/hooks/useAdminMarketplace";
 import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
 
@@ -82,6 +83,8 @@ export function MarketplaceOrdersSection() {
   const { data: orders, isLoading } = useAdminMarketplaceOrders();
   const { data: receipts } = useMarketplaceReceipts();
   useAdminOrdersRealtime();
+  const deleteTestOrder = useDeleteTestOrder();
+  const [deleteTarget, setDeleteTarget] = useState<MarketplaceOrder | null>(null);
   const updateFulfillment = useUpdateFulfillmentStatus();
   const refund = useRefundMarketplaceOrder();
   const shipOrder = useShipOrder();
@@ -266,6 +269,11 @@ export function MarketplaceOrdersSection() {
                       <TableCell className="py-3 pr-3.5">
                         <div className="flex flex-col gap-1">
                           {statusBadge(o)}
+                          {o.is_test && (
+                            <span className="inline-flex w-fit items-center whitespace-nowrap rounded-full border border-[hsl(0_0%_30%)] bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[hsl(0_0%_62%)]">
+                              Test
+                            </span>
+                          )}
                           {o.tracking_number && (o.fulfillment_status === "shipped" || o.fulfillment_status === "delivered") && (
                             <span className="whitespace-nowrap font-mono text-[10.5px] text-[hsl(0_0%_58%)]">
                               {o.carrier} · {o.tracking_number}
@@ -278,9 +286,13 @@ export function MarketplaceOrdersSection() {
                         {(() => {
                           const r = receipts?.get(o.id);
                           if (!r?.invoice) {
-                            // Kein Beleg heisst: nichts bezahlt. Ein Beleg entsteht
-                            // erst mit der Zahlung, nicht mit der Bestellung.
-                            return <span className="font-mono text-[11px] text-[hsl(0_0%_45%)]">—</span>;
+                            // Kein Beleg heisst: Testvorgang oder nichts bezahlt.
+                            // Ein Beleg entsteht mit der Zahlung, nicht mit der Bestellung.
+                            return (
+                              <span className="whitespace-nowrap font-mono text-[11px] text-[hsl(0_0%_45%)]">
+                                {o.is_test ? "kein Beleg (Test)" : "—"}
+                              </span>
+                            );
                           }
                           return (
                             <div className="flex flex-col items-start gap-1.5">
@@ -340,6 +352,17 @@ export function MarketplaceOrdersSection() {
                                 Stornieren
                               </Button>
                             )}
+                            {o.is_test && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className={BTN_DANGER_SM}
+                                onClick={() => setDeleteTarget(o)}
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                                Löschen
+                              </Button>
+                            )}
                           </div>
                           {!refunded && o.fulfillment_status === "pending" && hasAddress && (
                             <div className="flex flex-wrap items-center justify-end gap-1.5">
@@ -393,6 +416,41 @@ export function MarketplaceOrdersSection() {
     </Card>
 
     {/* Refund confirmation */}
+    <AlertDialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
+      <AlertDialogContent className="gap-4 rounded-[20px] border-[hsl(0_0%_15%)] bg-gradient-to-b from-[hsl(0_0%_7%)] to-[hsl(0_0%_4%)] p-6 sm:max-w-[450px] sm:rounded-[20px]">
+        <span className="flex h-11 w-11 items-center justify-center rounded-[13px] border border-[hsl(0_100%_71%/0.3)] bg-[hsl(0_100%_71%/0.1)] text-[#FF6B6B]">
+          <Trash2 className="h-5 w-5" />
+        </span>
+        <AlertDialogHeader className="space-y-[7px] text-left">
+          <AlertDialogTitle className="font-display text-[19px] font-extrabold tracking-tight text-foreground">
+            Testbestellung endgültig löschen?
+          </AlertDialogTitle>
+          <AlertDialogDescription className="text-sm leading-[1.55] text-[hsl(0_0%_68%)]">
+            {deleteTarget && (
+              <>
+                „{deleteTarget.item?.name}" ({deleteTarget.reference_code}) wird aus der Datenbank
+                entfernt. Eingesetzte Punkte und reservierte Ware gehen zurück.
+                {" "}Das geht nur, weil der Vorgang im Testbetrieb entstanden ist und deshalb
+                keinen Beleg hat. Nicht umkehrbar.
+              </>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter className="gap-2">
+          <AlertDialogCancel className="h-[38px] rounded-[10px]">Abbrechen</AlertDialogCancel>
+          <AlertDialogAction
+            className="h-[38px] rounded-[10px] bg-[#FF6B6B] text-black hover:bg-[#FF6B6B]/90"
+            onClick={() => {
+              if (deleteTarget) deleteTestOrder.mutate(deleteTarget.id);
+              setDeleteTarget(null);
+            }}
+          >
+            Löschen
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
     <AlertDialog open={!!refundTarget} onOpenChange={(open) => !open && setRefundTarget(null)}>
       <AlertDialogContent className="gap-4 rounded-[20px] border-[hsl(0_0%_15%)] bg-gradient-to-b from-[hsl(0_0%_7%)] to-[hsl(0_0%_4%)] p-6 sm:max-w-[450px] sm:rounded-[20px]">
         <span className="flex h-11 w-11 items-center justify-center rounded-[13px] border border-[hsl(0_100%_71%/0.3)] bg-[hsl(0_100%_71%/0.1)] text-[#FF6B6B]">
