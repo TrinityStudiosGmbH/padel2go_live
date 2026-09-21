@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, LogOut, User, Settings, Building2, Coins, CalendarDays } from "lucide-react";
+import { Menu, X, LogOut, User, Settings, Building2, CalendarDays } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,27 +22,22 @@ import { useChatRealtime } from "@/hooks/useChat";
 import { useFeatureToggles } from "@/hooks/useFeatureToggles";
 import { useSectionThemes } from "@/hooks/useSectionThemes";
 import { useAccountData } from "@/hooks/useAccountData";
-import { usePointsValue } from "@/hooks/usePointsValue";
 import wordmark from "@/assets/padel2go-wordmark.png";
 
 const DashboardNavigation = () => {
-  const { t, i18n } = useTranslation("dashboardnav");
-  const numberLocale = i18n.language === "en" ? "en-US" : "de-DE";
+  const { t } = useTranslation("dashboardnav");
   const [isOpen, setIsOpen] = useState(false);
   const { user, signOut } = useAuth();
   const { isAdmin } = useAdminAuth();
   const { isClubUser } = useClubAuth();
   const { canSee } = useFeatureToggles();
   const sectionThemes = useSectionThemes();
-  const { wallet, profile } = useAccountData(user);
-  const { centsPerPoint } = usePointsValue();
+  const { profile } = useAccountData(user);
 
   // Live chat updates everywhere (chat page relies on this for realtime data,
   // even though the nav no longer surfaces a chat icon)
   useChatRealtime();
 
-  const totalCredits = (wallet?.play_credits || 0) + (wallet?.reward_credits || 0);
-  const balanceWorthEuro = (totalCredits * centsPerPoint / 100).toFixed(2);
 
   const accountName = profile.display_name || profile.username || user?.email || t("menu.account");
   // Nav-Links folgen derselben Sichtbarkeit wie die Routen (Admin → Sichtbarkeit).
@@ -91,17 +86,6 @@ const DashboardNavigation = () => {
 
           {/* Right cluster */}
           <div className="flex items-center gap-1.5 sm:gap-2">
-            {/* P2G points balance + its euro worth — always visible */}
-            <div className="flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/5 px-2.5 py-1 sm:px-3 sm:py-1.5">
-              <Coins className="w-4 h-4 text-primary shrink-0" />
-              <span className="text-sm font-semibold tabular-nums leading-none">
-                {totalCredits.toLocaleString(numberLocale)}
-              </span>
-              <span className="hidden sm:inline text-xs text-muted-foreground whitespace-nowrap leading-none">
-                {t("points.worth", { amount: balanceWorthEuro })}
-              </span>
-            </div>
-
             {/* Desktop-only icon actions */}
             <div className="hidden lg:flex items-center gap-2">
               <NotificationCenter />
