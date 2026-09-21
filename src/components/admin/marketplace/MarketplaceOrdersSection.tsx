@@ -23,7 +23,10 @@ import {
   type MarketplaceOrder,
   type FulfillmentStatus,
   type ReturnStatus,
+  useMarketplaceReceipts,
+  useAdminOrdersRealtime,
 } from "@/hooks/useAdminMarketplace";
+import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
 
 const eur = (cents: number | null | undefined) =>
   new Intl.NumberFormat("de-DE", { style: "currency", currency: "EUR" }).format((cents || 0) / 100);
@@ -71,11 +74,14 @@ const ORDER_FILTERS: { key: string; label: string }[] = [
   { key: "shipped", label: "Versendet" },
   { key: "delivered", label: "Geliefert" },
   { key: "refunded", label: "Storniert / Erstattet" },
+  { key: "unpaid", label: "Zahlung offen" },
   { key: "all", label: "Alle" },
 ];
 
 export function MarketplaceOrdersSection() {
   const { data: orders, isLoading } = useAdminMarketplaceOrders();
+  const { data: receipts } = useMarketplaceReceipts();
+  useAdminOrdersRealtime();
   const updateFulfillment = useUpdateFulfillmentStatus();
   const refund = useRefundMarketplaceOrder();
   const shipOrder = useShipOrder();
@@ -96,10 +102,18 @@ export function MarketplaceOrdersSection() {
     if (filter === "shipped") return o.status === "success" && o.fulfillment_status === "shipped";
     if (filter === "delivered") return o.status === "success" && o.fulfillment_status === "delivered";
     if (filter === "refunded") return o.status === "refunded" || o.status === "cancelled";
+    if (filter === "unpaid") return o.status === "pending";
     return true;
   });
 
   const statusBadge = (o: MarketplaceOrder) => {
+    if (o.status === "pending") {
+      return (
+        <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[hsl(41_100%_65%/0.3)] bg-[hsl(41_100%_65%/0.1)] px-2.5 py-1 text-[11px] font-semibold text-[#FFC44D]">
+          Zahlung offen
+        </span>
+      );
+    }
     const key = o.status === "refunded" ? "refunded" : o.status === "cancelled" ? "cancelled" : o.fulfillment_status;
     const label =
       o.status === "refunded" ? "Erstattet" : o.status === "cancelled" ? "Storniert" : FULFILL_LABEL[o.fulfillment_status];
@@ -165,6 +179,7 @@ export function MarketplaceOrdersSection() {
                   <TableHead className={TH}>Lieferadresse</TableHead>
                   <TableHead className={`${TH} text-right`}>Bezahlt</TableHead>
                   <TableHead className={TH}>Status</TableHead>
+                  <TableHead className={TH}>Beleg</TableHead>
                   <TableHead className={`${TH} text-right`}>Aktionen</TableHead>
                 </TableRow>
               </TableHeader>
@@ -258,6 +273,42 @@ export function MarketplaceOrdersSection() {
                             </span>
                           )}
                         </div>
+                      </TableCell>
+                      <TableCell className="py-3 pr-3.5">
+                        {(() => {
+                          const r = receipts?.get(o.id);
+                          if (!r?.invoice) {
+                            // Kein Beleg heisst: nichts bezahlt. Ein Beleg entsteht
+                            // erst mit der Zahlung, nicht mit der Bestellung.
+                            return <span className="font-mono text-[11px] text-[hsl(0_0%_45%)]">—</span>;
+                          }
+                          return (
+                            <div className="flex flex-col items-start gap-1.5">
+                              <span className="whitespace-nowrap font-mono text-[11px] text-[hsl(0_0%_72%)]">
+                                {r.invoice.receipt_number}
+                              </span>
+                              <InvoiceDownloadButton
+                                sourceId={o.id}
+                                receiptType="marketplace_order"
+                                label="Rechnung"
+                                className="h-7 gap-1.5 px-2 text-[11.5px]"
+                              />
+                              {r.credit && (
+                                <>
+                                  <span className="whitespace-nowrap font-mono text-[11px] text-[#FF6B6B]">
+                                    {r.credit.receipt_number}
+                                  </span>
+                                  <InvoiceDownloadButton
+                                    sourceId={o.id}
+                                    receiptType="marketplace_refund"
+                                    label="Storno"
+                                    className="h-7 gap-1.5 border-[hsl(0_100%_71%/0.35)] px-2 text-[11.5px] text-[#FF6B6B]"
+                                  />
+                                </>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </TableCell>
                       <TableCell className="py-3 text-right">
                         <div className="flex flex-col items-end gap-[7px]">

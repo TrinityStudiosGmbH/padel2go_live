@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -135,6 +136,47 @@ export const useUpdateFulfillmentStatus = () => {
 };
 
 // ── Full order/fulfillment view (paid + refunded/cancelled) ──────────────────
+/** Ein Beleg, wie die Verwaltung ihn braucht: Nummer, Betrag, Art. */
+export interface OrderReceipt {
+  receipt_number: string;
+  receipt_type: "marketplace_order" | "marketplace_refund";
+  source_id: string;
+  paid_cents: number;
+  tax_cents: number;
+  tax_rate: number;
+  issued_at: string;
+}
+
+/**
+ * Belege zu Marketplace-Bestellungen, gruppiert nach Bestellung.
+ *
+ * Eine eigene Abfrage, weil receipts.source_id kein Fremdschluessel ist —
+ * PostgREST kann darueber nicht verknuepfen. Eine Bestellung kann ZWEI Belege
+ * haben: die Rechnung und, nach einer Erstattung, die Korrekturrechnung.
+ */
+export const useMarketplaceReceipts = () => {
+  return useQuery({
+    queryKey: ["admin-marketplace-receipts"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("receipts")
+        .select("receipt_number, receipt_type, source_id, paid_cents, tax_cents, tax_rate, issued_at")
+        .in("receipt_type", ["marketplace_order", "marketplace_refund"])
+        .order("receipt_number", { ascending: true });
+      if (error) throw error;
+
+      const byOrder = new Map<string, { invoice?: OrderReceipt; credit?: OrderReceipt }>();
+      for (const r of (data ?? []) as OrderReceipt[]) {
+        const entry = byOrder.get(r.source_id) ?? {};
+        if (r.receipt_type === "marketplace_refund") entry.credit = r;
+        else entry.invoice = r;
+        byOrder.set(r.source_id, entry);
+      }
+      return byOrder;
+    },
+  });
+};
+
 export interface MarketplaceOrder {
   id: string;
   status: string;
@@ -174,13 +216,56 @@ export const useAdminMarketplaceOrders = () => {
           tracking_number, carrier, shipped_at,
           item:marketplace_items(name, image_url)
         `)
-        .in("status", ["success", "refunded", "cancelled"])
+        // 'pending' gehoert dazu: eine angefangene, unbezahlte Bestellung war
+        // fuer die Verwaltung bisher unsichtbar — wer dem Kunden helfen will,
+        // muss sie sehen.
+        .in("status", ["pending", "success", "refunded", "cancelled"])
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return (data ?? []) as unknown as MarketplaceOrder[];
     },
+    // Der Status aendert sich auch ohne Zutun der Verwaltung: ein Kunde
+    // storniert, der Stripe-Webhook erstattet, der Aufraeumer laesst eine
+    // Bestellung verfallen. Realtime unten holt das sofort, dieses Intervall
+    // ist der Rueckfall, falls die Verbindung haengt.
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
   });
+};
+
+/**
+ * Haelt die Bestellliste der Verwaltung aktuell.
+ *
+ * Ein Kanal je Browsertab, mit Zaehler — dieselbe Vorsicht wie bei den
+ * Lobbies, auch wenn hier nur wenige Admins gleichzeitig zusehen.
+ */
+let ordersChannel: ReturnType<typeof supabase.channel> | null = null;
+let ordersRefCount = 0;
+
+export const useAdminOrdersRealtime = () => {
+  const queryClient = useQueryClient();
+
+  useEffect(() => {
+    ordersRefCount += 1;
+    if (!ordersChannel) {
+      const refresh = () => {
+        queryClient.invalidateQueries({ queryKey: ["admin-marketplace-orders"] });
+        queryClient.invalidateQueries({ queryKey: ["admin-marketplace-receipts"] });
+      };
+      ordersChannel = supabase
+        .channel("admin-marketplace-orders-realtime")
+        .on("postgres_changes", { event: "*", schema: "public", table: "marketplace_redemptions" }, refresh)
+        .subscribe();
+    }
+    return () => {
+      ordersRefCount -= 1;
+      if (ordersRefCount <= 0) {
+        ordersRefCount = 0;
+        if (ordersChannel) { supabase.removeChannel(ordersChannel); ordersChannel = null; }
+      }
+    };
+  }, [queryClient]);
 };
 
 // Admin-initiated cancellation + refund (Stripe money back + points + stock reversal)

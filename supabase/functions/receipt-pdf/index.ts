@@ -302,6 +302,20 @@ serve(async (req) => {
       if (!user) {
         return new Response(JSON.stringify({ error: "Nicht angemeldet" }), { status: 401, headers: jsonHeaders });
       }
+
+      // Admins duerfen jeden Beleg laden. Ohne das kaeme die Verwaltung nicht an
+      // die Rechnung einer Bestellung — und muesste dem Kunden bei Rueckfragen
+      // sagen, dass sie sein Dokument nicht sehen kann.
+      let isAdmin = user.email === "fsteinfelder@padel2go.eu";
+      if (!isAdmin) {
+        const { data: role } = await supabaseAdmin
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .eq("role", "admin")
+          .maybeSingle();
+        isAdmin = !!role;
+      }
       let q = supabaseAdmin.from("receipts").select("*");
       if (receiptId) q = q.eq("id", receiptId);
       else {
@@ -313,8 +327,8 @@ serve(async (req) => {
       const { data } = await q.maybeSingle();
       const candidate = (data as Receipt) ?? null;
       // Fremde Belege sehen aus wie nicht vorhandene: kein Rueckschluss darauf,
-      // welche Belegnummern es gibt.
-      receipt = candidate && candidate.user_id === user.id ? candidate : null;
+      // welche Belegnummern es gibt. Fuer Admins gilt das nicht.
+      receipt = candidate && (isAdmin || candidate.user_id === user.id) ? candidate : null;
     }
 
     if (!receipt) {

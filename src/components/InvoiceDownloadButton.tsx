@@ -18,7 +18,7 @@ export function InvoiceDownloadButton({
   label = "Rechnung",
 }: {
   sourceId: string;
-  receiptType: "marketplace_order" | "booking";
+  receiptType: "marketplace_order" | "marketplace_refund" | "booking" | "booking_refund";
   className?: string;
   label?: string;
 }) {
@@ -51,8 +51,8 @@ export function InvoiceDownloadButton({
         const msg = await res.json().catch(() => null);
         toast.error(
           res.status === 404
-            ? "Für diesen Vorgang gibt es noch keine Rechnung"
-            : "Rechnung konnte nicht geladen werden",
+            ? "Für diesen Vorgang gibt es noch keinen Beleg"
+            : "Beleg konnte nicht geladen werden",
           { description: msg?.error },
         );
         return;
