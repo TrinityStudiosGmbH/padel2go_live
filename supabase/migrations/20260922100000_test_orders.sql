@@ -202,18 +202,24 @@ DECLARE
   v_service DATE := p_service_date;
   v_user UUID := p_user_id;
   r RECORD;
+  v_is_test BOOLEAN;
 BEGIN
   -- Testvorgaenge bekommen keinen Beleg. Der Nummernkreis muss lueckenlos
   -- bleiben, also darf eine Testbestellung gar nicht erst eine Nummer ziehen —
   -- nachtraegliches Loeschen waere genau die Luecke, die nicht entstehen darf.
-  IF p_receipt_type IN ('marketplace_order', 'marketplace_refund') THEN
-    IF EXISTS (SELECT 1 FROM public.marketplace_redemptions WHERE id = p_source_id AND is_test) THEN
-      RETURN NULL;
-    END IF;
-  ELSIF p_receipt_type IN ('booking', 'booking_refund') THEN
-    IF EXISTS (SELECT 1 FROM public.bookings WHERE id = p_source_id AND is_test) THEN
-      RETURN NULL;
-    END IF;
+  --
+  -- Bewusst eine schlichte Zuweisung: 'IF EXISTS (SELECT ...)' gefolgt von
+  -- 'RETURN NULL' und ein nachgestelltes 'SELECT ... INTO' liessen sich im
+  -- SQL-Editor nicht anlegen (mismatched parentheses bzw. INTO specified more
+  -- than once). Eine Bestell-ID trifft nur in marketplace_redemptions, eine
+  -- Buchungs-ID nur in bookings — COALESCE nimmt den gefundenen Wert.
+  v_is_test := COALESCE(
+    (SELECT o.is_test FROM public.marketplace_redemptions o WHERE o.id = p_source_id),
+    (SELECT b.is_test FROM public.bookings b WHERE b.id = p_source_id),
+    false);
+
+  IF v_is_test THEN
+    RETURN v_row;
   END IF;
 
   -- Idempotent: ein vorhandener Beleg zu dieser Quelle kommt unveraendert zurueck.
