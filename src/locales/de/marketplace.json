@@ -122,7 +122,8 @@
     "securePayment": "Sichere Zahlung über Stripe · SSL-verschlüsselt",
     "redirecting": "Weiter zu Stripe …",
     "redirectingSub": "Du wirst sicher zur Zahlung weitergeleitet.",
-    "stepLabel": "SCHRITT {{n}}"
+    "stepLabel": "SCHRITT {{n}}",
+    "pointsMax": "Max. {{points}}"
   },
   "upsell": {
     "title": "Punkte sammeln & Freunde werben",

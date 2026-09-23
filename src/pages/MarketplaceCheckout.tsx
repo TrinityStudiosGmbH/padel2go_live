@@ -281,18 +281,38 @@ const MarketplaceCheckout = () => {
                       <span className="text-[13.5px] font-bold flex-1">{t("checkout.redeemPoints")}</span>
                       <span className="font-stat text-[11.5px] text-primary">{t("checkout.pointsBalance", { points: ptsFmt(balance) })}</span>
                     </div>
-                    {maxRedeem >= 10 ? (
+                    {maxRedeem > 0 ? (
                       <>
-                        <input
-                          type="range"
-                          min={0}
-                          max={maxRedeem}
-                          step={10}
-                          value={redeem}
-                          onChange={(e) => setPointsUse(Number(e.target.value))}
-                          className="w-full cursor-pointer"
-                          style={{ accentColor: "#C7F011" }}
-                        />
+                        <div className="flex items-center gap-2">
+                          <Input
+                            id="points-to-redeem"
+                            type="number"
+                            inputMode="numeric"
+                            min={0}
+                            max={maxRedeem}
+                            step={1}
+                            value={pointsUse === 0 ? "" : pointsUse}
+                            placeholder="0"
+                            aria-label={t("checkout.redeemPoints")}
+                            onChange={(e) => {
+                              // Beim Tippen nur begrenzen, nicht korrigieren: wer eine
+                              // Zahl loescht, um sie neu einzugeben, soll nicht gegen
+                              // eine springende Null tippen muessen.
+                              const raw = Math.floor(Number(e.target.value));
+                              setPointsUse(Number.isFinite(raw) ? Math.max(0, Math.min(raw, maxRedeem)) : 0);
+                            }}
+                            className="h-10 flex-1 font-stat text-[15px] font-bold"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="h-10 shrink-0 px-3 text-[12.5px]"
+                            disabled={pointsUse >= maxRedeem}
+                            onClick={() => setPointsUse(maxRedeem)}
+                          >
+                            {t("checkout.pointsMax", { points: ptsFmt(maxRedeem) })}
+                          </Button>
+                        </div>
                         <div className="flex justify-between items-baseline">
                           <span className="font-stat text-[12.5px] text-foreground/70">{t("checkout.pointsSelected", { points: ptsFmt(redeem) })}</span>
                           <span className="font-stat font-bold text-sm text-primary">−{eur(discountCents)}</span>
