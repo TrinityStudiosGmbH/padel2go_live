@@ -122,8 +122,7 @@
     "securePayment": "Secure payment via Stripe · SSL-encrypted",
     "redirecting": "Continuing to Stripe …",
     "redirectingSub": "You are being securely redirected to payment.",
-    "stepLabel": "STEP {{n}}",
-    "pointsMax": "Max {{points}}"
+    "stepLabel": "STEP {{n}}"
   },
   "upsell": {
     "title": "Earn points & refer friends",

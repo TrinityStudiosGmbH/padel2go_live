@@ -14,6 +14,9 @@ export const discountPct = (priceCents: number, uvpCents?: number | null): numbe
  * Es gibt kein Feld am Produkt mehr: 170 € bei 50 % und 100 Punkten je Euro
  * ergeben 8.500 Punkte. Unabhaengig vom Guthaben des Kaeufers — das ist die
  * Zahl, die auf der Produktseite steht.
+ *
+ * Abgerundet auf Zehner, weil der Schieberegler im Checkout in Zehnerschritten
+ * laeuft: sonst stuende dort eine Zahl, die sich nicht einstellen laesst.
  */
 export function productPointsCap(
   subtotalCents: number,
@@ -23,7 +26,7 @@ export function productPointsCap(
   if (centsPerPoint <= 0) return 0;
   const pct = Math.min(100, Math.max(0, maxPercent || 0));
   const capCents = Math.floor((subtotalCents * pct) / 100);
-  return Math.max(0, Math.floor(capCents / centsPerPoint));
+  return Math.max(0, Math.floor(capCents / centsPerPoint / 10) * 10);
 }
 
 /**
@@ -38,5 +41,8 @@ export function maxRedeemablePoints(
   maxPercent: number,
 ): number {
   if (!balance || balance <= 0) return 0;
-  return Math.min(productPointsCap(subtotalCents, centsPerPoint, maxPercent), Math.floor(balance));
+  return Math.min(
+    productPointsCap(subtotalCents, centsPerPoint, maxPercent),
+    Math.floor(balance / 10) * 10,
+  );
 }
