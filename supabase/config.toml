@@ -97,6 +97,11 @@ verify_jwt = false
 [functions.send-match-reminders]
 verify_jwt = false
 
+# Wird vom Zeitplan mit dem Cron-Geheimnis aufgerufen, nicht mit einem
+# Anmelde-Token — die Pruefung sitzt in der Funktion, wie bei den Erinnerungen.
+[functions.reconcile-payments]
+verify_jwt = false
+
 [functions.marketplace-checkout]
 verify_jwt = false
 
