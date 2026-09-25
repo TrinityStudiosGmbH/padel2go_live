@@ -34,11 +34,15 @@ DECLARE
   -- Ohne Angabe folgt die Ansicht dem Stripe-Betrieb.
   v_is_test  boolean := COALESCE(p_is_test, public.stripe_is_test());
 BEGIN
-  IF v_uid IS NULL THEN RETURN; END IF;
+  IF v_uid IS NULL THEN
+    RETURN;
+  END IF;
 
   v_is_admin := (auth.jwt() ->> 'email') = 'fsteinfelder@padel2go.eu'
     OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = v_uid AND ur.role = 'admin');
-  IF NOT v_is_admin THEN RETURN; END IF;
+  IF NOT v_is_admin THEN
+    RETURN;
+  END IF;
 
   IF p_basis NOT IN ('cash', 'service') THEN
     RAISE EXCEPTION 'p_basis must be cash or service';
@@ -267,7 +271,9 @@ DECLARE
   v_pm         integer;
   v_bm         integer;
 BEGIN
-  IF v_uid IS NULL THEN RETURN; END IF;
+  IF v_uid IS NULL THEN
+    RETURN;
+  END IF;
 
   IF p_months IS NULL OR p_months < 1 OR p_months > 24 THEN
     RAISE EXCEPTION 'p_months must be between 1 and 24';
@@ -295,7 +301,11 @@ BEGIN
       );
   END IF;
 
-  IF NOT v_authorized THEN RETURN; END IF;
+  IF NOT v_authorized THEN
+
+    RETURN;
+
+  END IF;
 
   -- Sport-Filter: ein Court gehoert genau einer Sportart an. Passt sie nicht
   -- zum gewaehlten Scope, gibt es hier nichts anzuzeigen.
@@ -366,7 +376,9 @@ DECLARE
   v_pm        bigint;
   v_bm        bigint;
 BEGIN
-  IF v_uid IS NULL THEN RETURN; END IF;
+  IF v_uid IS NULL THEN
+    RETURN;
+  END IF;
 
   IF p_months IS NULL OR p_months < 1 OR p_months > 24 THEN
     RAISE EXCEPTION 'p_months must be between 1 and 24';
@@ -379,7 +391,11 @@ BEGIN
   v_is_admin := (v_email = 'fsteinfelder@padel2go.eu')
     OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id = v_uid AND ur.role = 'admin');
 
-  IF NOT v_is_admin THEN RETURN; END IF;
+  IF NOT v_is_admin THEN
+
+    RETURN;
+
+  END IF;
 
   FOR v_i IN REVERSE (p_months - 1)..0 LOOP
     v_m := (v_cur_month - (v_i || ' months')::interval)::date;
