@@ -74,6 +74,21 @@ serve(async (req) => {
     }
     logStep("Auth resolved", { userId: user.id });
 
+    // Admins duerfen fremde Buchungen stornieren — und auch nach Spielbeginn,
+    // denn genau das ist ein Kulanzfall. Ohne diesen Weg bliebe der Verwaltung
+    // nur eine nackte Statusaenderung, bei der das Geld einbehalten wuerde.
+    let isAdmin = user.email === "fsteinfelder@padel2go.eu";
+    if (!isAdmin) {
+      const { data: roleRow } = await supabaseAdmin
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", user.id)
+        .eq("role", "admin")
+        .maybeSingle();
+      isAdmin = !!roleRow;
+    }
+    logStep("Rolle", { isAdmin });
+
     const body = await req.json().catch(() => ({}));
     const bookingId: string | undefined = body?.booking_id;
     if (!bookingId) {
@@ -102,8 +117,9 @@ serve(async (req) => {
       });
     }
 
-    // Ownership: the booking must belong to the authenticated user.
-    if (booking.user_id !== user.id) {
+    // Ownership: the booking must belong to the authenticated user — ausser
+    // die Verwaltung storniert im Namen eines Kunden oder eines Gastes.
+    if (!isAdmin && booking.user_id !== user.id) {
       logStep("Access denied", { bookingUserId: booking.user_id, requestUserId: user.id });
       return new Response(JSON.stringify({ error: "Kein Zugriff auf diese Buchung." }), {
         status: 403,
@@ -125,7 +141,7 @@ serve(async (req) => {
     // Only a confirmed booking that is still in the FUTURE may be cancelled. Validate
     // this BEFORE touching Stripe so a past/pending booking is never refunded.
     const startsInFuture = new Date(booking.start_time).getTime() > Date.now();
-    if (booking.status !== "confirmed" || !startsInFuture) {
+    if (booking.status !== "confirmed" || (!startsInFuture && !isAdmin)) {
       logStep("Booking not cancellable", { status: booking.status, startsInFuture });
       return new Response(JSON.stringify({ error: "Diese Buchung kann nicht storniert werden." }), {
         status: 400,
@@ -172,10 +188,12 @@ serve(async (req) => {
     // Only the call that flips confirmed -> cancelled returns the spent points to the
     // wallet, so this is safe against the charge.refunded webhook (which also flips to
     // cancelled but does NOT refund the spent points).
-    const { data: cancelResult, error: cancelError } = await supabaseAdmin.rpc("cancel_confirmed_booking", {
-      p_booking_id: bookingId,
-      p_user_id: user.id,
-    });
+    const { data: cancelResult, error: cancelError } = isAdmin
+      ? await supabaseAdmin.rpc("cancel_booking_admin", { p_booking_id: bookingId })
+      : await supabaseAdmin.rpc("cancel_confirmed_booking", {
+          p_booking_id: bookingId,
+          p_user_id: user.id,
+        });
     if (cancelError) {
       logStep("cancel_confirmed_booking RPC failed", { bookingId, error: cancelError.message });
       throw new Error("Die Buchung konnte nicht storniert werden.");
@@ -208,6 +226,27 @@ serve(async (req) => {
     }
     logStep("Booking cancelled", { bookingId, creditsRefunded });
 
+    // Wem die Stornierung mitgeteilt wird: dem Kunden. Bei einer Stornierung
+    // durch die Verwaltung ist das jemand anderes als der Aufrufer — ohne diese
+    // Unterscheidung bekaeme der Admin seine eigene Absage.
+    const recipientUserId = booking.user_id ?? user.id;
+    let recipientEmail: string | null = booking.user_id === user.id ? user.email ?? null : null;
+    if (!recipientEmail) {
+      if (booking.user_id) {
+        const { data: ownerData } = await supabaseAdmin.auth.admin.getUserById(booking.user_id);
+        recipientEmail = ownerData?.user?.email ?? null;
+      } else {
+        // Gastbuchung: die Adresse steht an der Buchung.
+        const { data: guestRow } = await supabaseAdmin
+          .from("bookings")
+          .select("guest_email")
+          .eq("id", bookingId)
+          .maybeSingle();
+        recipientEmail = (guestRow as { guest_email?: string } | null)?.guest_email ?? null;
+      }
+    }
+    logStep("Empfaenger der Stornomitteilung", { recipientEmail, isAdmin });
+
     // Hat ein Vereinsmitglied Freikontingent verbraucht, gehen die Minuten zurück an den
     // Verein. Idempotent — eine bereits gutgeschriebene Buchung wird nicht doppelt erstattet.
     const { data: quotaRefunded, error: quotaError } = await supabaseAdmin.rpc("refund_member_quota", {
@@ -235,7 +274,7 @@ serve(async (req) => {
         ? ` ${creditsRefunded} Punkte wurden dir gutgeschrieben.`
         : "";
       await supabaseAdmin.from("notifications").insert({
-        user_id: user.id,
+        user_id: recipientUserId,
         type: "booking_cancelled",
         title: "Buchung storniert",
         message: `Deine Buchung auf ${courtName} (${locationName}) am ${dateFormatted} um ${timeFormatted} Uhr wurde storniert.${creditsLine}`,
@@ -247,7 +286,7 @@ serve(async (req) => {
 
       // Branded cancellation email (PADEL2GO design)
       const resendKey = await resolveResendKey(supabaseAdmin);
-      if (resendKey && user.email) {
+      if (resendKey && recipientEmail) {
         const refundNote = refundIssued
           ? "Der bezahlte Betrag wird auf dein Zahlungsmittel zurückerstattet."
           : creditsRefunded > 0
@@ -268,8 +307,8 @@ serve(async (req) => {
           ctaLabel: "Neue Buchung",
           ctaUrl: "https://www.padel2go-official.de/booking",
         });
-        await sendBrandedEmail(resendKey, user.email, "Deine Buchung wurde storniert", html);
-        logStep("Cancellation email sent", { email: user.email });
+        await sendBrandedEmail(resendKey, recipientEmail, "Deine Buchung wurde storniert", html);
+        logStep("Cancellation email sent", { email: recipientEmail });
       }
     } catch (notifyErr) {
       logStep("Failed to send cancellation notification/email", { error: (notifyErr as Error).message });

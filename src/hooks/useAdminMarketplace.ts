@@ -27,6 +27,7 @@ export interface MarketplaceItemInput {
   status?: ProductStatus;
   meta_title?: string | null;
   meta_description?: string | null;
+  tax_rate?: number;
   // GPSR / Kennzeichnung (columns not yet in generated types.ts)
   manufacturer_name?: string | null;
   manufacturer_address?: string | null;

@@ -95,10 +95,10 @@ const PartnerShowcase = () => {
 
 const Index = () => {
   const sectionColor = useSectionTheme("home");
-  const { user, isLoading } = useAuth();
+  const { user, loading } = useAuth();
   const { t } = useTranslation("index");
 
-  if (!isLoading && user) {
+  if (!loading && user) {
     return <Navigate to="/dashboard" replace />;
   }
 

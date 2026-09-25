@@ -32,7 +32,7 @@ const MON = ["Januar","Februar","März","April","Mai","Juni","Juli","August","Se
 const DashboardHome = () => {
   const { user } = useAuth();
   const { canSee } = useFeatureToggles();
-  const { profile, wallet } = useAccountData();
+  const { profile, wallet } = useAccountData(user);
   const { summary } = useP2GPoints();
   const { centsPerPoint, maxPercent, enabled: pointsEnabled } = usePointsValue();
   const { data: marketItems } = useMarketplaceItems();

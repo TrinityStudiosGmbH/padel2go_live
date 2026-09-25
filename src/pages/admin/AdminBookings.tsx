@@ -274,22 +274,39 @@ export default function AdminBookings() {
   });
 
   // Cancel booking mutation
+  // Storniert ueber dieselbe Edge Function wie der Kundenweg. Vorher stand hier
+  // eine nackte Statusaenderung: das Geld blieb einbehalten, Punkte kamen nicht
+  // zurueck, das Vereinskontingent verfiel, es entstand keine Stornorechnung und
+  // der Kunde erfuhr nichts.
   const cancelMutation = useMutation({
     mutationFn: async (bookingId: string) => {
-      const { error } = await supabase
-        .from("bookings")
-        .update({ status: "cancelled", cancelled_at: new Date().toISOString() })
-        .eq("id", bookingId);
-      if (error) throw error;
+      const { error } = await supabase.functions.invoke("cancel-booking", {
+        body: { booking_id: bookingId },
+      });
+      if (error) {
+        let serverMessage: string | null = null;
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.json === "function") {
+          try {
+            const body = await ctx.json();
+            serverMessage = body?.error ?? null;
+          } catch {
+            /* ignore */
+          }
+        }
+        throw new Error(serverMessage || error.message);
+      }
     },
     onSuccess: () => {
-      toast.success("Buchung storniert");
+      toast.success("Buchung storniert", {
+        description: "Betrag erstattet, Punkte zurückgebucht, Kunde benachrichtigt.",
+      });
       queryClient.invalidateQueries({ queryKey: ["admin-week-bookings"] });
       setCancelBookingId(null);
       setSelectedBooking(null);
     },
-    onError: () => {
-      toast.error("Fehler beim Stornieren");
+    onError: (e: Error) => {
+      toast.error("Fehler beim Stornieren", { description: e.message });
     },
   });
 
@@ -915,8 +932,9 @@ export default function AdminBookings() {
               Buchung stornieren?
             </AlertDialogTitle>
             <AlertDialogDescription className="text-sm leading-relaxed text-[hsl(0_0%_68%)]">
-              Diese Aktion kann nicht rückgängig gemacht werden. Die Buchung wird als storniert
-              markiert.
+              Der bezahlte Betrag wird über Stripe zurückerstattet, eingesetzte Punkte und
+              Vereins-Freistunden gehen zurück, und der Kunde bekommt eine Nachricht. Die
+              Stornorechnung entsteht automatisch. Nicht umkehrbar.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -927,7 +945,7 @@ export default function AdminBookings() {
               className="rounded-[11px] bg-[#FF6B6B] text-[13.5px] font-bold text-[#0A0A0A] hover:bg-[#ff8585]"
               onClick={() => cancelBookingId && cancelMutation.mutate(cancelBookingId)}
             >
-              Stornieren
+              {cancelMutation.isPending ? "Storniere…" : "Stornieren & erstatten"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
