@@ -58,6 +58,8 @@ import {
 import { SPORT_LABEL, courtSport } from "@/components/admin/courts/types";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
 import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { PnlSection } from "@/components/admin/overview/PnlSection";
+import type { PnlBasis } from "@/lib/pnl";
 
 const STATUS_PILL: Record<string, string> = {
   confirmed: "border-primary/30 bg-primary/10 text-primary",
@@ -157,6 +159,10 @@ export default function AdminOverview() {
   const today = new Date();
   const [selectedCourtId, setSelectedCourtId] = useState<string | null>(null);
   const [range, setRange] = useState<RangeKey>("today");
+  // Gebucht (Buchungsdatum) oder realisiert (Spieltermin) — gilt fuer die
+  // Kacheln und die Ergebnisrechnung gleichermassen.
+  const [basis, setBasis] = useState<PnlBasis>("cash");
+  const dateCol = basis === "cash" ? "created_at" : "start_time";
   const [sportScope, setSportScope] = useState<SportScope>("all");
   const period = getPeriod(range, today);
 
@@ -188,7 +194,7 @@ export default function AdminOverview() {
 
   // Fetch confirmed bookings count for selected range (+ previous period for trend)
   const { data: bookingStats } = useQuery({
-    queryKey: ["admin-bookings-count", range, sportScope, isTest],
+    queryKey: ["admin-bookings-count", range, sportScope, isTest, basis],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) return { current: 0, previous: 0 };
@@ -196,10 +202,10 @@ export default function AdminOverview() {
         let query = (supabase as any)
           .from("bookings")
           .select("*", { count: "exact", head: true })
-          .gte("start_time", from.toISOString())
-          .lte("start_time", to.toISOString())
+          .gte(dateCol, from.toISOString())
+          .lte(dateCol, to.toISOString())
           .eq("status", "confirmed")
-        .eq("is_test", isTest);
+          .eq("is_test", isTest);
         if (courtIds) query = query.in("court_id", courtIds);
         const { count } = await query;
         return count || 0;
@@ -216,7 +222,7 @@ export default function AdminOverview() {
   // Fetch booking revenue for selected range: confirmed, paid bookings only
   // (excludes free club allocations; price_cents reflects the charged amount)
   const { data: revenueStats } = useQuery({
-    queryKey: ["admin-revenue", range, sportScope, isTest],
+    queryKey: ["admin-revenue", range, sportScope, isTest, basis],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) {
@@ -230,8 +236,8 @@ export default function AdminOverview() {
           .eq("is_test", isTest)
           .eq("is_free_allocation", false)
           .not("price_cents", "is", null)
-          .gte("start_time", from.toISOString())
-          .lte("start_time", to.toISOString());
+          .gte(dateCol, from.toISOString())
+          .lte(dateCol, to.toISOString());
         if (courtIds) query = query.in("court_id", courtIds);
         const { data, error } = await query;
         if (error) throw error;
@@ -480,10 +486,11 @@ export default function AdminOverview() {
         ? "Aktuelle Woche"
         : format(today, "MMMM yyyy", { locale: de });
 
+  const basisWord = basis === "cash" ? "gebucht" : "gespielt";
   const bookingsTitle =
-    range === "today" ? "Buchungen heute" : range === "week" ? "Buchungen diese Woche" : "Buchungen im Monat";
+    range === "today" ? `Buchungen heute ${basisWord}` : range === "week" ? `Buchungen diese Woche ${basisWord}` : `Buchungen im Monat ${basisWord}`;
   const revenueTitle =
-    range === "today" ? "Umsatz heute" : range === "week" ? "Umsatz diese Woche" : "Umsatz im Monat";
+    range === "today" ? `Umsatz heute ${basisWord}` : range === "week" ? `Umsatz diese Woche ${basisWord}` : `Umsatz im Monat ${basisWord}`;
 
   const revenueCurrent = revenueStats?.current;
   const avgPerBooking =
@@ -569,6 +576,23 @@ export default function AdminOverview() {
             </h2>
             <div className="flex flex-wrap items-center gap-2.5">
               <SportScopeTabs value={sportScope} onChange={handleSportChange} />
+              <div
+                className="flex gap-[3px] rounded-[11px] border border-[hsl(0_0%_14%)] bg-white/[0.04] p-[3px]"
+                title="Gebucht: nach dem Tag, an dem gebucht wurde. Realisiert: nach dem Spieltermin."
+              >
+                {([["cash", "Gebucht"], ["service", "Realisiert"]] as [PnlBasis, string][]).map(([key, label]) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setBasis(key)}
+                    className={`rounded-lg px-3.5 py-1.5 text-[12.5px] font-semibold transition-colors ${
+                      basis === key ? "bg-primary text-[#0A0A0A]" : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
               <div className="flex gap-[3px] rounded-[11px] border border-[hsl(0_0%_14%)] bg-white/[0.04] p-[3px]">
                 {RANGE_OPTIONS.map((option) => (
                   <button
@@ -672,6 +696,9 @@ export default function AdminOverview() {
             ))}
           </div>
         </section>
+
+        {/* Ergebnisrechnung */}
+        <PnlSection basis={basis} />
 
         {/* Letzte Buchungen + Standorte */}
         <section className="grid grid-cols-1 items-start gap-[18px] xl:grid-cols-[minmax(0,1.55fr)_minmax(0,1fr)]">
