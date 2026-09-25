@@ -139,6 +139,14 @@ supabase/
 - Die konkrete Frist steht im Checkout, unter „Meine Buchungen" und in der Bestätigungsmail („Kostenlos stornierbar bis …").
 - Die Verwaltung (`cancel_booking_admin`, Admin → Buchungen) ist von der Frist ausgenommen — Kulanz.
 
+## Ergebnisrechnung (PnL)
+- **Quelle sind die Belege** (`receipts`), nicht Buchungen oder Bestellungen: Umsatz ist, was gezahlt wurde (Punkte und Gutscheine sind Entgeltminderung). `get_pnl(von, bis, basis, gliederung)` rechnet serverseitig; `basis` = `cash` (Belegdatum) oder `service` (Leistungsdatum), filtert auf die aktuelle Betriebsart.
+- **Einkaufspreis** `marketplace_items.cost_cents` (netto) wird beim Verkauf in `marketplace_redemptions.unit_cost_cents` eingefroren → Wareneinsatz. Rechenhelfer in `src/lib/productPricing.ts` (`pricing.ts` gehört der Buchung); gespeichert wird immer brutto.
+- **Stripe-Gebühr** `receipts.stripe_fee_cents`: der Webhook holt sie an der Balance-Transaktion (`stripeFeeCents()` in `_shared/stripe.ts`), `reconcile-payments` trägt fehlende nach (40 je Lauf).
+- **Lobby-Anteile** bekommen Belege (`lobby_share`); Event-Tickets (`event_ticket`) sind als Belegart vorbereitet, ein Bezahlweg existiert noch nicht.
+- **Manuelle Posten & Fixkosten** in `pnl_entries` (einmalig oder monatlich/quartalsweise/jährlich), aufgelöst durch `pnl_entry_occurrences()`. Nur Admins.
+- `lobby-api` lehnt Geldaktionen ab, solange `feature_lobbies_state = hidden`.
+
 ## Rechnungen
 - Belege liegen in `receipts` (lückenlose Nummer `P2G-<Jahr>-<nnnnnn>`, Netto/Steuer getrennt). `create_receipt()` löst Empfängername, E-Mail und Anschrift **selbst** aus Bestellung, Buchung und Profil auf — Aufrufer müssen nichts mitgeben.
 - Absenderangaben (Firma, USt-IdNr., Registergericht, Bank) stehen in `billing_profile` (eine Zeile, `id = 'global'`), gepflegt unter Admin → Einstellungen → Rechnungsangaben. **Nicht** im Impressum-Text nachpflegen.
@@ -175,6 +183,7 @@ supabase/
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 - `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
 - `20260925140000_test_receipts.sql` — OFFEN: Testbelege mit eigenem Nummernkreis, Trigger zum Löschen beim Moduswechsel, Auslastung je Betriebsart. Danach `receipt-pdf` neu bereitstellen
+- `20260926100000_pnl_foundation.sql` — OFFEN: Einkaufspreis, Stripe-Gebühr am Beleg, Belegarten lobby_share/event_ticket, pnl_entries, get_pnl(), View admin_receipts. Danach stripe-webhook, marketplace-checkout, reconcile-payments, lobby-api bereitstellen
 - `20260925160000_cancellation_24h.sql` — OFFEN: Stornofrist 24 h in cancel_confirmed_booking()
 - `20260925120000_cron_secret_source.sql` — OFFEN: stellt notify_push() und trigger_match_reminders() von current_setting('app.cron_secret') auf private.cron_secrets um (der Parameter lässt sich auf Supabase nicht setzen, beide liefen deshalb ins Leere) und plant den Stripe-Abgleich alle 30 Minuten ein
 

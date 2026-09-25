@@ -299,6 +299,8 @@ serve(async (req) => {
       play_spent: 0,
       reward_spent: 0,
       unit_price_cents: unitPriceCents,
+      // Einkaufspreis zum Zeitpunkt des Verkaufs — Preise aendern sich, alte Verkaeufe nicht.
+      unit_cost_cents: Number((item as any).cost_cents ?? 0),
       gross_cents: priceCents,
       // Vorlaeufig: discount_cents traegt am Ende den GESAMTEN Rabatt
       // (Punkte + Gutschein) und wird nach der Sitzungserstellung neu gesetzt.

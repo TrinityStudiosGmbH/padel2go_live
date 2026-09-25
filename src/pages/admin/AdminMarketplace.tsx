@@ -89,6 +89,7 @@ import { useTranslateContent, toastTranslateResult } from "@/hooks/useTranslateC
 import { supabase } from "@/integrations/supabase/client";
 import { uploadMediaFile } from "@/lib/uploadMedia";
 import { toast } from "sonner";
+import { grossFromNet, marginPercent, netFromGross, taxFromGross, unitMarginCents } from "@/lib/productPricing";
 
 const PRODUCT_TRANSLATE_FIELDS = ["name", "subtitle", "description", "long_description", "meta_title", "meta_description"];
 
@@ -161,6 +162,7 @@ const emptyForm = (): Partial<MarketplaceItemInput> => ({
   price_cents: 0,
   compare_at_price_cents: null,
   tax_rate: 19,
+  cost_cents: 0,
   description: "",
   subtitle: "",
   long_description: "",
@@ -289,6 +291,8 @@ const AdminMarketplace = () => {
   const [exportingReceipts, setExportingReceipts] = useState(false);
 
   const [formData, setFormData] = useState<Partial<MarketplaceItemInput>>(emptyForm());
+  // Preis wahlweise brutto (was der Kunde zahlt) oder netto eingeben; gespeichert wird brutto.
+  const [priceEntry, setPriceEntry] = useState<"gross" | "net">("gross");
   const [specs, setSpecs] = useState<SpecRow[]>([]);
   const [gallery, setGallery] = useState<GalleryImage[]>([]);
   const [aiUrl, setAiUrl] = useState("");
@@ -429,6 +433,7 @@ const AdminMarketplace = () => {
       compare_at_price_cents: item.compare_at_price_cents ?? null,
       // tax_rate fehlt noch in den generierten Supabase-Typen -> Cast wie anderswo im Repo.
       tax_rate: Number((item as any).tax_rate ?? 19),
+      cost_cents: Number((item as any).cost_cents ?? 0),
       description: item.description || "",
       subtitle: item.subtitle || "",
       long_description: item.long_description || "",
@@ -537,6 +542,7 @@ const AdminMarketplace = () => {
       price_cents: formData.price_cents,
       compare_at_price_cents: formData.compare_at_price_cents || null,
       tax_rate: Number(formData.tax_rate ?? 19),
+      cost_cents: Math.max(0, Math.round(Number(formData.cost_cents ?? 0))),
       description: formData.description,
       subtitle: formData.subtitle || null,
       long_description: formData.long_description || null,
@@ -1264,23 +1270,42 @@ const AdminMarketplace = () => {
             {/* Preis, UVP, Punkte-Rabatt, Steuersatz */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div className="flex flex-col gap-2">
-                <Label className={FIELD_LABEL}>
-                  Preis (€)<span className="text-primary"> *</span>
-                </Label>
+                <div className="flex items-center justify-between gap-2">
+                  <Label className={FIELD_LABEL}>
+                    {priceEntry === "gross" ? "Preis brutto (€)" : "Preis netto (€)"}<span className="text-primary"> *</span>
+                  </Label>
+                  <button
+                    type="button"
+                    onClick={() => setPriceEntry(priceEntry === "gross" ? "net" : "gross")}
+                    className="font-mono text-[10px] uppercase tracking-[0.12em] text-primary hover:underline"
+                  >
+                    {priceEntry === "gross" ? "netto eingeben" : "brutto eingeben"}
+                  </button>
+                </div>
                 <Input
                   type="number"
                   min={0.01}
                   step={0.01}
-                  value={formData.price_cents ? (formData.price_cents / 100).toFixed(2) : ""}
-                  onChange={(e) =>
+                  value={
+                    formData.price_cents
+                      ? ((priceEntry === "gross" ? formData.price_cents : netFromGross(formData.price_cents, Number(formData.tax_rate ?? 19))) / 100).toFixed(2)
+                      : ""
+                  }
+                  onChange={(e) => {
+                    const cents = e.target.value ? Math.round(parseFloat(e.target.value) * 100) : 0;
                     setFormData({
                       ...formData,
-                      price_cents: e.target.value ? Math.round(parseFloat(e.target.value) * 100) : 0,
-                    })
-                  }
+                      price_cents: priceEntry === "gross" ? cents : grossFromNet(cents, Number(formData.tax_rate ?? 19)),
+                    });
+                  }}
                   placeholder="0.00"
                   className={FIELD_INPUT}
                 />
+                <span className="text-[11.5px] leading-relaxed text-muted-foreground">
+                  {priceEntry === "gross"
+                    ? "Das zahlt der Kunde. Netto und Steuer stehen unten."
+                    : "Ohne Steuer. Der Kunde zahlt den Bruttopreis unten."}
+                </span>
               </div>
               <div className="flex flex-col gap-2">
                 <Label className={FIELD_LABEL}>UVP (€)</Label>
@@ -1343,6 +1368,56 @@ const AdminMarketplace = () => {
                 </span>
               </div>
             </div>
+
+            {/* Kalkulation: Einkaufspreis, Netto, Steuer, Rohertrag */}
+            {(() => {
+              const gross = formData.price_cents ?? 0;
+              const rate = Number(formData.tax_rate ?? 19);
+              const cost = Number(formData.cost_cents ?? 0);
+              const net = netFromGross(gross, rate);
+              const tax = taxFromGross(gross, rate);
+              const margin = unitMarginCents(gross, rate, cost);
+              const pct = marginPercent(gross, rate, cost);
+              const cell = (label: string, value: string, tone?: "good" | "bad") => (
+                <div className="flex flex-col gap-1 rounded-[11px] border border-[hsl(0_0%_15%)] bg-white/[0.02] px-3 py-2.5">
+                  <span className="font-mono text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+                  <span className={`font-mono text-[15px] font-bold ${tone === "bad" ? "text-[#FF6B6B]" : tone === "good" ? "text-primary" : "text-foreground"}`}>{value}</span>
+                </div>
+              );
+              return (
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_repeat(4,minmax(0,1fr))]">
+                  <div className="flex flex-col gap-2">
+                    <Label className={FIELD_LABEL}>Einkaufspreis netto (€)</Label>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={formData.cost_cents ? (formData.cost_cents / 100).toFixed(2) : ""}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          cost_cents: e.target.value ? Math.round(parseFloat(e.target.value) * 100) : 0,
+                        })
+                      }
+                      placeholder="0.00"
+                      className={FIELD_INPUT}
+                    />
+                    <span className="text-[11.5px] leading-relaxed text-muted-foreground">
+                      Was du je Stück bezahlst, ohne Steuer. Wird bei jedem Verkauf eingefroren und geht als
+                      Wareneinsatz in die Ergebnisrechnung.
+                    </span>
+                  </div>
+                  {cell("Netto", formatEuro(net))}
+                  {cell(`USt ${rate} %`, formatEuro(tax))}
+                  {cell("Brutto (Kunde)", formatEuro(gross))}
+                  {cell(
+                    `Rohertrag · ${pct.toLocaleString("de-DE")} %`,
+                    formatEuro(margin),
+                    cost > 0 ? (margin < 0 ? "bad" : "good") : undefined,
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Short description */}
             <div className="flex flex-col gap-2">

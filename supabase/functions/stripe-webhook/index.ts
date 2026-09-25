@@ -4,7 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { Resend } from "npm:resend@4.0.0";
 import { resolveResendKey, DEFAULT_FROM, INTERNAL_INBOX, brandedEmailHtml } from "../_shared/email.ts";
 import { bookingDescription } from "../_shared/receiptText.ts";
-import { resolveWebhookSecrets } from "../_shared/stripe.ts";
+import { resolveWebhookSecrets, stripeFeeCents } from "../_shared/stripe.ts";
 
 // Stripe webhooks are server-to-server, minimal CORS needed
 const corsHeaders = {
@@ -342,6 +342,12 @@ serve(async (req) => {
                 p_tax_rate: taxRate,
               });
               if (receiptError) logStep("Marketplace: receipt creation failed", { redemptionId, error: receiptError.message });
+              // Stripe-Gebuehr an den Beleg — fuer die Ergebnisrechnung.
+              const feeCents = await stripeFeeCents(stripe, typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id);
+              if (feeCents > 0) {
+                await supabaseAdmin.from("receipts").update({ stripe_fee_cents: feeCents })
+                  .eq("receipt_type", "marketplace_order").eq("source_id", redemptionId);
+              }
             }
 
             // Finalize the points spend in the ledger. The wallet was already debited at
@@ -520,6 +526,30 @@ serve(async (req) => {
                 logStep("Failed to update lobby member", { error: memberError.message });
               } else {
                 logStep("Lobby member marked as paid", { lobbyMemberId });
+
+                // Auch ein Anteil ist Geld, das bei uns eingeht — also ein Beleg.
+                // Vorher war das die einzige Zahlung ohne Rechnung.
+                {
+                  const paidCents = session.amount_total ?? 0;
+                  const { error: lobbyReceiptError } = await supabaseAdmin.rpc("create_receipt", {
+                    p_receipt_type: "lobby_share",
+                    p_source_id: lobbyMemberId,
+                    p_user_id: userId || null,
+                    p_recipient_email: session.customer_details?.email ?? null,
+                    p_recipient_name: null,
+                    p_description: `Anteil an einer geteilten Court-Buchung (Lobby ${String(lobbyId ?? "").slice(0, 8)})`,
+                    p_gross_cents: paidCents,
+                    p_discount_cents: 0,
+                    p_paid_cents: paidCents,
+                    p_tax_rate: 19,
+                  });
+                  if (lobbyReceiptError) logStep("Lobby: receipt creation failed", { lobbyMemberId, error: lobbyReceiptError.message });
+                  const feeCents = await stripeFeeCents(stripe, typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id);
+                  if (feeCents > 0) {
+                    await supabaseAdmin.from("receipts").update({ stripe_fee_cents: feeCents })
+                      .eq("receipt_type", "lobby_share").eq("source_id", lobbyMemberId);
+                  }
+                }
 
                 // Create lobby event
                 await supabaseAdmin.from("lobby_events").insert({
@@ -880,6 +910,11 @@ serve(async (req) => {
                 p_tax_rate: 19,
               });
               if (receiptError) logStep("Booking: receipt creation failed", { bookingId, error: receiptError.message });
+              const feeCents = await stripeFeeCents(stripe, typeof session.payment_intent === "string" ? session.payment_intent : session.payment_intent?.id);
+              if (feeCents > 0) {
+                await supabaseAdmin.from("receipts").update({ stripe_fee_cents: feeCents })
+                  .eq("receipt_type", "booking").eq("source_id", bookingId);
+              }
             }
 
             // Record voucher redemption if a partial-discount voucher was applied.

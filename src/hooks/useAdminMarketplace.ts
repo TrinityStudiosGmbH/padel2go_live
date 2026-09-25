@@ -28,6 +28,8 @@ export interface MarketplaceItemInput {
   meta_title?: string | null;
   meta_description?: string | null;
   tax_rate?: number;
+  /** Einkaufspreis netto je Stueck */
+  cost_cents?: number;
   // GPSR / Kennzeichnung (columns not yet in generated types.ts)
   manufacturer_name?: string | null;
   manufacturer_address?: string | null;

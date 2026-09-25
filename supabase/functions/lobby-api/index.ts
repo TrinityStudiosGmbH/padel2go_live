@@ -87,6 +87,24 @@ serve(async (req) => {
       logStep("User authenticated", { userId: user.id });
     }
 
+    // Ist die Funktion unter Sichtbarkeit versteckt, bleibt auch die Schnittstelle
+    // zu — sonst liesse sich ueber die API weiter beitreten und bezahlen, waehrend
+    // die Oberflaeche "Bald verfuegbar" zeigt. Aufraeumen und Ansehen bleiben moeglich.
+    const geldAktionen = ["create_lobby", "join_lobby", "invite_to_lobby", "respond_invite"];
+    if (geldAktionen.includes(action)) {
+      const { data: sichtbarkeit } = await supabaseAdmin
+        .from("site_settings")
+        .select("feature_lobbies_state")
+        .eq("id", "global")
+        .maybeSingle();
+      if ((sichtbarkeit as { feature_lobbies_state?: string } | null)?.feature_lobbies_state === "hidden") {
+        return new Response(JSON.stringify({ error: "Lobbies sind derzeit nicht verfügbar." }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     switch (action) {
       // ============================================
       // CREATE LOBBY

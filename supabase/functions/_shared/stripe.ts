@@ -126,3 +126,23 @@ export async function resolveWebhookSecrets(
     keyFor: { live: liveKey, test: testKey },
   };
 }
+
+/**
+ * Die Gebuehr, die Stripe fuer eine Zahlung einbehalten hat, in Cent. Steht an
+ * der Balance-Transaktion der Abbuchung; ohne sie ist die Ergebnisrechnung nur
+ * eine Umsatzrechnung. Liefert 0, wenn sich nichts ermitteln laesst — die
+ * Verbuchung darf daran nie scheitern, der Abgleich traegt es spaeter nach.
+ */
+// deno-lint-ignore no-explicit-any
+export async function stripeFeeCents(stripe: any, paymentIntentId: string | null | undefined): Promise<number> {
+  if (!paymentIntentId) return 0;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+      expand: ["latest_charge.balance_transaction"],
+    });
+    const fee = pi?.latest_charge?.balance_transaction?.fee;
+    return typeof fee === "number" && fee > 0 ? fee : 0;
+  } catch {
+    return 0;
+  }
+}

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { resolveStripe } from "../_shared/stripe.ts";
+import { resolveStripe, stripeFeeCents } from "../_shared/stripe.ts";
 import {
   resolveResendKey, brandedEmailHtml, sendBrandedEmail, INTERNAL_INBOX,
 } from "../_shared/email.ts";
@@ -141,7 +141,46 @@ serve(async (req) => {
       }
     }
 
-    log("Abgleich fertig", { mode, gefunden: findings.length });
+    // ── Stripe-Gebuehren nachtragen ──────────────────────────────────────────
+    // Belege, die vor der Erfassung entstanden sind oder bei denen der Abruf im
+    // Webhook leer blieb. Hoechstens 40 je Lauf, das reicht bei 48 Laeufen am Tag.
+    let nachgetragen = 0;
+    const { data: ohneGebuehr } = await supabaseAdmin
+      .from("receipts")
+      .select("id, receipt_type, source_id")
+      .eq("stripe_fee_cents", 0)
+      .gt("paid_cents", 0)
+      .in("receipt_type", ["booking", "marketplace_order", "lobby_share"])
+      .order("issued_at", { ascending: false })
+      .limit(40);
+    for (const r of (ohneGebuehr ?? []) as { id: string; receipt_type: string; source_id: string }[]) {
+      let intentId: string | null = null;
+      try {
+        if (r.receipt_type === "booking") {
+          const { data: pay } = await supabaseAdmin.from("payments").select("stripe_payment_intent_id").eq("booking_id", r.source_id).maybeSingle();
+          intentId = (pay as { stripe_payment_intent_id?: string } | null)?.stripe_payment_intent_id ?? null;
+        } else if (r.receipt_type === "marketplace_order") {
+          const { data: ord } = await supabaseAdmin.from("marketplace_redemptions").select("stripe_session_id").eq("id", r.source_id).maybeSingle();
+          const sid = (ord as { stripe_session_id?: string } | null)?.stripe_session_id;
+          if (sid) {
+            const s = await stripe.checkout.sessions.retrieve(sid);
+            intentId = typeof s.payment_intent === "string" ? s.payment_intent : s.payment_intent?.id ?? null;
+          }
+        } else if (r.receipt_type === "lobby_share") {
+          const { data: lm } = await supabaseAdmin.from("lobby_members").select("payment_intent_id").eq("id", r.source_id).maybeSingle();
+          intentId = (lm as { payment_intent_id?: string } | null)?.payment_intent_id ?? null;
+        }
+        const fee = await stripeFeeCents(stripe, intentId);
+        if (fee > 0) {
+          await supabaseAdmin.from("receipts").update({ stripe_fee_cents: fee }).eq("id", r.id);
+          nachgetragen++;
+        }
+      } catch (e) {
+        log("Gebuehr nicht ermittelbar", { receiptId: r.id, error: (e as Error).message });
+      }
+    }
+
+    log("Abgleich fertig", { mode, gefunden: findings.length, gebuehrenNachgetragen: nachgetragen });
 
     if (findings.length === 0) {
       return json({ ok: true, mode, findings: 0 });
