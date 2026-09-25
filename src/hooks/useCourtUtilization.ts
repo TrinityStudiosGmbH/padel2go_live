@@ -40,13 +40,16 @@ export interface UtilizationTrendPoint {
 export function useCourtUtilization(
   monthStartISO: string | null,
   sport: UtilizationSport = null,
+  /** Test- oder Live-Daten; null = wie der Stripe-Betrieb. */
+  isTest: boolean | null = null,
 ) {
   return useQuery({
-    queryKey: ["utilization-courts", monthStartISO, sport],
+    queryKey: ["utilization-courts", monthStartISO, sport, isTest],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("get_court_utilization", {
         p_month_start: monthStartISO,
         p_sport: sport,
+        p_is_test: isTest,
       });
       if (error) throw error;
       return (data ?? []) as CourtUtilizationRow[];
@@ -60,14 +63,16 @@ export function useCourtUtilizationTrend(
   courtId: string | null,
   months = 6,
   sport: UtilizationSport = null,
+  isTest: boolean | null = null,
 ) {
   return useQuery({
-    queryKey: ["utilization-court-trend", courtId, months, sport],
+    queryKey: ["utilization-court-trend", courtId, months, sport, isTest],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("get_court_utilization_trend", {
         p_court_id: courtId,
         p_months: months,
         p_sport: sport,
+        p_is_test: isTest,
       });
       if (error) throw error;
       return (data ?? []) as UtilizationTrendPoint[];
@@ -77,13 +82,14 @@ export function useCourtUtilizationTrend(
 }
 
 /** Network-wide monthly trend (admin only). */
-export function useNetworkUtilizationTrend(months = 6, sport: UtilizationSport = null) {
+export function useNetworkUtilizationTrend(months = 6, sport: UtilizationSport = null, isTest: boolean | null = null) {
   return useQuery({
-    queryKey: ["utilization-network-trend", months, sport],
+    queryKey: ["utilization-network-trend", months, sport, isTest],
     queryFn: async () => {
       const { data, error } = await (supabase as any).rpc("get_network_utilization_trend", {
         p_months: months,
         p_sport: sport,
+        p_is_test: isTest,
       });
       if (error) throw error;
       return (data ?? []) as UtilizationTrendPoint[];

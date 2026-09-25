@@ -38,6 +38,7 @@ import {
   useCourtUtilization,
   useNetworkUtilizationTrend,
 } from "@/hooks/useCourtUtilization";
+import { useDataMode } from "@/hooks/useDataMode";
 import {
   monthStartISO,
   formatMonthLabel,
@@ -80,8 +81,9 @@ export default function AdminUtilization() {
   const sport = sportOf(sportScope);
   // Der Sport wird serverseitig gefiltert: die Kennzahlen unten summieren über
   // die Zeilen, ein Frontend-Filter würde sie an der Tabelle vorbei verfälschen.
-  const { data: rows = [], isLoading, isError } = useCourtUtilization(monthISO, sport);
-  const { data: networkTrend = [] } = useNetworkUtilizationTrend(6, sport);
+  const { isTest } = useDataMode();
+  const { data: rows = [], isLoading, isError } = useCourtUtilization(monthISO, sport, isTest ?? null);
+  const { data: networkTrend = [] } = useNetworkUtilizationTrend(6, sport, isTest ?? null);
 
   const isCurrentMonth = isSameMonth(month, today);
 

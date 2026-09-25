@@ -57,7 +57,7 @@ import {
 } from "@/components/admin/SportScopeTabs";
 import { SPORT_LABEL, courtSport } from "@/components/admin/courts/types";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
-import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { useDataMode } from "@/hooks/useDataMode";
 import { PnlSection } from "@/components/admin/overview/PnlSection";
 import type { PnlBasis } from "@/lib/pnl";
 
@@ -182,7 +182,7 @@ export default function AdminOverview() {
   // lang die andere Sportart mit.
   // Und erst, wenn feststeht, welcher Betrieb gerade laeuft: Testbuchungen
   // gehoeren in den Testbetrieb, echte in den Echtbetrieb — nie gemischt.
-  const { data: isTest } = useStripeIsTest();
+  const { isTest } = useDataMode();
   const scopeReady = (sportScope === "all" || Array.isArray(sportCourtIds)) && isTest !== undefined;
 
   const handleSportChange = (scope: SportScope) => {

@@ -157,6 +157,7 @@ supabase/
 - Bis 250 € ohne Empfängeranschrift läuft das Dokument als Kleinbetragsrechnung nach § 33 UStDV — das deckt praktisch jede Platzbuchung ab.
 - Kunden laden sie unter Konto → Bestellungen und bei den Buchungen; der Link steht zusätzlich in beiden Bestätigungsmails.
 - **Testbetrieb (Stripe auf Test):** Vorgänge werden beim Anlegen als `is_test` gestempelt und bekommen Belege aus einem **eigenen Nummernkreis** `TEST-<Jahr>-<nnnnnn>` (eigener Zähler in `receipt_counters`, Schlüssel `(year, is_test)`). Der echte Kreis `P2G-…` bleibt davon unberührt. Beim Wechsel der Betriebsart löscht ein Trigger auf `site_integration_configs` alle Testbelege und nullt den Testzähler. Das PDF trägt bei Testbelegen einen roten Hinweis; der Belegexport (CSV) enthält nur echte Belege.
+- **Datenansicht Test/Live** (`useDataMode()`, Schalter in der Admin-Kopfzeile, `localStorage`): folgt Stripe, lässt sich aber fest auf Test oder Live stellen. Alle Admin-Abfragen und die RPCs (`p_is_test`, NULL = wie Stripe) hängen daran — nie an `useStripeIsTest()` direkt.
 - **Auswertungen zeigen den Betrieb, in dem man sich befindet:** Übersicht, Analytics, Standort-Auswertung (`useStripeIsTest()` → `.eq("is_test", isTest)`) und die drei Auslastungs-RPCs (`b.is_test = public.stripe_is_test()`) filtern auf die aktuelle Betriebsart. Im Testbetrieb sieht man Testbuchungen, im Echtbetrieb echte — nie gemischt.
 
 ## Gutscheine
@@ -186,6 +187,7 @@ supabase/
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 - `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
 - `20260925140000_test_receipts.sql` — OFFEN: Testbelege mit eigenem Nummernkreis, Trigger zum Löschen beim Moduswechsel, Auslastung je Betriebsart. Danach `receipt-pdf` neu bereitstellen
+- `20260926140000_data_mode_param.sql` — OFFEN: p_is_test an get_pnl() und den drei Auslastungsfunktionen (alte Signaturen werden entfernt)
 - `20260926120000_admin_receipts_page.sql` — OFFEN: Eintrag 'Belege' in admin_pages (nur für delegierte Rollen nötig, Superadmin sieht die Seite ohnehin)
 - `20260926100000_pnl_foundation.sql` — OFFEN: Einkaufspreis, Stripe-Gebühr am Beleg, Belegarten lobby_share/event_ticket, pnl_entries, get_pnl(), View admin_receipts. Danach stripe-webhook, marketplace-checkout, reconcile-payments, lobby-api bereitstellen
 - `20260925160000_cancellation_24h.sql` — OFFEN: Stornofrist 24 h in cancel_confirmed_booking()

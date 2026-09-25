@@ -1,19 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { PnlBasis, PnlBucket, PnlRow } from "@/lib/pnl";
-import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { useDataMode } from "@/hooks/useDataMode";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 
 /** Zeilen von get_pnl() fuer einen Zeitraum. Nur Admins bekommen etwas zurueck. */
 export function usePnl(from: Date, to: Date, basis: PnlBasis, bucket: PnlBucket, enabled = true) {
-  const { data: isTest } = useStripeIsTest();
+  const { isTest } = useDataMode();
   return useQuery({
     queryKey: ["pnl", iso(from), iso(to), basis, bucket, isTest],
     enabled: enabled && isTest !== undefined,
     queryFn: async () => {
       const { data, error } = await (supabase.rpc as any)("get_pnl", {
-        p_from: iso(from), p_to: iso(to), p_basis: basis, p_bucket: bucket,
+        p_from: iso(from), p_to: iso(to), p_basis: basis, p_bucket: bucket, p_is_test: isTest,
       });
       if (error) throw error;
       return (data ?? []) as PnlRow[];

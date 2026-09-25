@@ -2,6 +2,7 @@ import { useLocation } from "react-router-dom";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useAuth } from "@/hooks/useAuth";
 import { menuItems } from "./AdminSidebar";
+import { DataModeSwitch } from "./DataModeSwitch";
 
 export function AdminHeader() {
   const { user } = useAuth();
@@ -28,7 +29,8 @@ export function AdminHeader() {
         </h1>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-3">
+        <DataModeSwitch />
         <div className="flex items-center gap-2.5 rounded-full border border-[hsl(0_0%_14%)] bg-white/[0.04] py-[5px] pl-[5px] pr-3">
           <span className="flex h-[27px] w-[27px] flex-none items-center justify-center rounded-full bg-gradient-lime font-display text-[11px] font-extrabold text-primary-foreground">
             {initials}

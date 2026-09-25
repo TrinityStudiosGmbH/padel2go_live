@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
-import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { useDataMode } from "@/hooks/useDataMode";
 
 interface ReceiptRow {
   id: string;
@@ -52,14 +52,16 @@ export default function AdminReceipts() {
   const [sport, setSport] = useState<"all" | "padel" | "tennis">("all");
   const [search, setSearch] = useState("");
   const [zipBusy, setZipBusy] = useState<string | null>(null);
-  const { data: isTest } = useStripeIsTest();
+  const { isTest } = useDataMode();
 
   const { data: rows, isLoading, error } = useQuery({
-    queryKey: ["admin-receipts", from, to],
+    queryKey: ["admin-receipts", from, to, isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("admin_receipts")
         .select("id, receipt_number, receipt_type, source_id, recipient_name, recipient_email, description, gross_cents, paid_cents, net_cents, tax_rate, tax_cents, stripe_fee_cents, issued_at, service_date, is_test, category, is_refund, sport, reference_code")
+        .eq("is_test", isTest)
         .gte("issued_at", `${from}T00:00:00+02:00`)
         .lte("issued_at", `${to}T23:59:59+02:00`)
         .order("receipt_number", { ascending: false })
@@ -262,7 +264,7 @@ export default function AdminReceipts() {
         </Card>
 
         {isTest && (
-          <p className="flex items-center gap-1.5 text-[12px] text-[#FFC44D]"><FileText className="h-3.5 w-3.5" /> Stripe läuft im Testbetrieb — neue Belege tragen TEST-Nummern und verschwinden beim Umschalten.</p>
+          <p className="flex items-center gap-1.5 text-[12px] text-[#FFC44D]"><FileText className="h-3.5 w-3.5" /> Ansicht Testdaten — Testbelege tragen TEST-Nummern und verschwinden beim Umschalten von Stripe auf Echtbetrieb.</p>
         )}
       </div>
     </AdminLayout>

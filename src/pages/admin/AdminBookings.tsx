@@ -63,6 +63,7 @@ import { BookingWeekCalendar, BookingDetailDrawer, type Booking } from "@/compon
 import { courtSport, SPORT_LABEL } from "@/components/admin/courts/types";
 import type { SportScope } from "@/components/admin/SportScopeTabs";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
+import { useDataMode } from "@/hooks/useDataMode";
 
 const CALENDAR_LEGEND = [
   { label: "Spieler", dot: "bg-primary" },
@@ -115,6 +116,7 @@ export default function AdminBookings() {
   const [onlyExpiredAndCancelled, setOnlyExpiredAndCancelled] = useState(true);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const queryClient = useQueryClient();
+  const { isTest } = useDataMode();
 
   // Live: eine neue oder geaenderte Buchung erscheint ohne Neuladen. Ein
   // Kanal je Seite, nicht je Zeile — wie bei den Lobbies.
@@ -198,12 +200,14 @@ export default function AdminBookings() {
       statusFilter,
       clubFilter,
       onlyClubBookings,
+      isTest,
     ],
     // Ohne die Court-IDs der Sportart würde die Query kurzzeitig ALLE Buchungen
     // liefern — also erst starten, wenn der Filter wirklich anwendbar ist.
-    enabled: sportFilter === "all" || sportCourtIds !== undefined,
+    enabled: (sportFilter === "all" || sportCourtIds !== undefined) && isTest !== undefined,
     queryFn: async () => {
-      let query = supabase
+      // is_test steht noch nicht in den generierten Typen.
+      let query = (supabase as any)
         .from("bookings")
         .select(`
           id,
@@ -229,6 +233,7 @@ export default function AdminBookings() {
           locations (id, name),
           club:clubs (id, name)
         `)
+        .eq("is_test", isTest)
         .gte("start_time", weekStart.toISOString())
         .lte("start_time", weekEnd.toISOString())
         .order("start_time", { ascending: true });

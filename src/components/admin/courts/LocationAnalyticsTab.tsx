@@ -13,7 +13,7 @@ import { de } from "date-fns/locale";
 import { Location, courtSport } from "./types";
 import { SportScopeTabs, type SportScope } from "@/components/admin/SportScopeTabs";
 import { cn } from "@/lib/utils";
-import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { useDataMode } from "@/hooks/useDataMode";
 
 interface LocationAnalyticsTabProps {
   locations: Location[];
@@ -56,7 +56,7 @@ export function LocationAnalyticsTab({ locations }: LocationAnalyticsTabProps) {
   }, [locations, sportScope]);
 
   // Testbuchungen im Testbetrieb, echte im Echtbetrieb — nie gemischt.
-  const { data: isTest } = useStripeIsTest();
+  const { isTest } = useDataMode();
 
   // Fetch bookings for analytics
   const { data: bookings, isLoading } = useQuery({

@@ -13,7 +13,7 @@ import {
 } from "@/components/admin/SportScopeTabs";
 import { SPORT_LABEL } from "@/components/admin/courts/types";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
-import { useStripeIsTest } from "@/hooks/useStripeIsTest";
+import { useDataMode } from "@/hooks/useDataMode";
 
 const COLORS = ["hsl(71, 91%, 51%)", "hsl(0, 0%, 40%)", "hsl(0, 84%, 60%)"];
 
@@ -35,7 +35,7 @@ export default function AdminAnalytics() {
   // Erst zählen, wenn die Court-IDs da sind — sonst flackerte kurz die andere
   // Sportart durch.
   // Und erst, wenn feststeht, welcher Betrieb gerade laeuft.
-  const { data: isTest } = useStripeIsTest();
+  const { isTest } = useDataMode();
   const scopeReady = (sportScope === "all" || Array.isArray(sportCourtIds)) && isTest !== undefined;
 
   // Bookings per day for last 7 days
