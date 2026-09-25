@@ -256,7 +256,10 @@
     "cancelDeadlinePassed": "Stornofrist abgelaufen (24 h vor Spielbeginn)",
     "cancelTooLateTitle": "Zu spät zum Stornieren",
     "cancelTooLateDesc": "Eine kostenlose Stornierung ist nur bis 24 Stunden vor Spielbeginn möglich. Diese Frist ist am {{deadline}} Uhr abgelaufen – die Buchung bleibt bestehen und wird nicht erstattet. Bei Fragen erreichst du uns unter contact@padel2go.eu.",
-    "cancelTooLateOk": "Verstanden"
+    "cancelTooLateOk": "Verstanden",
+    "creditNote": "Stornorechnung",
+    "showAllPast": "Alle {{count}} anzeigen",
+    "showLessPast": "Weniger anzeigen"
   },
   "locationCard": {
     "fromPrice": "ab {{price}}€",

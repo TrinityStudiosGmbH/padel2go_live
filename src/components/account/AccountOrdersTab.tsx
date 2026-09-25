@@ -217,8 +217,11 @@ export function AccountOrdersTab() {
                 {/* Ab bezahlt gibt es die Rechnung. Eine stornierte oder offene
                     Bestellung hat keinen Beleg, dort waere der Knopf eine Sackgasse. */}
                 {(o.status === "success" || o.status === "refunded") && (
-                  <div className="mt-3">
+                  <div className="mt-3 flex flex-wrap gap-2">
                     <InvoiceDownloadButton sourceId={o.id} receiptType="marketplace_order" className="gap-1.5" />
+                    {o.status === "refunded" && (
+                      <InvoiceDownloadButton sourceId={o.id} receiptType="marketplace_refund" label="Stornorechnung" className="gap-1.5" />
+                    )}
                   </div>
                 )}
 

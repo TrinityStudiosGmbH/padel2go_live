@@ -148,9 +148,11 @@ export const MyBookings = () => {
   const upcomingBookings = bookings.filter(
     b => b.status === "confirmed" && !isPast(new Date(b.start_time))
   );
+  const [showAllPast, setShowAllPast] = useState(false);
   const pastBookings = bookings.filter(b => {
-    // Cancelled bookings are hidden entirely.
-    if (b.status === "cancelled") return false;
+    // Stornierte bleiben sichtbar: Rechnung und Korrekturrechnung muessen
+    // jederzeit abrufbar sein, auch Jahre spaeter.
+    if (b.status === "cancelled") return true;
 
     // Completed confirmed bookings: always show
     if (b.status === "confirmed" && isPast(new Date(b.start_time))) {
@@ -365,7 +367,7 @@ export const MyBookings = () => {
                       {t("myBookings.pastHeading")}
                     </h3>
                     <div className="space-y-3">
-                      {pastBookings.slice(0, 5).map((booking) => (
+                      {(showAllPast ? pastBookings : pastBookings.slice(0, 5)).map((booking) => (
                         <div
                           key={booking.id}
                           className="rounded-2xl p-4 border border-border/60 bg-gradient-card opacity-60"
@@ -403,17 +405,36 @@ export const MyBookings = () => {
                             </div>
                           </div>
                           {(booking.price_cents ?? 0) > 0 && booking.status !== "expired" && (
-                            <div className="mt-3 border-t border-border/50 pt-3">
+                            <div className="mt-3 flex flex-wrap gap-2 border-t border-border/50 pt-3">
                               <InvoiceDownloadButton
                                 sourceId={booking.id}
                                 receiptType="booking"
                                 className="gap-1.5"
                               />
+                              {booking.status === "cancelled" && (
+                                <InvoiceDownloadButton
+                                  sourceId={booking.id}
+                                  receiptType="booking_refund"
+                                  label={t("myBookings.creditNote")}
+                                  className="gap-1.5"
+                                />
+                              )}
                             </div>
                           )}
                         </div>
                       ))}
                     </div>
+                    {pastBookings.length > 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setShowAllPast((v) => !v)}
+                        className="mt-3 text-[12.5px] font-semibold text-primary underline-offset-2 hover:underline"
+                      >
+                        {showAllPast
+                          ? t("myBookings.showLessPast")
+                          : t("myBookings.showAllPast", { count: pastBookings.length })}
+                      </button>
+                    )}
                   </div>
                 )}
 

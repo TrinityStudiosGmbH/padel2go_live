@@ -256,7 +256,10 @@
     "cancelDeadlinePassed": "Cancellation deadline passed (24 h before start)",
     "cancelTooLateTitle": "Too late to cancel",
     "cancelTooLateDesc": "Free cancellation is only possible up to 24 hours before the start of play. That deadline passed on {{deadline}} – the booking stands and will not be refunded. Questions? Reach us at contact@padel2go.eu.",
-    "cancelTooLateOk": "Got it"
+    "cancelTooLateOk": "Got it",
+    "creditNote": "Credit note",
+    "showAllPast": "Show all {{count}}",
+    "showLessPast": "Show less"
   },
   "locationCard": {
     "fromPrice": "from €{{price}}",
