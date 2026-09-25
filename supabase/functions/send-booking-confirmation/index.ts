@@ -26,6 +26,8 @@ interface ConfirmationRequest {
   guest_name?: string;
   payment_type: "owner";
   amount_cents?: number;
+  /** Verwaltung schickt die Bestaetigung erneut — nur mit Admin-Anmeldung. */
+  resend?: boolean;
 }
 
 serve(async (req) => {
@@ -45,17 +47,32 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
-    // Only allow calls from internal services (stripe-webhook, etc.) using service role key
-    const authHeader = req.headers.get("Authorization");
-    if (authHeader !== `Bearer ${supabaseServiceKey}`) {
-      logStep("Unauthorized call rejected");
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+    const requestBody: ConfirmationRequest = await req.json();
+
+    // Zwei Wege hinein: interne Dienste (Webhook) mit dem Service-Schluessel —
+    // oder ein Admin, der die Bestaetigung erneut schickt, weil die erste nicht
+    // ankam. Der zweite Weg umgeht die Einmal-Sperre bewusst.
+    const authHeader = req.headers.get("Authorization") ?? "";
+    let isResend = false;
+    if (authHeader !== `Bearer ${supabaseServiceKey}`) {
+      const jwt = authHeader.replace("Bearer ", "").trim();
+      const { data: userData } = jwt ? await supabase.auth.getUser(jwt) : { data: { user: null } };
+      const caller = userData?.user ?? null;
+      let isAdmin = !!caller && caller.email === "fsteinfelder@padel2go.eu";
+      if (caller && !isAdmin) {
+        const { data: role } = await supabase.from("user_roles").select("role").eq("user_id", caller.id).eq("role", "admin").maybeSingle();
+        isAdmin = !!role;
+      }
+      if (!caller || !isAdmin || requestBody.resend !== true) {
+        logStep("Unauthorized call rejected");
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      isResend = true;
+    }
 
     // Schluessel kommt aus derselben Quelle wie bei allen anderen Mailwegen:
     // Admin -> Integrationen, Umgebungsvariable nur als Notnagel.
@@ -74,13 +91,14 @@ serve(async (req) => {
 
     const resend = new Resend(resendApiKey);
 
-    const { booking_id, user_id, guest_email, guest_name, payment_type, amount_cents }: ConfirmationRequest = await req.json();
-    logStep("Request parsed", { booking_id, user_id: user_id ?? "guest", payment_type, amount_cents });
+    const { booking_id, payment_type, amount_cents } = requestBody;
+    let { user_id, guest_email, guest_name } = requestBody;
+    logStep("Request parsed", { booking_id, user_id: user_id ?? "guest", payment_type, amount_cents, isResend });
 
     if (!booking_id) {
       throw new Error("booking_id is required");
     }
-    if (!user_id && !guest_email) {
+    if (!isResend && !user_id && !guest_email) {
       throw new Error("Either user_id or guest_email is required");
     }
 
@@ -96,6 +114,8 @@ serve(async (req) => {
         price_cents,
         currency,
         user_id,
+        guest_email,
+        guest_name,
         courts!inner(id, name),
         locations!inner(id, name, address, city)
       `)
@@ -106,6 +126,15 @@ serve(async (req) => {
       throw new Error(`Failed to fetch booking: ${bookingError?.message || "Not found"}`);
     }
     logStep("Booking fetched", { bookingId: booking.id });
+
+    // Beim erneuten Versand kennt der Aufrufer den Empfaenger nicht — er steht
+    // an der Buchung.
+    if (isResend) {
+      user_id = (booking as any).user_id ?? undefined;
+      guest_email = (booking as any).guest_email ?? undefined;
+      guest_name = (booking as any).guest_name ?? undefined;
+      if (!user_id && !guest_email) throw new Error("Buchung hat weder Nutzer noch Gast-E-Mail");
+    }
 
     // Idempotency (mirrors send-marketplace-confirmation): only a CONFIRMED booking
     // gets a confirmation, and only the caller that flips confirmation_sent_at NULL→now
@@ -118,19 +147,20 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    if ((booking as any).confirmation_sent_at) {
+    if (!isResend && (booking as any).confirmation_sent_at) {
       logStep("Skip — confirmation already sent");
       return new Response(JSON.stringify({ success: true, skipped: "already_sent" }), {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const { data: claimed } = await supabase
+    let claimQuery = supabase
       .from("bookings")
       .update({ confirmation_sent_at: new Date().toISOString() })
-      .eq("id", booking_id)
-      .is("confirmation_sent_at", null)
-      .select("id");
+      .eq("id", booking_id);
+    // Erneuter Versand: die Sperre gilt nicht, der Zeitstempel wird nur aktualisiert.
+    if (!isResend) claimQuery = claimQuery.is("confirmation_sent_at", null);
+    const { data: claimed } = await claimQuery.select("id");
     if (!claimed || claimed.length === 0) {
       logStep("Skip — confirmation already claimed");
       return new Response(JSON.stringify({ success: true, skipped: "already_claimed" }), {

@@ -40,6 +40,7 @@ import {
   Search,
   Filter,
   XCircle,
+  Mail,
   Trash2,
   AlertTriangle,
   Building2,
@@ -296,6 +297,27 @@ export default function AdminBookings() {
   // eine nackte Statusaenderung: das Geld blieb einbehalten, Punkte kamen nicht
   // zurueck, das Vereinskontingent verfiel, es entstand keine Stornorechnung und
   // der Kunde erfuhr nichts.
+  // Bestaetigung erneut schicken — fuer den Fall "Mail nicht angekommen".
+  const resendMutation = useMutation({
+    mutationFn: async (bookingId: string) => {
+      const { data, error } = await supabase.functions.invoke("send-booking-confirmation", {
+        body: { booking_id: bookingId, resend: true },
+      });
+      if (error) {
+        let serverMessage: string | null = null;
+        const ctx = (error as { context?: Response }).context;
+        if (ctx && typeof ctx.json === "function") {
+          try { serverMessage = (await ctx.json())?.error ?? null; } catch { /* ignore */ }
+        }
+        throw new Error(serverMessage || error.message);
+      }
+      if (data?.error) throw new Error(String(data.error));
+      if (data?.skipped) throw new Error(`Nicht verschickt (${data.skipped})`);
+    },
+    onSuccess: () => toast.success("Bestätigung erneut verschickt"),
+    onError: (e: Error) => toast.error("Versand fehlgeschlagen", { description: e.message }),
+  });
+
   const cancelMutation = useMutation({
     mutationFn: async (bookingId: string) => {
       const { error } = await supabase.functions.invoke("cancel-booking", {
@@ -910,14 +932,27 @@ export default function AdminBookings() {
                                 Details
                               </Button>
                               {booking.status === "confirmed" && (
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-[30px] w-[30px] rounded-lg border border-[hsl(0_100%_71%/0.28)] bg-[hsl(0_100%_71%/0.08)] text-[#FF6B6B] hover:bg-[hsl(0_100%_71%/0.18)] hover:text-[#FF6B6B]"
-                                  onClick={() => setCancelBookingId(booking.id)}
-                                >
-                                  <XCircle className="h-3.5 w-3.5" />
-                                </Button>
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Bestätigung erneut senden"
+                                    disabled={resendMutation.isPending}
+                                    className="h-[30px] w-[30px] rounded-lg border border-[hsl(0_0%_16%)] bg-white/5 text-[hsl(0_0%_82%)] hover:border-primary/40 hover:text-primary"
+                                    onClick={() => resendMutation.mutate(booking.id)}
+                                  >
+                                    <Mail className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Stornieren & erstatten"
+                                    className="h-[30px] w-[30px] rounded-lg border border-[hsl(0_100%_71%/0.28)] bg-[hsl(0_100%_71%/0.08)] text-[#FF6B6B] hover:bg-[hsl(0_100%_71%/0.18)] hover:text-[#FF6B6B]"
+                                    onClick={() => setCancelBookingId(booking.id)}
+                                  >
+                                    <XCircle className="h-3.5 w-3.5" />
+                                  </Button>
+                                </>
                               )}
                             </div>
                           </TableCell>
