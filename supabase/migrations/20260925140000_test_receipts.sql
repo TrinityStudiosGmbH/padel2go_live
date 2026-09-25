@@ -95,7 +95,11 @@ BEGIN
     (SELECT o.is_test FROM public.marketplace_redemptions o WHERE o.id = p_source_id),
     (SELECT b.is_test FROM public.bookings b WHERE b.id = p_source_id),
     false);
-  v_prefix := CASE WHEN v_is_test THEN 'TEST-' ELSE 'P2G-' END;
+  IF v_is_test THEN
+    v_prefix := 'TEST-';
+  ELSE
+    v_prefix := 'P2G-';
+  END IF;
 
   -- Idempotent: ein vorhandener Beleg zu dieser Quelle kommt unveraendert zurueck.
   SELECT * INTO v_row FROM public.receipts
@@ -510,7 +514,11 @@ BEGIN
     month_start      := v_m;
     possible_minutes := v_pm;
     booked_minutes   := v_bm;
-    capacity_pct     := CASE WHEN v_pm > 0 THEN round(100.0 * v_bm / v_pm, 1) ELSE 0 END;
+    IF v_pm > 0 THEN
+      capacity_pct := round(100.0 * v_bm / v_pm, 1);
+    ELSE
+      capacity_pct := 0;
+    END IF;
     RETURN NEXT;
   END LOOP;
 END;
@@ -584,7 +592,11 @@ BEGIN
     month_start      := v_m;
     possible_minutes := v_pm;
     booked_minutes   := v_bm;
-    capacity_pct     := CASE WHEN v_pm > 0 THEN round(100.0 * v_bm / v_pm, 1) ELSE 0 END;
+    IF v_pm > 0 THEN
+      capacity_pct := round(100.0 * v_bm / v_pm, 1);
+    ELSE
+      capacity_pct := 0;
+    END IF;
     RETURN NEXT;
   END LOOP;
 END;
