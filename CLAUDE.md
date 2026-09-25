@@ -146,7 +146,7 @@ supabase/
 - **Lobby-Anteile** bekommen Belege (`lobby_share`); Event-Tickets (`event_ticket`) sind als Belegart vorbereitet, ein Bezahlweg existiert noch nicht.
 - **Manuelle Posten & Fixkosten** in `pnl_entries` (einmalig oder monatlich/quartalsweise/jährlich), aufgelöst durch `pnl_entry_occurrences()`. Nur Admins.
 - `lobby-api` lehnt Geldaktionen ab, solange `feature_lobbies_state = hidden`.
-- **Belege-Tab** `/admin/belege` liest die View `admin_receipts` (Beleg + Kategorie + Sport + Referenz). CSV der Auswahl entsteht im Browser; **ZIP** (ein PDF je Beleg + `belege.csv`) baut die Edge Function `receipts-export` — Renderer in `_shared/receiptPdf.ts`, geteilt mit `receipt-pdf`. Höchstens 500 Belege je Export, nie Testbelege.
+- **Belege-Tab** `/admin/belege` liest die View `admin_receipts` (Beleg + Kategorie + Sport + Referenz). CSV der Auswahl entsteht im Browser; **ZIP** (ein PDF je Beleg + `belege.csv`) baut die Edge Function `receipts-export` — Renderer in `_shared/receiptPdf.ts`, geteilt mit `receipt-pdf`. Höchstens 500 Belege je Export; der Export folgt der Datenansicht, Testexporte tragen „TEST“ im Dateinamen.
 - **Übersicht** hat den Umschalter *Gebucht/Realisiert* (`basis`): Kacheln nach `created_at` bzw. `start_time`, PnL nach Beleg- bzw. Leistungsdatum. PnL-Modell in `src/lib/pnl.ts`, Sektion `components/admin/overview/PnlSection.tsx`.
 - Admin → Buchungen hält einen Realtime-Kanal auf `bookings` und lädt bei jeder Änderung nach.
 
@@ -187,6 +187,7 @@ supabase/
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 - `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
 - `20260925140000_test_receipts.sql` — OFFEN: Testbelege mit eigenem Nummernkreis, Trigger zum Löschen beim Moduswechsel, Auslastung je Betriebsart. Danach `receipt-pdf` neu bereitstellen
+- `20260926160000_admin_receipts_view_fix.sql` — OFFEN: Belege-Sicht ohne security_invoker (Rekursion in den lobby_members-Regeln), eigene Zugriffsregel in der Sicht
 - `20260926140000_data_mode_param.sql` — OFFEN: p_is_test an get_pnl() und den drei Auslastungsfunktionen (alte Signaturen werden entfernt)
 - `20260926120000_admin_receipts_page.sql` — OFFEN: Eintrag 'Belege' in admin_pages (nur für delegierte Rollen nötig, Superadmin sieht die Seite ohnehin)
 - `20260926100000_pnl_foundation.sql` — OFFEN: Einkaufspreis, Stripe-Gebühr am Beleg, Belegarten lobby_share/event_ticket, pnl_entries, get_pnl(), View admin_receipts. Danach stripe-webhook, marketplace-checkout, reconcile-payments, lobby-api bereitstellen

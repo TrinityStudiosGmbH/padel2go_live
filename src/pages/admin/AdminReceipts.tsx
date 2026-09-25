@@ -84,13 +84,13 @@ export default function AdminReceipts() {
   }, [rows, category, kind, sport, search]);
 
   const totals = useMemo(() => filtered.reduce(
-    (acc, r) => r.is_test ? acc : { gross: acc.gross + r.paid_cents, tax: acc.tax + r.tax_cents, net: acc.net + r.net_cents, fee: acc.fee + (r.stripe_fee_cents ?? 0) },
+    (acc, r) => ({ gross: acc.gross + r.paid_cents, tax: acc.tax + r.tax_cents, net: acc.net + r.net_cents, fee: acc.fee + (r.stripe_fee_cents ?? 0) }),
     { gross: 0, tax: 0, net: 0, fee: 0 },
   ), [filtered]);
 
   const exportCsv = () => {
-    const real = filtered.filter((r) => !r.is_test);
-    if (!real.length) return toast.info("Keine echten Belege in der Auswahl");
+    const real = filtered;
+    if (!real.length) return toast.info("Keine Belege in der Auswahl");
     const num = (c: number) => ((c ?? 0) / 100).toFixed(2).replace(".", ",");
     const esc = (v: unknown) => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const header = "Belegnummer;Art;Sport;Datum;Leistungsdatum;Empfänger;Beschreibung;Brutto;Zahlbetrag;Netto;USt-Satz;USt-Betrag;Stripe-Gebühr";
@@ -102,7 +102,7 @@ export default function AdminReceipts() {
     ].join(";"));
     const blob = new Blob(["\uFEFF" + [header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `p2g-belege-${from}_${to}.csv`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `p2g-belege${isTest ? "-TEST" : ""}-${from}_${to}.csv`; a.click();
     URL.revokeObjectURL(url);
   };
 
@@ -115,7 +115,7 @@ export default function AdminReceipts() {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receipts-export`, {
         method: "POST",
         headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: f, to: t }),
+        body: JSON.stringify({ from: f, to: t, is_test: isTest === true }),
       });
       if (!res.ok) {
         const msg = await res.json().catch(() => null);
@@ -123,7 +123,7 @@ export default function AdminReceipts() {
       }
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = `p2g-belege-${f}_${t}.zip`; a.click();
+      const a = document.createElement("a"); a.href = url; a.download = `p2g-belege${isTest ? "-TEST" : ""}-${f}_${t}.zip`; a.click();
       URL.revokeObjectURL(url);
       toast.success(`${res.headers.get("X-Receipt-Count") ?? ""} Belege als ZIP exportiert`.trim());
     } catch (e) {
@@ -144,7 +144,7 @@ export default function AdminReceipts() {
           <div>
             <h1 className="font-display text-xl font-bold tracking-tight text-foreground">Belege</h1>
             <p className="text-sm text-muted-foreground">
-              Alle Rechnungen und Korrekturrechnungen. Exporte enthalten nur echte Belege — Testbelege stehen hier zur Kontrolle, gehen aber nie an die Buchhaltung.
+              Alle Rechnungen und Korrekturrechnungen der gewählten Datenansicht (Schalter oben rechts). Exporte aus der Testansicht tragen „TEST“ im Dateinamen.
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

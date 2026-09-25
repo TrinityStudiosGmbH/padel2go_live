@@ -5,8 +5,9 @@ import { buildPdf, type Receipt, type Biller } from "../_shared/receiptPdf.ts";
 
 /**
  * Alle Belege eines Zeitraums als ZIP: ein PDF je Beleg plus belege.csv.
- * Nur fuer Admins, nur echte Belege — Testbelege gehoeren nicht in einen
- * Export, der an die Buchhaltung geht. Die PDFs entstehen hier wie beim
+ * Nur fuer Admins. Welche Betriebsart (Test oder Live) exportiert wird, sagt
+ * der Aufrufer — die Datei traegt es im Namen, damit ein Testexport nie fuer
+ * einen echten gehalten wird. Die PDFs entstehen hier wie beim
  * Einzelabruf frisch aus dem Beleg; ab 500 Stueck bitte den Zeitraum teilen,
  * die Funktion hat dafuer nicht die Laufzeit.
  */
@@ -35,8 +36,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const body = (await req.json().catch(() => ({}))) as { from?: string; to?: string };
+    const body = (await req.json().catch(() => ({}))) as { from?: string; to?: string; is_test?: boolean };
     const from = body.from ?? "", to = body.to ?? "";
+    const isTest = body.is_test === true;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || to < from) {
       return json({ error: "Zeitraum fehlt oder ist ungültig (from/to als YYYY-MM-DD)" }, 400);
     }
@@ -68,7 +70,7 @@ serve(async (req) => {
     const { data, error } = await supabaseAdmin
       .from("receipts")
       .select("*")
-      .eq("is_test", false)
+      .eq("is_test", isTest)
       .gte("issued_at", lo.toISOString())
       .lt("issued_at", hi.toISOString())
       .order("receipt_number", { ascending: true })
@@ -104,7 +106,7 @@ serve(async (req) => {
     const zipped = zipSync(files, { level: 6 });
     const buf = new ArrayBuffer(zipped.byteLength);
     new Uint8Array(buf).set(zipped);
-    const filename = `p2g-belege-${from}_${to}.zip`;
+    const filename = `p2g-belege${isTest ? "-TEST" : ""}-${from}_${to}.zip`;
     return new Response(buf, {
       headers: {
         ...corsHeaders,
