@@ -146,5 +146,8 @@ verify_jwt = true
 # Der Rechnungslink aus der Bestaetigungsmail kann keinen Anmelde-Token tragen.
 # Die Funktion prueft selbst: entweder das access_token des Belegs oder ein
 # JWT, das sie eigenhaendig verifiziert.
+[functions.receipts-export]
+verify_jwt = false
+
 [functions.receipt-pdf]
 verify_jwt = false

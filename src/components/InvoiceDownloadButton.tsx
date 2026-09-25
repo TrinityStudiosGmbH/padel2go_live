@@ -18,7 +18,7 @@ export function InvoiceDownloadButton({
   label = "Rechnung",
 }: {
   sourceId: string;
-  receiptType: "marketplace_order" | "marketplace_refund" | "booking" | "booking_refund";
+  receiptType: string;
   className?: string;
   label?: string;
 }) {

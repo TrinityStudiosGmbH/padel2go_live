@@ -81,6 +81,7 @@ const AdminNotifications = lazy(() => import("./pages/admin/AdminNotifications")
 const AdminFeatures = lazy(() => import("./pages/admin/AdminFeatures"));
 const AdminClubs = lazy(() => import("./pages/admin/AdminClubs"));
 const AdminVouchers = lazy(() => import("./pages/admin/AdminVouchers"));
+const AdminReceipts = lazy(() => import("./pages/admin/AdminReceipts"));
 const AdminLocationTeasers = lazy(() => import("./pages/admin/AdminLocationTeasers"));
 const AdminSkyPadelGallery = lazy(() => import("./pages/admin/AdminSkyPadelGallery"));
 const AdminPartnerTiles = lazy(() => import("./pages/admin/AdminPartnerTiles"));
@@ -226,6 +227,7 @@ const App = () => (
                 <Route path="/admin/features" element={<AdminFeatures />} />
                 <Route path="/admin/clubs" element={<AdminClubs />} />
                 <Route path="/admin/vouchers" element={<AdminVouchers />} />
+                <Route path="/admin/belege" element={<AdminReceipts />} />
                 <Route path="/admin/location-teasers" element={<AdminLocationTeasers />} />
                 <Route path="/admin/skypadel-gallery" element={<AdminSkyPadelGallery />} />
                 <Route path="/admin/partner-tiles" element={<AdminPartnerTiles />} />

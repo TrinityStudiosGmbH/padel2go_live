@@ -31,6 +31,7 @@ import {
   ExternalLink,
   LogOut,
   Search,
+  FileText,
 } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useAdminAuth } from "@/hooks/useAdminAuth";
@@ -60,6 +61,7 @@ const NAV_GROUPS = [
     items: [
       { title: "Marketplace", url: "/admin/marketplace", icon: ShoppingBag },
       { title: "Vouchers", url: "/admin/vouchers", icon: Tag },
+      { title: "Belege", url: "/admin/belege", icon: FileText },
     ],
   },
   {

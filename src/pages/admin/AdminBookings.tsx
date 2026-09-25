@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,7 @@ import { useSportCourtIds } from "@/hooks/useSportCourtIds";
 const CALENDAR_LEGEND = [
   { label: "Spieler", dot: "bg-primary" },
   { label: "Club", dot: "bg-[#7FD4FF]" },
-  { label: "Ausstehend", dot: "bg-[#FFC44D]" },
+  { label: "Zahlung offen", dot: "bg-[#FFC44D]" },
   { label: "Storniert", dot: "bg-[#FF6B6B]" },
 ];
 
@@ -115,6 +115,18 @@ export default function AdminBookings() {
   const [onlyExpiredAndCancelled, setOnlyExpiredAndCancelled] = useState(true);
   const [resetConfirmText, setResetConfirmText] = useState("");
   const queryClient = useQueryClient();
+
+  // Live: eine neue oder geaenderte Buchung erscheint ohne Neuladen. Ein
+  // Kanal je Seite, nicht je Zeile — wie bei den Lobbies.
+  useEffect(() => {
+    const channel = supabase
+      .channel("admin-bookings-live")
+      .on("postgres_changes", { event: "*", schema: "public", table: "bookings" }, () => {
+        queryClient.invalidateQueries({ queryKey: ["admin-week-bookings"] });
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [queryClient]);
 
   // Get week boundaries (Monday to Friday for work week)
   const weekStart = startOfWeek(selectedWeek, { weekStartsOn: 1 });
@@ -873,7 +885,7 @@ export default function AdminBookings() {
                                 ? "Bestätigt"
                                 : booking.status === "cancelled"
                                 ? "Storniert"
-                                : "Ausstehend"}
+                                : "Zahlung offen"}
                             </span>
                             {(booking as { is_test?: boolean }).is_test && (
                               <span className="ml-1.5 inline-flex items-center whitespace-nowrap rounded-full border border-[hsl(0_0%_30%)] bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[hsl(0_0%_62%)]">
