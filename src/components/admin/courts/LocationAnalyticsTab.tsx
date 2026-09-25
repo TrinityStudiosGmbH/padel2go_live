@@ -13,6 +13,7 @@ import { de } from "date-fns/locale";
 import { Location, courtSport } from "./types";
 import { SportScopeTabs, type SportScope } from "@/components/admin/SportScopeTabs";
 import { cn } from "@/lib/utils";
+import { useStripeIsTest } from "@/hooks/useStripeIsTest";
 
 interface LocationAnalyticsTabProps {
   locations: Location[];
@@ -54,11 +55,15 @@ export function LocationAnalyticsTab({ locations }: LocationAnalyticsTabProps) {
     );
   }, [locations, sportScope]);
 
+  // Testbuchungen im Testbetrieb, echte im Echtbetrieb — nie gemischt.
+  const { data: isTest } = useStripeIsTest();
+
   // Fetch bookings for analytics
   const { data: bookings, isLoading } = useQuery({
-    queryKey: ["admin-location-analytics", selectedLocationId, timeRange, sportScope],
+    queryKey: ["admin-location-analytics", selectedLocationId, timeRange, sportScope, isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
-      let query = supabase
+      let query = (supabase as any)
         .from("bookings")
         .select(`
           id,
@@ -71,6 +76,7 @@ export function LocationAnalyticsTab({ locations }: LocationAnalyticsTabProps) {
           created_at,
           courts(name)
         `)
+        .eq("is_test", isTest)
         .order("start_time", { ascending: false });
 
       if (selectedLocationId !== "all") {

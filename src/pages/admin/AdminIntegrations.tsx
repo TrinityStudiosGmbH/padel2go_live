@@ -384,7 +384,9 @@ export default function AdminIntegrations() {
                   <ShieldCheck className="mt-0.5 h-4 w-4 flex-none text-[#FF6B6B]" />
                   <span className="text-[12.5px] leading-relaxed text-[hsl(0_0%_82%)]">
                     Solange der Testbetrieb läuft, kommt bei echten Kundenzahlungen kein Geld an.
-                    Vor dem Start unbedingt zurück auf Echtbetrieb stellen.
+                    Vor dem Start unbedingt zurück auf Echtbetrieb stellen. Belege aus dem Testbetrieb
+                    tragen TEST-Nummern und werden beim Umschalten gelöscht — der Echtbetrieb beginnt
+                    bei P2G-{new Date().getFullYear()}-000001.
                   </span>
                 </div>
               )}

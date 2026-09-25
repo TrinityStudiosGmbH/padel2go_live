@@ -58,6 +58,7 @@ interface Receipt {
   currency: string;
   issued_at: string;
   service_date: string | null;
+  is_test: boolean;
 }
 
 interface Biller {
@@ -137,6 +138,11 @@ function buildPdf(r: Receipt, b: Biller): Promise<Uint8Array> {
     const title = isRefund(r.receipt_type) ? "Korrekturrechnung" : "Rechnung";
     put(title, R, 790, { size: 20, font: bold, align: "right" });
     put(r.receipt_number, R, 770, { size: 10.5, font: bold, align: "right" });
+    if (r.is_test) {
+      // Damit ein Testbeleg nie fuer ein steuerliches Dokument gehalten wird.
+      put("TESTBELEG · kein steuerliches Dokument · es ist kein Geld geflossen", R, 756,
+        { size: 8, font: bold, color: rgb(0.8, 0.15, 0.15), align: "right" });
+    }
 
     // ── Empfaenger ───────────────────────────────────────────────────────────
     y = 690;

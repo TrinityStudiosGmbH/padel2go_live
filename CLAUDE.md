@@ -139,6 +139,8 @@ supabase/
 - Das PDF erzeugt die Edge Function `receipt-pdf` bei jedem Abruf neu (`verify_jwt = false`, prüft selbst: eigenes JWT oder `receipts.access_token` aus dem Mail-Link). Nichts wird abgelegt.
 - Bis 250 € ohne Empfängeranschrift läuft das Dokument als Kleinbetragsrechnung nach § 33 UStDV — das deckt praktisch jede Platzbuchung ab.
 - Kunden laden sie unter Konto → Bestellungen und bei den Buchungen; der Link steht zusätzlich in beiden Bestätigungsmails.
+- **Testbetrieb (Stripe auf Test):** Vorgänge werden beim Anlegen als `is_test` gestempelt und bekommen Belege aus einem **eigenen Nummernkreis** `TEST-<Jahr>-<nnnnnn>` (eigener Zähler in `receipt_counters`, Schlüssel `(year, is_test)`). Der echte Kreis `P2G-…` bleibt davon unberührt. Beim Wechsel der Betriebsart löscht ein Trigger auf `site_integration_configs` alle Testbelege und nullt den Testzähler. Das PDF trägt bei Testbelegen einen roten Hinweis; der Belegexport (CSV) enthält nur echte Belege.
+- **Auswertungen zeigen den Betrieb, in dem man sich befindet:** Übersicht, Analytics, Standort-Auswertung (`useStripeIsTest()` → `.eq("is_test", isTest)`) und die drei Auslastungs-RPCs (`b.is_test = public.stripe_is_test()`) filtern auf die aktuelle Betriebsart. Im Testbetrieb sieht man Testbuchungen, im Echtbetrieb echte — nie gemischt.
 
 ## Gutscheine
 - `voucher_codes.scope` ∈ `booking` | `marketplace` | `both` — wird beim Anlegen gesetzt (Admin → Gutscheine, Feld „Gilt für").
@@ -166,6 +168,7 @@ supabase/
 - `20260921100000_cron_hygiene.sql` — OFFEN: meldet doppelte Cron-Jobs ab und plant die beiden nie eingeplanten Aufräumer (`cleanup_rate_limit_log`, `cleanup_expired_notifications`)
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 - `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
+- `20260925140000_test_receipts.sql` — OFFEN: Testbelege mit eigenem Nummernkreis, Trigger zum Löschen beim Moduswechsel, Auslastung je Betriebsart. Danach `receipt-pdf` neu bereitstellen
 - `20260925120000_cron_secret_source.sql` — OFFEN: stellt notify_push() und trigger_match_reminders() von current_setting('app.cron_secret') auf private.cron_secrets um (der Parameter lässt sich auf Supabase nicht setzen, beide liefen deshalb ins Leere) und plant den Stripe-Abgleich alle 30 Minuten ein
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie

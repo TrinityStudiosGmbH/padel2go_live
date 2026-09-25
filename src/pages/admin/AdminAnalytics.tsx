@@ -13,6 +13,7 @@ import {
 } from "@/components/admin/SportScopeTabs";
 import { SPORT_LABEL } from "@/components/admin/courts/types";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
+import { useStripeIsTest } from "@/hooks/useStripeIsTest";
 
 const COLORS = ["hsl(71, 91%, 51%)", "hsl(0, 0%, 40%)", "hsl(0, 84%, 60%)"];
 
@@ -33,11 +34,13 @@ export default function AdminAnalytics() {
   const noCourtsForSport = courtIds !== null && courtIds.length === 0;
   // Erst zählen, wenn die Court-IDs da sind — sonst flackerte kurz die andere
   // Sportart durch.
-  const scopeReady = sportScope === "all" || Array.isArray(sportCourtIds);
+  // Und erst, wenn feststeht, welcher Betrieb gerade laeuft.
+  const { data: isTest } = useStripeIsTest();
+  const scopeReady = (sportScope === "all" || Array.isArray(sportCourtIds)) && isTest !== undefined;
 
   // Bookings per day for last 7 days
   const { data: bookingsPerDay } = useQuery({
-    queryKey: ["admin-analytics-bookings-per-day", sportScope],
+    queryKey: ["admin-analytics-bookings-per-day", sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       const days = [];
@@ -45,9 +48,11 @@ export default function AdminAnalytics() {
         const date = subDays(new Date(), i);
         let bookings = 0;
         if (!noCourtsForSport) {
-          let query = supabase
+          let query = (supabase as any)
             .from("bookings")
             .select("*", { count: "exact", head: true })
+            .in("status", ["confirmed", "completed"])
+            .eq("is_test", isTest)
             .gte("start_time", startOfDay(date).toISOString())
             .lte("start_time", endOfDay(date).toISOString());
           if (courtIds) query = query.in("court_id", courtIds);
@@ -66,24 +71,25 @@ export default function AdminAnalytics() {
 
   // Bookings by status
   const { data: bookingsByStatus } = useQuery({
-    queryKey: ["admin-analytics-bookings-by-status", sportScope],
+    queryKey: ["admin-analytics-bookings-by-status", sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
-      const statuses = ["confirmed", "pending", "cancelled"] as const;
+      const statuses = ["confirmed", "pending_payment", "cancelled"] as const;
       const result = [];
       for (const status of statuses) {
         let value = 0;
         if (!noCourtsForSport) {
-          let query = supabase
+          let query = (supabase as any)
             .from("bookings")
             .select("*", { count: "exact", head: true })
-            .eq("status", status);
+            .eq("status", status)
+            .eq("is_test", isTest);
           if (courtIds) query = query.in("court_id", courtIds);
           const { count } = await query;
           value = count || 0;
         }
         result.push({
-          name: status === "confirmed" ? "Bestätigt" : status === "pending" ? "Ausstehend" : "Storniert",
+          name: status === "confirmed" ? "Bestätigt" : status === "pending_payment" ? "Zahlung offen" : "Storniert",
           value,
         });
       }
@@ -93,7 +99,7 @@ export default function AdminAnalytics() {
 
   // Bookings by location
   const { data: bookingsByLocation } = useQuery({
-    queryKey: ["admin-analytics-bookings-by-location", sportScope],
+    queryKey: ["admin-analytics-bookings-by-location", sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       const { data: locations } = await supabase.from("locations").select("id, name");
@@ -101,11 +107,12 @@ export default function AdminAnalytics() {
       for (const location of locations || []) {
         let bookings = 0;
         if (!noCourtsForSport) {
-          let query = supabase
+          let query = (supabase as any)
             .from("bookings")
             .select("*", { count: "exact", head: true })
             .eq("location_id", location.id)
-            .eq("status", "confirmed");
+            .eq("status", "confirmed")
+            .eq("is_test", isTest);
           if (courtIds) query = query.in("court_id", courtIds);
           const { count } = await query;
           bookings = count || 0;

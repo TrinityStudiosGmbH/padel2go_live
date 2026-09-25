@@ -286,11 +286,11 @@ export function MarketplaceOrdersSection() {
                         {(() => {
                           const r = receipts?.get(o.id);
                           if (!r?.invoice) {
-                            // Kein Beleg heisst: Testvorgang oder nichts bezahlt.
-                            // Ein Beleg entsteht mit der Zahlung, nicht mit der Bestellung.
+                            // Kein Beleg heisst: nichts bezahlt. Ein Beleg entsteht mit
+                            // der Zahlung, nicht mit der Bestellung — auch im Testbetrieb.
                             return (
                               <span className="whitespace-nowrap font-mono text-[11px] text-[hsl(0_0%_45%)]">
-                                {o.is_test ? "kein Beleg (Test)" : "—"}
+                                —
                               </span>
                             );
                           }

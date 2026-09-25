@@ -57,6 +57,7 @@ import {
 } from "@/components/admin/SportScopeTabs";
 import { SPORT_LABEL, courtSport } from "@/components/admin/courts/types";
 import { useSportCourtIds } from "@/hooks/useSportCourtIds";
+import { useStripeIsTest } from "@/hooks/useStripeIsTest";
 
 const STATUS_PILL: Record<string, string> = {
   confirmed: "border-primary/30 bg-primary/10 text-primary",
@@ -173,7 +174,10 @@ export default function AdminOverview() {
   const noCourtsForSport = courtIds !== null && courtIds.length === 0;
   // Erst rechnen, wenn die Court-IDs da sind — sonst zählte ein Wimpernschlag
   // lang die andere Sportart mit.
-  const scopeReady = sportScope === "all" || Array.isArray(sportCourtIds);
+  // Und erst, wenn feststeht, welcher Betrieb gerade laeuft: Testbuchungen
+  // gehoeren in den Testbetrieb, echte in den Echtbetrieb — nie gemischt.
+  const { data: isTest } = useStripeIsTest();
+  const scopeReady = (sportScope === "all" || Array.isArray(sportCourtIds)) && isTest !== undefined;
 
   const handleSportChange = (scope: SportScope) => {
     setSportScope(scope);
@@ -184,17 +188,18 @@ export default function AdminOverview() {
 
   // Fetch confirmed bookings count for selected range (+ previous period for trend)
   const { data: bookingStats } = useQuery({
-    queryKey: ["admin-bookings-count", range, sportScope],
+    queryKey: ["admin-bookings-count", range, sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) return { current: 0, previous: 0 };
       const countIn = async (from: Date, to: Date) => {
-        let query = supabase
+        let query = (supabase as any)
           .from("bookings")
           .select("*", { count: "exact", head: true })
           .gte("start_time", from.toISOString())
           .lte("start_time", to.toISOString())
-          .eq("status", "confirmed");
+          .eq("status", "confirmed")
+        .eq("is_test", isTest);
         if (courtIds) query = query.in("court_id", courtIds);
         const { count } = await query;
         return count || 0;
@@ -211,17 +216,18 @@ export default function AdminOverview() {
   // Fetch booking revenue for selected range: confirmed, paid bookings only
   // (excludes free club allocations; price_cents reflects the charged amount)
   const { data: revenueStats } = useQuery({
-    queryKey: ["admin-revenue", range, sportScope],
+    queryKey: ["admin-revenue", range, sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) {
         return { current: { sum: 0, count: 0 }, previous: { sum: 0, count: 0 } };
       }
       const sumIn = async (from: Date, to: Date) => {
-        let query = supabase
+        let query = (supabase as any)
           .from("bookings")
           .select("price_cents")
           .eq("status", "confirmed")
+          .eq("is_test", isTest)
           .eq("is_free_allocation", false)
           .not("price_cents", "is", null)
           .gte("start_time", from.toISOString())
@@ -302,17 +308,18 @@ export default function AdminOverview() {
 
   // Fetch club bookings today
   const { data: clubBookingsToday } = useQuery({
-    queryKey: ["admin-club-bookings-today", sportScope],
+    queryKey: ["admin-club-bookings-today", sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) return 0;
-      let query = supabase
+      let query = (supabase as any)
         .from("bookings")
         .select("*", { count: "exact", head: true })
         .not("club_id", "is", null)
         .gte("start_time", startOfDay(today).toISOString())
         .lte("start_time", endOfDay(today).toISOString())
-        .eq("status", "confirmed");
+        .eq("status", "confirmed")
+        .eq("is_test", isTest);
       if (courtIds) query = query.in("court_id", courtIds);
       const { count } = await query;
       return count || 0;
@@ -321,17 +328,18 @@ export default function AdminOverview() {
 
   // Fetch club bookings this week
   const { data: clubBookingsWeek } = useQuery({
-    queryKey: ["admin-club-bookings-week", sportScope],
+    queryKey: ["admin-club-bookings-week", sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) return 0;
-      let query = supabase
+      let query = (supabase as any)
         .from("bookings")
         .select("*", { count: "exact", head: true })
         .not("club_id", "is", null)
         .gte("start_time", startOfWeek(today, { locale: de }).toISOString())
         .lte("start_time", endOfWeek(today, { locale: de }).toISOString())
-        .eq("status", "confirmed");
+        .eq("status", "confirmed")
+        .eq("is_test", isTest);
       if (courtIds) query = query.in("court_id", courtIds);
       const { count } = await query;
       return count || 0;
@@ -403,11 +411,11 @@ export default function AdminOverview() {
 
   // Fetch recent bookings with optional court filter (incl. player + amount)
   const { data: recentBookings } = useQuery({
-    queryKey: ["admin-recent-bookings", selectedCourtId, sportScope],
+    queryKey: ["admin-recent-bookings", selectedCourtId, sportScope, isTest],
     enabled: scopeReady,
     queryFn: async () => {
       if (noCourtsForSport) return [];
-      let query = supabase
+      let query = (supabase as any)
         .from("bookings")
         .select(`
           id,
@@ -423,6 +431,7 @@ export default function AdminOverview() {
           courts (id, name),
           locations (name)
         `)
+        .eq("is_test", isTest)
         .order("created_at", { ascending: false });
 
       if (courtIds) {

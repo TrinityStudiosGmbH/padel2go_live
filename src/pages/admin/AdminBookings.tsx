@@ -211,6 +211,7 @@ export default function AdminBookings() {
           is_free_allocation,
           price_cents,
           payment_mode,
+          is_test,
           credits_used,
           courts (id, name, sport),
           locations (id, name),
@@ -874,6 +875,11 @@ export default function AdminBookings() {
                                 ? "Storniert"
                                 : "Ausstehend"}
                             </span>
+                            {(booking as { is_test?: boolean }).is_test && (
+                              <span className="ml-1.5 inline-flex items-center whitespace-nowrap rounded-full border border-[hsl(0_0%_30%)] bg-white/[0.06] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-[hsl(0_0%_62%)]">
+                                Test
+                              </span>
+                            )}
                           </TableCell>
                           {/* Actions */}
                           <TableCell className="text-right">

@@ -603,6 +603,7 @@ const AdminMarketplace = () => {
       const { data, error } = await (supabase as any)
         .from("receipts")
         .select("*")
+        .eq("is_test", false)
         .order("receipt_number", { ascending: true });
       if (error) throw error;
       const rows = (data ?? []) as Record<string, unknown>[];
