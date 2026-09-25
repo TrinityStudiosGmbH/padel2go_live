@@ -76,12 +76,27 @@ export async function resizeImageForUpload(
 
   const keepAlpha = file.type !== "image/jpeg" && hasTransparency(ctx, canvas);
 
-  return await new Promise<Blob>((resolve, reject) => {
-    canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error("Canvas toBlob failed"))),
-      keepAlpha ? "image/png" : "image/jpeg",
-      keepAlpha ? undefined : quality,
-    );
+  // Transparenz zwingt frueher zu PNG, und ein PNG mit Fotoinhalt wiegt bei
+  // 2000px schnell das Zehnfache eines JPEG. WebP kann beides: Alphakanal und
+  // verlustbehaftete Kompression. PNG bleibt nur der Notnagel, falls der
+  // Browser kein WebP schreibt — dann ist ein grosses Bild besser als keines.
+  if (keepAlpha) {
+    const webp = await toBlob(canvas, "image/webp", quality);
+    if (webp) return webp;
+    const png = await toBlob(canvas, "image/png");
+    if (png) return png;
+    throw new Error("Canvas toBlob failed");
+  }
+
+  const jpeg = await toBlob(canvas, "image/jpeg", quality);
+  if (jpeg) return jpeg;
+  throw new Error("Canvas toBlob failed");
+}
+
+function toBlob(canvas: HTMLCanvasElement, type: string, quality?: number): Promise<Blob | null> {
+  return new Promise((resolve) => {
+    // toBlob liefert bei einem nicht unterstuetzten Typ still null, statt zu werfen.
+    canvas.toBlob((blob) => resolve(blob && blob.type === type ? blob : null), type, quality);
   });
 }
 

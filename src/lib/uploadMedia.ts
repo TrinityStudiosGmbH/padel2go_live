@@ -47,11 +47,29 @@ export async function uploadMediaFile(
   return supabase.storage.from(bucket).getPublicUrl(path).data.publicUrl;
 }
 
+/**
+ * Groesse, ab der ein Bild nicht mehr durchgeht. Ein auf 2000px verkleinertes
+ * Bild liegt weit darunter; wer hier anschlaegt, laedt ein Original hoch, das
+ * sich nicht verkleinern liess.
+ */
+const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
+
 async function resizeOrKeep(file: File, opts: UploadOptions): Promise<Blob> {
   try {
     return await resizeImageForUpload(file, opts.maxEdge, opts.quality);
   } catch (error) {
-    console.warn("Bild konnte nicht verkleinert werden, Original wird hochgeladen:", error);
+    // Bisher ging hier stillschweigend das Original hinaus. Der Bildwandler von
+    // Supabase lehnt grosse Quellen mit 400 ab, die Anzeige faellt aufs Original
+    // zurueck — und jeder Besucher laedt dann zweistellige Megabyte. Einmal
+    // beim Hochladen scheitern ist besser als das dauerhaft auszuliefern.
+    console.warn("Bild konnte nicht verkleinert werden:", error);
+    if (file.size > MAX_IMAGE_BYTES) {
+      throw new Error(
+        `Das Bild ließ sich nicht verkleinern und ist mit ${(file.size / 1048576).toFixed(1)} MB ` +
+        "zu groß zum Ausliefern. Bitte das Bild vorher auf maximal 2000 Pixel Kantenlänge " +
+        "verkleinern und erneut hochladen.",
+      );
+    }
     return file;
   }
 }

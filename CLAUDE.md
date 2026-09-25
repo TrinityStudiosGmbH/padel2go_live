@@ -153,6 +153,7 @@ supabase/
 - **`fallbackSrc` lädt erst, wenn feststeht, dass kein Bild gepflegt ist.** `SiteVisual` und `HeroBackgroundVisual` zeigen während der Abfrage bewusst nichts — vorher luden sie bei jedem Aufruf ein gebündeltes Bild, das Sekundenbruchteile später ersetzt wurde.
 - **three.js darf nie statisch importiert werden.** Der Hero-Canvas liegt in `synthetic-hero-canvas.tsx`, der Seiten-Shader wird in `SectionShaderBackdrop` nachgeladen. Beide über `lazy` + `Suspense`.
 - **Routen laufen über `lazyWithReload`** (`src/lib/lazyWithReload.ts`), nicht über `lazy` direkt: sonst sieht jeder, der die Seite während eines Deploys offen hat, beim nächsten Routenwechsel einen Fehlerbildschirm.
+- **Ein Bild, das sich nicht verkleinern lässt, wird nicht mehr hochgeladen.** `uploadMediaFile` gab bei einem Fehler im Canvas still das Original weiter; der Transformations-Endpunkt lehnt große Quellen mit 400 ab, die Anzeige fällt aufs Original zurück, und jeder Besucher lädt zweistellige Megabyte. Ab 4 MB bricht der Upload jetzt mit einer Meldung ab. Bilder mit Transparenz gehen als WebP statt als PNG raus.
 - **Gemessene Werte (20.09.2026, nach der Optimierung):** Startseite 2,1 s / 1,8 MB · Buchen 1,0 s / 120 KB · Marketplace 1,5 s / 415 KB. Vorher Startseite 3,2 s / 4,3 MB.
 - **Ein Realtime-Kanal je Browsertab**, nicht je Komponente — siehe `useLobbyRealtime` in `useLobbies.ts`. Hooks, die mehrfach gerendert werden, dürfen keine eigenen Kanäle öffnen.
 - **Vercel** ist eine statische Auslieferung ohne Serverless-Funktionen; dort skaliert nur Bandbreite. Der Engpass liegt bei der **Supabase-Compute-Instanz** (Buchungen serialisieren über Advisory Locks). Vor einem Upgrade die CPU-Auslastung unter *Reports → Database* ansehen.
@@ -164,6 +165,8 @@ supabase/
 - `20260920160000_voucher_scope_marketplace.sql` — am 20.09.2026 gelaufen und Ende-zu-Ende verifiziert
 - `20260921100000_cron_hygiene.sql` — OFFEN: meldet doppelte Cron-Jobs ab und plant die beiden nie eingeplanten Aufräumer (`cleanup_rate_limit_log`, `cleanup_expired_notifications`)
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
+- `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
+- `20260925120000_cron_secret_source.sql` — OFFEN: stellt notify_push() und trigger_match_reminders() von current_setting('app.cron_secret') auf private.cron_secrets um (der Parameter lässt sich auf Supabase nicht setzen, beide liefen deshalb ins Leere) und plant den Stripe-Abgleich alle 30 Minuten ein
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
 `20260918120200_drop_expert_levels.sql`) sind am 18.09.2026 in Produktion gelaufen
