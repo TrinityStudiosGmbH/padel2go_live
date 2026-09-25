@@ -100,7 +100,7 @@
       "and": " und der ",
       "privacy": "Datenschutzerklärung",
       "outro": " zu.",
-      "cancellation": "Kostenlose Stornierung bis zum Spielbeginn – du erhältst den vollen Betrag zurück.",
+      "cancellation": "Kostenlose Stornierung bis 24 Stunden vor Spielbeginn – für diese Buchung bis {{deadline}} Uhr. Du erhältst den vollen Betrag zurück; danach ist keine Stornierung mehr möglich.",
       "withdrawal": "Bei termingebundenen Freizeitleistungen besteht kein gesetzliches Widerrufsrecht (§ 312g Abs. 2 Nr. 9 BGB)."
     }
   },
@@ -159,7 +159,7 @@
     "agbAnd": " und die ",
     "privacyLink": "Datenschutzerklärung",
     "agbOutro": ".",
-    "cancellationNote": "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
+    "cancellationNote": "Kostenlose Stornierung bis 24 Stunden vor Spielbeginn, danach nicht mehr möglich. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
     "submitting": "Buchung wird vorbereitet…",
     "submit": "Als Gast weiterbuchen →",
     "hasAccount": "Du hast bereits ein Konto?",
@@ -250,8 +250,13 @@
     "cancelSuccessDesc": "Rückerstattung veranlasst.",
     "cancelErrorDesc": "Die Buchung konnte nicht storniert werden.",
     "cancelConfirmTitle": "Buchung wirklich stornieren?",
-    "cancelConfirmDesc": "Der Betrag wird zurückerstattet.",
-    "cancelConfirmAbort": "Abbrechen"
+    "cancelConfirmDesc": "Du bist noch innerhalb der Frist: Der volle Betrag wird auf dein Zahlungsmittel zurückerstattet, eingesetzte Punkte kommen zurück.",
+    "cancelConfirmAbort": "Abbrechen",
+    "cancelDeadlineHint": "Kostenlos stornierbar bis {{deadline}} Uhr",
+    "cancelDeadlinePassed": "Stornofrist abgelaufen (24 h vor Spielbeginn)",
+    "cancelTooLateTitle": "Zu spät zum Stornieren",
+    "cancelTooLateDesc": "Eine kostenlose Stornierung ist nur bis 24 Stunden vor Spielbeginn möglich. Diese Frist ist am {{deadline}} Uhr abgelaufen – die Buchung bleibt bestehen und wird nicht erstattet. Bei Fragen erreichst du uns unter contact@padel2go.eu.",
+    "cancelTooLateOk": "Verstanden"
   },
   "locationCard": {
     "fromPrice": "ab {{price}}€",

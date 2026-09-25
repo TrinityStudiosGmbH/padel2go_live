@@ -100,7 +100,7 @@
       "and": " and ",
       "privacy": "Privacy Policy",
       "outro": ".",
-      "cancellation": "Free cancellation up to the start of play – you will receive a full refund.",
+      "cancellation": "Free cancellation up to 24 hours before the start of play – for this booking until {{deadline}}. You will receive a full refund; after that, cancellation is no longer possible.",
       "withdrawal": "Date-specific leisure services are exempt from the statutory right of withdrawal (§ 312g (2) no. 9 German Civil Code)."
     }
   },
@@ -159,7 +159,7 @@
     "agbAnd": " and the ",
     "privacyLink": "Privacy Policy",
     "agbOutro": ".",
-    "cancellationNote": "Free cancellation until the start of play. No statutory right of withdrawal for date-specific leisure services (§ 312g (2) no. 9 German Civil Code).",
+    "cancellationNote": "Free cancellation up to 24 hours before the start of play, not possible after that. No statutory right of withdrawal for date-specific leisure services (§ 312g (2) no. 9 German Civil Code).",
     "submitting": "Preparing booking…",
     "submit": "Continue as guest →",
     "hasAccount": "Already have an account?",
@@ -250,8 +250,13 @@
     "cancelSuccessDesc": "Refund has been initiated.",
     "cancelErrorDesc": "The booking could not be cancelled.",
     "cancelConfirmTitle": "Really cancel this booking?",
-    "cancelConfirmDesc": "The amount will be refunded.",
-    "cancelConfirmAbort": "Cancel"
+    "cancelConfirmDesc": "You are still within the deadline: the full amount will be refunded to your payment method and any points used will be returned.",
+    "cancelConfirmAbort": "Cancel",
+    "cancelDeadlineHint": "Free cancellation until {{deadline}}",
+    "cancelDeadlinePassed": "Cancellation deadline passed (24 h before start)",
+    "cancelTooLateTitle": "Too late to cancel",
+    "cancelTooLateDesc": "Free cancellation is only possible up to 24 hours before the start of play. That deadline passed on {{deadline}} – the booking stands and will not be refunded. Questions? Reach us at contact@padel2go.eu.",
+    "cancelTooLateOk": "Got it"
   },
   "locationCard": {
     "fromPrice": "from €{{price}}",

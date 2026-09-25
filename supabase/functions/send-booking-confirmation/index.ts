@@ -5,6 +5,7 @@ import { encodeBase64 } from "https://deno.land/std@0.224.0/encoding/base64.ts";
 import { DEFAULT_FROM, REPLY_TO_EMAIL, brandedEmailHtml, resolveResendKey, invoiceUrl } from "../_shared/email.ts";
 import { AGB_ATTACHMENT } from "../_shared/agb-text.ts";
 import { buildBookingIcs, googleCalendarUrl, signBookingIcsToken, bookingIcsUrl } from "../_shared/bookingIcs.ts";
+import { CANCEL_CUTOFF_HOURS, cancelDeadline } from "../_shared/bookingPolicy.ts";
 
 // Resend is initialized lazily inside the handler so we can fall back to DB config
 
@@ -186,6 +187,10 @@ serve(async (req) => {
     
     const formattedDate = startDate.toLocaleDateString('de-DE', dateOptions);
     const startTime = startDate.toLocaleTimeString('de-DE', timeOptions);
+    // Bis wann der Kunde kostenlos stornieren kann — als Datum in der Mail,
+    // nicht nur als Regel, damit niemand rechnen muss.
+    const deadlineDate = cancelDeadline(booking.start_time);
+    const deadlineText = `${deadlineDate.toLocaleDateString('de-DE', dateOptions)}, ${deadlineDate.toLocaleTimeString('de-DE', timeOptions)} Uhr`;
     const endTime = endDate.toLocaleTimeString('de-DE', timeOptions);
 
     // Determine paid amount
@@ -257,6 +262,7 @@ serve(async (req) => {
         { label: "Uhrzeit", value: `${startTime} – ${endTime} Uhr (${durationMinutes} Min)` },
         { label: "Court", value: court.name },
         { label: "Buchungsnr.", value: `#${bookingRef}` },
+        { label: "Kostenlos stornierbar bis", value: deadlineText },
       ],
       highlight: { label: "Bezahlt", value: `${paidAmount} €`, sub: [taxLine, receiptNumberLine] },
       ctaLabel: "Buchung ansehen",
@@ -267,7 +273,7 @@ serve(async (req) => {
         : {}),
       calendar: { googleUrl: googleCalUrl, appleUrl: appleCalUrl },
       note: "Die .ics-Datei im Anhang funktioniert auch mit Outlook. Wir freuen uns auf dein Match! 🏆",
-      legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
+      legalHtml: `Kostenlose Stornierung bis ${CANCEL_CUTOFF_HOURS} Stunden vor Spielbeginn (für diese Buchung bis ${deadlineText}) mit voller Rückerstattung; danach ist keine Stornierung mehr möglich. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).`,
     });
 
     // Send email

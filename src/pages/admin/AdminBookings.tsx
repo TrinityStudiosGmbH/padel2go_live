@@ -940,7 +940,8 @@ export default function AdminBookings() {
             <AlertDialogDescription className="text-sm leading-relaxed text-[hsl(0_0%_68%)]">
               Der bezahlte Betrag wird über Stripe zurückerstattet, eingesetzte Punkte und
               Vereins-Freistunden gehen zurück, und der Kunde bekommt eine Nachricht. Die
-              Stornorechnung entsteht automatisch. Nicht umkehrbar.
+              Stornorechnung entsteht automatisch. Nicht umkehrbar. Die 24-Stunden-Frist
+              gilt hier nicht — die Verwaltung storniert aus Kulanz jederzeit.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

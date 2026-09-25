@@ -29,6 +29,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useCancelBooking } from "@/hooks/useCancelBooking";
+import { canCancelFree, cancelDeadline } from "@/lib/bookingPolicy";
 import { format, isPast } from "date-fns";
 import { de, enUS } from "date-fns/locale";
 import { useTranslation } from "react-i18next";
@@ -268,6 +269,11 @@ export const MyBookings = () => {
                                   <span className="font-stat text-[12.5px]">{format(new Date(booking.start_time), "HH:mm")} - {format(new Date(booking.end_time), "HH:mm")}{t("myBookings.timeSuffix")}</span>
                                 </span>
                               </div>
+                              <p className="mt-1.5 text-[11.5px] text-muted-foreground/70">
+                                {canCancelFree(booking.start_time)
+                                  ? t("myBookings.cancelDeadlineHint", { deadline: format(cancelDeadline(booking.start_time), "dd.MM.yyyy, HH:mm", { locale: dateLocale }) })
+                                  : t("myBookings.cancelDeadlinePassed")}
+                              </p>
                             </div>
                             <div className="flex flex-col sm:flex-row gap-2 shrink-0">
                               <LobbyActionButton
@@ -299,23 +305,39 @@ export const MyBookings = () => {
                                     <span className="ml-1 hidden sm:inline">{t("myBookings.cancel")}</span>
                                   </Button>
                                 </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                  <AlertDialogHeader>
-                                    <AlertDialogTitle>{t("myBookings.cancelConfirmTitle")}</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                      {t("myBookings.cancelConfirmDesc")}
-                                    </AlertDialogDescription>
-                                  </AlertDialogHeader>
-                                  <AlertDialogFooter>
-                                    <AlertDialogCancel>{t("myBookings.cancelConfirmAbort")}</AlertDialogCancel>
-                                    <AlertDialogAction
-                                      onClick={() => cancelBooking.mutate(booking.id, { onSuccess: () => fetchBookings() })}
-                                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                                    >
-                                      {t("myBookings.cancel")}
-                                    </AlertDialogAction>
-                                  </AlertDialogFooter>
-                                </AlertDialogContent>
+                                {canCancelFree(booking.start_time) ? (
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>{t("myBookings.cancelConfirmTitle")}</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {t("myBookings.cancelConfirmDesc")}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>{t("myBookings.cancelConfirmAbort")}</AlertDialogCancel>
+                                      <AlertDialogAction
+                                        onClick={() => cancelBooking.mutate(booking.id, { onSuccess: () => fetchBookings() })}
+                                        className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                                      >
+                                        {t("myBookings.cancel")}
+                                      </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                ) : (
+                                  // Innerhalb der 24 Stunden: kein Storno mehr. Der Server lehnt
+                                  // ohnehin ab — hier steht, warum, bevor jemand vergeblich klickt.
+                                  <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                      <AlertDialogTitle>{t("myBookings.cancelTooLateTitle")}</AlertDialogTitle>
+                                      <AlertDialogDescription>
+                                        {t("myBookings.cancelTooLateDesc", { deadline: format(cancelDeadline(booking.start_time), "dd.MM.yyyy, HH:mm", { locale: dateLocale }) })}
+                                      </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                      <AlertDialogCancel>{t("myBookings.cancelTooLateOk")}</AlertDialogCancel>
+                                    </AlertDialogFooter>
+                                  </AlertDialogContent>
+                                )}
                               </AlertDialog>
                             </div>
                           </div>

@@ -98,7 +98,7 @@ const CATALOG: CatalogEntry[] = [
           appleUrl: `${Deno.env.get("SUPABASE_URL") ?? ""}/functions/v1/booking-ics?sample=1`,
         },
         note: "Die .ics-Datei im Anhang funktioniert auch mit Outlook. Wir freuen uns auf dein Match! 🏆",
-        legalHtml: "Kostenlose Stornierung bis Spielbeginn. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
+        legalHtml: "Kostenlose Stornierung bis 24 Stunden vor Spielbeginn (für diese Buchung bis Freitag, 2. Oktober 2026, 18:00 Uhr) mit voller Rückerstattung; danach ist keine Stornierung mehr möglich. Kein gesetzliches Widerrufsrecht bei termingebundenen Freizeitleistungen (§ 312g Abs. 2 Nr. 9 BGB).",
       }),
     }),
   },

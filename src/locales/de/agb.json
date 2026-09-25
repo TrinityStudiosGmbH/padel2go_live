@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "Allgemeine Geschäftsbedingungen",
-    "subtitle": "Stand: Juli 2026"
+    "subtitle": "Stand: September 2026"
   },
   "sections": {
     "scope": {
@@ -54,8 +54,8 @@
       "userLabel": "Stornierung durch den Nutzer:",
       "userText": "Registrierte Nutzer stornieren über ihr Nutzerkonto, Gäste über den in der Buchungsbestätigung angegebenen Kontaktweg (eine E-Mail genügt). Es gelten folgende Bedingungen:",
       "userList": [
-        "Stornierung bis zum Beginn der gebuchten Spielzeit: kostenlos, volle Rückerstattung des gezahlten Betrags auf das ursprüngliche Zahlungsmittel",
-        "Nach Beginn der gebuchten Spielzeit oder bei Nichterscheinen: keine Rückerstattung"
+        "Stornierung bis 24 Stunden vor Beginn der gebuchten Spielzeit: kostenlos, volle Rückerstattung des gezahlten Betrags auf das ursprüngliche Zahlungsmittel",
+        "Weniger als 24 Stunden vor Beginn der gebuchten Spielzeit, nach Beginn oder bei Nichterscheinen: keine Stornierung und keine Rückerstattung"
       ],
       "providerLabel": "Stornierung durch PADEL2GO:",
       "providerText": "Im Falle von höherer Gewalt, technischen Problemen oder anderen unvorhersehbaren Ereignissen, die eine Durchführung der Buchung unmöglich machen, wird der vollständige Betrag erstattet."
@@ -151,6 +151,6 @@
       "p5": "Wir sind zur Teilnahme an Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle weder verpflichtet noch bereit."
     }
   },
-  "footerNote": "Stand: Juli 2026 · PADEL2GO OpCo UG (haftungsbeschränkt), Humboldtstraße 34, 81543 München",
+  "footerNote": "Stand: September 2026 · PADEL2GO OpCo UG (haftungsbeschränkt), Humboldtstraße 34, 81543 München",
   "enLegalNotice": ""
 }

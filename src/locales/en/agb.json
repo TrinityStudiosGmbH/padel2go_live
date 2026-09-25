@@ -5,7 +5,7 @@
   },
   "header": {
     "title": "General Terms & Conditions",
-    "subtitle": "As of: July 2026"
+    "subtitle": "As of: September 2026"
   },
   "sections": {
     "scope": {
@@ -54,8 +54,8 @@
       "userLabel": "Cancellation by the user:",
       "userText": "Registered users cancel via their user account; guests via the contact channel stated in the booking confirmation (an email is sufficient). The following conditions apply:",
       "userList": [
-        "Cancellation up to the start of the booked playing time: free of charge, full refund of the amount paid to the original payment method",
-        "After the start of the booked playing time or in case of no-show: no refund"
+        "Cancellation up to 24 hours before the start of the booked playing time: free of charge, full refund of the amount paid to the original payment method",
+        "Less than 24 hours before the start of the booked playing time, after the start, or in case of no-show: no cancellation and no refund"
       ],
       "providerLabel": "Cancellation by PADEL2GO:",
       "providerText": "In the event of force majeure, technical problems or other unforeseeable events that make it impossible to carry out the booking, the full amount will be refunded."
@@ -151,6 +151,6 @@
       "p5": "We are neither obliged nor willing to participate in dispute resolution proceedings before a consumer arbitration board."
     }
   },
-  "footerNote": "As of: July 2026 · PADEL2GO OpCo UG (haftungsbeschränkt), Humboldtstraße 34, 81543 Munich, Germany",
+  "footerNote": "As of: September 2026 · PADEL2GO OpCo UG (haftungsbeschränkt), Humboldtstraße 34, 81543 Munich, Germany",
   "enLegalNotice": "This English version is provided for convenience. The legally binding version of these Terms is the German one."
 }

@@ -36,6 +36,7 @@ import { formatPrice, applyVoucherDiscount } from "@/lib/pricing";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { cancelDeadline } from "@/lib/bookingPolicy";
 
 const BookingCheckout = () => {
   const sectionColor = useSectionTheme("booking");
@@ -596,7 +597,9 @@ const BookingCheckout = () => {
                       {t("checkout.legal.outro")}
                     </p>
                     <p className="text-xs text-center text-muted-foreground/70">
-                      {t("checkout.legal.cancellation")}
+                      {t("checkout.legal.cancellation", {
+                        deadline: format(cancelDeadline(startTime), "dd.MM.yyyy, HH:mm", { locale: dateLocale }),
+                      })}
                     </p>
                     <p className="text-xs text-center text-muted-foreground/70">
                       {t("checkout.legal.withdrawal")}

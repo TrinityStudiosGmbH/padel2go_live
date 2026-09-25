@@ -3,6 +3,7 @@ import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveResendKey, brandedEmailHtml, sendBrandedEmail } from "../_shared/email.ts";
 import { resolveStripe } from "../_shared/stripe.ts";
+import { CANCEL_CUTOFF_HOURS, cancelDeadline } from "../_shared/bookingPolicy.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -138,12 +139,22 @@ serve(async (req) => {
       });
     }
 
-    // Only a confirmed booking that is still in the FUTURE may be cancelled. Validate
-    // this BEFORE touching Stripe so a past/pending booking is never refunded.
-    const startsInFuture = new Date(booking.start_time).getTime() > Date.now();
-    if (booking.status !== "confirmed" || (!startsInFuture && !isAdmin)) {
-      logStep("Booking not cancellable", { status: booking.status, startsInFuture });
-      return new Response(JSON.stringify({ error: "Diese Buchung kann nicht storniert werden." }), {
+    // Nur eine bestaetigte Buchung, und fuer den Kunden nur bis 24 Stunden vor
+    // Spielbeginn — danach keine Erstattung, also auch keine Stornierung. Die
+    // Verwaltung darf aus Kulanz jederzeit. Geprueft BEVOR Stripe angefasst
+    // wird, damit nie erstattet wird, was nicht storniert werden darf.
+    const deadline = cancelDeadline(booking.start_time);
+    const withinFreeWindow = Date.now() < deadline.getTime();
+    if (booking.status !== "confirmed" || (!withinFreeWindow && !isAdmin)) {
+      const tooLate = booking.status === "confirmed" && !withinFreeWindow;
+      logStep("Booking not cancellable", { status: booking.status, withinFreeWindow, deadline: deadline.toISOString() });
+      return new Response(JSON.stringify({
+        error: tooLate
+          ? `Die kostenlose Stornierung ist nur bis ${CANCEL_CUTOFF_HOURS} Stunden vor Spielbeginn möglich. Diese Frist ist abgelaufen.`
+          : "Diese Buchung kann nicht storniert werden.",
+        code: tooLate ? "too_late" : "not_cancellable",
+        cancel_deadline: deadline.toISOString(),
+      }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

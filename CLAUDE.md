@@ -133,6 +133,12 @@ supabase/
 - **Expert Levels sind entfernt.** Kein Level-Multiplikator, keine Stufen im Frontend, kein `expert-levels`-Endpunkt.
 - Admin: alles unter `/admin/pricing` („Preise & Punkte") in den Reitern Preise / Punkte / Wallets / Übersicht. `/admin/p2g-points` leitet dorthin um.
 
+## Stornoregel (Buchungen)
+- **Kostenlos bis 24 Stunden vor Spielbeginn, danach keine Stornierung durch den Kunden.** Die Zahl steht dreimal und muss dreimal gleich sein: `cancel_confirmed_booking()` (DB, letzte Instanz), `supabase/functions/_shared/bookingPolicy.ts` (Edge), `src/lib/bookingPolicy.ts` (Frontend).
+- Frontend zeigt vor dem Klick, ob die Frist noch läuft (`canCancelFree`), und öffnet innerhalb der 24 h ein „Zu spät"-Fenster statt des Storno-Dialogs. Der Server lehnt mit `code: "too_late"` trotzdem ab.
+- Die konkrete Frist steht im Checkout, unter „Meine Buchungen" und in der Bestätigungsmail („Kostenlos stornierbar bis …").
+- Die Verwaltung (`cancel_booking_admin`, Admin → Buchungen) ist von der Frist ausgenommen — Kulanz.
+
 ## Rechnungen
 - Belege liegen in `receipts` (lückenlose Nummer `P2G-<Jahr>-<nnnnnn>`, Netto/Steuer getrennt). `create_receipt()` löst Empfängername, E-Mail und Anschrift **selbst** aus Bestellung, Buchung und Profil auf — Aufrufer müssen nichts mitgeben.
 - Absenderangaben (Firma, USt-IdNr., Registergericht, Bank) stehen in `billing_profile` (eine Zeile, `id = 'global'`), gepflegt unter Admin → Einstellungen → Rechnungsangaben. **Nicht** im Impressum-Text nachpflegen.
@@ -169,6 +175,7 @@ supabase/
 - `20260920140000_invoice_documents.sql` — am 20.09.2026 gelaufen und verifiziert
 - `20260925100000_admin_cancel_booking.sql` — OFFEN: cancel_booking_admin() für die Stornierung durch die Verwaltung. Muss laufen, BEVOR die Edge Function cancel-booking neu bereitgestellt wird
 - `20260925140000_test_receipts.sql` — OFFEN: Testbelege mit eigenem Nummernkreis, Trigger zum Löschen beim Moduswechsel, Auslastung je Betriebsart. Danach `receipt-pdf` neu bereitstellen
+- `20260925160000_cancellation_24h.sql` — OFFEN: Stornofrist 24 h in cancel_confirmed_booking()
 - `20260925120000_cron_secret_source.sql` — OFFEN: stellt notify_push() und trigger_match_reminders() von current_setting('app.cron_secret') auf private.cron_secrets um (der Parameter lässt sich auf Supabase nicht setzen, beide liefen deshalb ins Leere) und plant den Stripe-Abgleich alle 30 Minuten ein
 
 Die Preis- und Punkte-Migrationen (`20260918120000` bis `20260918120040` sowie
