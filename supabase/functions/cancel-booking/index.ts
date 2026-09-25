@@ -4,6 +4,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { resolveResendKey, brandedEmailHtml, sendBrandedEmail } from "../_shared/email.ts";
 import { resolveStripe } from "../_shared/stripe.ts";
 import { CANCEL_CUTOFF_HOURS, cancelDeadline } from "../_shared/bookingPolicy.ts";
+import { bookingDescription } from "../_shared/receiptText.ts";
 
 const allowedOrigins = [
   "https://www.padel2go-official.com",
@@ -179,12 +180,31 @@ serve(async (req) => {
         // Schluessel am Zahlungsvorgang, nicht an der Buchung: ein wiederholter
         // Storno erzeugt weiterhin keine zweite Erstattung, aber zwei Zahlungen
         // auf dieselbe Buchung bleiben einzeln erstattbar.
-        await stripe.refunds.create(
+        const refund = await stripe.refunds.create(
           { payment_intent: payment.stripe_payment_intent_id },
           { idempotencyKey: `bk_refund_${payment.stripe_payment_intent_id}` },
         );
         refundIssued = true;
         logStep("Stripe refund issued", { bookingId, paymentIntentId: payment.stripe_payment_intent_id });
+
+        // Die Korrekturrechnung entsteht hier, direkt an der Erstattung — nicht
+        // erst, wenn Stripe irgendwann charge.refunded zustellt. Das Ereignis ist
+        // im Endpunkt leicht vergessen, und dann fehlte zu jeder Erstattung der
+        // Beleg. create_receipt ist idempotent: kommt das Ereignis doch, gibt es
+        // keinen zweiten.
+        const { error: creditError } = await supabaseAdmin.rpc("create_receipt", {
+          p_receipt_type: "booking_refund",
+          p_source_id: bookingId,
+          p_user_id: booking.user_id ?? null,
+          p_recipient_email: null,
+          p_recipient_name: null,
+          p_description: await bookingDescription(supabaseAdmin, bookingId, { refund: true }),
+          p_gross_cents: -refund.amount,
+          p_discount_cents: 0,
+          p_paid_cents: -refund.amount,
+          p_tax_rate: 19,
+        });
+        if (creditError) logStep("Booking refund: receipt creation failed", { bookingId, error: creditError.message });
       } catch (refundErr) {
         // Refund failed — do NOT cancel the booking. The user keeps the booking and can retry.
         logStep("Stripe refund failed — aborting cancel", { bookingId, error: (refundErr as Error).message });

@@ -90,6 +90,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { uploadMediaFile } from "@/lib/uploadMedia";
 import { toast } from "sonner";
 import { grossFromNet, marginPercent, netFromGross, taxFromGross, unitMarginCents } from "@/lib/productPricing";
+import { useDataMode } from "@/hooks/useDataMode";
 
 const PRODUCT_TRANSLATE_FIELDS = ["name", "subtitle", "description", "long_description", "meta_title", "meta_description"];
 
@@ -235,11 +236,13 @@ const AdminMarketplace = () => {
     toast.success(t("admin.translateAllDone", { count: ok }));
   };
 
+  const { isTest } = useDataMode();
   const { data: analytics, isLoading: analyticsLoading } = useQuery({
-    queryKey: ["admin-marketplace-analytics"],
+    queryKey: ["admin-marketplace-analytics", isTest],
+    enabled: isTest !== undefined,
     queryFn: async (): Promise<MarketplaceAnalytics> => {
       const { data, error } = await supabase.functions.invoke("admin-credits", {
-        body: { action: "marketplace_analytics" },
+        body: { action: "marketplace_analytics", is_test: isTest },
       });
       if (error) throw error;
       return data as MarketplaceAnalytics;
@@ -251,12 +254,14 @@ const AdminMarketplace = () => {
   // Präfix der Listen-Queries, damit die bestehenden Invalidierungen der Mutations
   // (Versand, Storno, Retouren-Update) die Pille automatisch mit aktualisieren.
   const { data: openOrderCount } = useQuery({
-    queryKey: ["admin-marketplace-redemptions", "open-count"],
+    queryKey: ["admin-marketplace-redemptions", "open-count", isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
-      const { count, error } = await supabase
+      const { count, error } = await (supabase as any)
         .from("marketplace_redemptions")
         .select("*", { count: "exact", head: true })
         .eq("status", "success")
+        .eq("is_test", isTest)
         .eq("fulfillment_status", "pending");
       if (error) throw error;
       return count ?? 0;

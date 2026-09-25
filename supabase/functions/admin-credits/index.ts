@@ -2543,7 +2543,9 @@ serve(async (req) => {
         supabaseAdmin
           .from("marketplace_redemptions")
           .select("amount_cents, play_spent, reward_spent")
-          .eq("status", "success"),
+          .eq("status", "success")
+          // Datenansicht der Verwaltung: Test oder Live, nie gemischt.
+          .eq("is_test", typeof body.is_test === "boolean" ? body.is_test : false),
       );
 
       let revenueCents = 0;

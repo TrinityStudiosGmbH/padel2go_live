@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { MarketplaceCategory, MarketplaceItem, ProductStatus, ProductType } from "./useMarketplaceItems";
+import { useDataMode } from "@/hooks/useDataMode";
 
 export interface MarketplaceItemInput {
   name: string;
@@ -89,20 +90,23 @@ export interface MarketplaceRedemption {
 
 // Fetch all redemptions for admin
 export const useAdminRedemptions = () => {
+  const { isTest } = useDataMode();
   return useQuery({
-    queryKey: ["admin-marketplace-redemptions"],
+    queryKey: ["admin-marketplace-redemptions", isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
       // Only PAID orders belong in the fulfillment queue. Orders sit at status
       // 'pending' from checkout start until the payment webhook settles them, and
       // abandoned ones become 'cancelled' — surfacing either would let an admin ship
       // a never-paid item (indistinguishable by fulfillment_status alone).
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("marketplace_redemptions")
         .select(`
           *,
           item:marketplace_items(name, category, product_type)
         `)
         .eq("status", "success")
+        .eq("is_test", isTest)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -158,13 +162,16 @@ export interface OrderReceipt {
  * haben: die Rechnung und, nach einer Erstattung, die Korrekturrechnung.
  */
 export const useMarketplaceReceipts = () => {
+  const { isTest } = useDataMode();
   return useQuery({
-    queryKey: ["admin-marketplace-receipts"],
+    queryKey: ["admin-marketplace-receipts", isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("receipts")
         .select("receipt_number, receipt_type, source_id, paid_cents, tax_cents, tax_rate, issued_at")
         .in("receipt_type", ["marketplace_order", "marketplace_refund"])
+        .eq("is_test", isTest)
         .order("receipt_number", { ascending: true });
       if (error) throw error;
 
@@ -207,10 +214,12 @@ export interface MarketplaceOrder {
 }
 
 export const useAdminMarketplaceOrders = () => {
+  const { isTest } = useDataMode();
   return useQuery({
-    queryKey: ["admin-marketplace-orders"],
+    queryKey: ["admin-marketplace-orders", isTest],
+    enabled: isTest !== undefined,
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("marketplace_redemptions")
         .select(`
           id, status, fulfillment_status, reference_code, created_at, quantity,
@@ -224,6 +233,7 @@ export const useAdminMarketplaceOrders = () => {
         // fuer die Verwaltung bisher unsichtbar — wer dem Kunden helfen will,
         // muss sie sehen.
         .in("status", ["pending", "success", "refunded", "cancelled"])
+        .eq("is_test", isTest)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
