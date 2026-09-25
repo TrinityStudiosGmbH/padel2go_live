@@ -58,7 +58,7 @@ const BookingCheckout = () => {
     formatTimeLeft,
     memberQuota,
     claimingQuota,
-    useMemberQuotaForBooking,
+    claimMemberQuotaForBooking,
   } = useBookingCheckout();
 
   // Gutschein-Feld standardmäßig offen, damit es in der Bezahlmaske sofort sichtbar ist.
@@ -456,7 +456,7 @@ const BookingCheckout = () => {
                           variant="outline"
                           size="sm"
                           disabled={claimingQuota}
-                          onClick={() => useMemberQuotaForBooking()}
+                          onClick={() => claimMemberQuotaForBooking()}
                           className="border-primary/40 text-primary hover:bg-primary/10"
                         >
                           {claimingQuota ? (

@@ -74,7 +74,7 @@ export interface UseBookingCheckoutReturn {
   /** Freikontingent des Vereins auf diesem Court; null = nicht verfügbar. */
   memberQuota: MemberQuotaSummary | null;
   claimingQuota: boolean;
-  useMemberQuotaForBooking: () => Promise<void>;
+  claimMemberQuotaForBooking: () => Promise<void>;
 }
 
 /** Fehlermeldungen der claim_member_quota-RPC in Klartext. */
@@ -446,7 +446,7 @@ export function useBookingCheckout(): UseBookingCheckoutReturn {
    * Danach wird die Buchung neu geladen — bezahlt wird dann über den Free-Path
    * von create-checkout-session.
    */
-  const useMemberQuotaForBooking = async () => {
+  const claimMemberQuotaForBooking = async () => {
     if (!booking || claimingQuota) return;
 
     setClaimingQuota(true);
@@ -490,6 +490,6 @@ export function useBookingCheckout(): UseBookingCheckoutReturn {
     formatTimeLeft,
     memberQuota: memberQuota ?? null,
     claimingQuota,
-    useMemberQuotaForBooking,
+    claimMemberQuotaForBooking,
   };
 }

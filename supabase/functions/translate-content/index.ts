@@ -204,13 +204,14 @@ serve(async (req) => {
   // string, an HTML string (body_html — DeepL needs tag_handling=html) or a text[] array
   // (events.highlights — translated element-wise). Locked or empty fields are skipped.
   type Work =
-    | { field: string; kind: "text" | "html"; text: string }
+    | { field: string; kind: "text"; text: string }
+    | { field: string; kind: "html"; text: string }
     | { field: string; kind: "array"; arr: string[] };
   const work: Work[] = [];
   for (const field of fields) {
-    const isLocked = Boolean((row as Record<string, unknown>)[`${field}_en_locked`]);
+    const isLocked = Boolean((row as unknown as Record<string, unknown>)[`${field}_en_locked`]);
     if (isLocked) continue;
-    const source = (row as Record<string, unknown>)[field];
+    const source = (row as unknown as Record<string, unknown>)[field];
     if (Array.isArray(source)) {
       const arr = source.filter(
         (s): s is string => typeof s === "string" && s.trim().length > 0,

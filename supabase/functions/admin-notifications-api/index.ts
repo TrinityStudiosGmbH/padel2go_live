@@ -7,6 +7,7 @@ const corsHeaders = {
 };
 
 interface BroadcastRequest {
+  category?: "transactional" | "marketing";
   action: "send_broadcast" | "update_broadcast" | "delete_broadcast" | "cleanup_expired";
   title?: string;
   message?: string;

@@ -287,14 +287,15 @@ serve(async (req) => {
               });
             }
 
-            let item: { name: string; category: string; partner_name: string | null; product_type: string } | null = null;
+            type MarketplaceItemRow = { name: string; category: string; partner_name: string | null; product_type: string };
+            let item: MarketplaceItemRow | null = null;
             if (order?.item_id) {
               const { data: itemRow } = await supabaseAdmin
                 .from("marketplace_items")
                 .select("name, category, partner_name, product_type")
                 .eq("id", order.item_id)
                 .single();
-              item = itemRow as typeof item;
+              item = itemRow as unknown as MarketplaceItemRow | null;
             }
 
             // Gutschein-Einloesung dokumentieren. Die Nutzung wurde schon beim
@@ -421,16 +422,14 @@ serve(async (req) => {
                   const formattedAddress = item?.product_type === "purchase"
                     ? `${order?.shipping_address_line1 ?? ""}\n${order?.shipping_postal_code ?? ""} ${order?.shipping_city ?? ""}\n${order?.shipping_country ?? "Deutschland"}`
                     : "— (kein Versand nötig)";
-                  // `item` kommt aus einem untypisierten Select (never) — lokal typisieren.
-                  const itemInfo = item as { name?: string; category?: string } | null;
                   const resend = new Resend(resendApiKey);
                   await resend.emails.send({
                     from: DEFAULT_FROM,
                     to: [INTERNAL_INBOX],
-                    subject: `Neue Marketplace-Bestellung: ${item.name} - ${order?.reference_code ?? redemptionId}`,
+                    subject: `Neue Marketplace-Bestellung: ${item?.name ?? "Artikel"} - ${order?.reference_code ?? redemptionId}`,
                     html: brandedEmailHtml({
                       internal: true,
-                      title: `Neue Marketplace-Bestellung: ${itemInfo?.name ?? "Artikel"}`,
+                      title: `Neue Marketplace-Bestellung: ${item?.name ?? "Artikel"}`,
                       preheader: `${order?.reference_code ?? redemptionId} · ${customerName}`,
                       emoji: "🛍️",
                       heading: "Neue Marketplace-Bestellung",
@@ -438,8 +437,8 @@ serve(async (req) => {
                       rowsTitle: "Bestelldetails",
                       rows: [
                         { label: "Referenz", value: String(order?.reference_code ?? redemptionId) },
-                        { label: "Produkt", value: itemInfo?.name ?? "Artikel" },
-                        { label: "Kategorie", value: itemInfo?.category ?? "-" },
+                        { label: "Produkt", value: item?.name ?? "Artikel" },
+                        { label: "Kategorie", value: item?.category ?? "-" },
                         { label: "Menge", value: String(order?.quantity ?? 1) },
                         { label: "Bezahlt mit Punkten", value: String(pointsSpent) },
                         { label: "Bezahlt bar", value: `${((order?.amount_cents ?? session.amount_total ?? 0) / 100).toFixed(2).replace(".", ",")} €` },

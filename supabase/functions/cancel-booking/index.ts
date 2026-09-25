@@ -268,8 +268,8 @@ serve(async (req) => {
         year: "numeric",
       });
       const timeFormatted = startDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
-      const courtName = (booking.courts as { name: string } | null)?.name || "Court";
-      const locationName = (booking.locations as { name: string } | null)?.name || "Standort";
+      const courtName = (booking.courts as unknown as { name: string } | null)?.name || "Court";
+      const locationName = (booking.locations as unknown as { name: string } | null)?.name || "Standort";
       const creditsLine = creditsRefunded > 0
         ? ` ${creditsRefunded} Punkte wurden dir gutgeschrieben.`
         : "";
