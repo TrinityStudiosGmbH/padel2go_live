@@ -35,8 +35,8 @@ const Impressum = () => {
               <h2 className="text-xl font-bold mb-4 text-primary">{t("sections.provider")}</h2>
               <div className="space-y-1 text-foreground">
                 <p className="font-semibold">PADEL2GO OpCo UG (haftungsbeschränkt)</p>
-                <p>Am Neudeck 12</p>
-                <p>81541 München</p>
+                <p>Humboldtstraße 34</p>
+                <p>81543 München</p>
                 <p>Deutschland</p>
               </div>
             </section>
@@ -101,8 +101,8 @@ const Impressum = () => {
               <h2 className="text-xl font-bold mb-4 text-primary">{t("sections.responsible")}</h2>
               <div className="space-y-1 text-foreground">
                 <p className="font-semibold">Florian Steinfelder & David Klemm</p>
-                <p>Am Neudeck 12</p>
-                <p>81541 München</p>
+                <p>Humboldtstraße 34</p>
+                <p>81543 München</p>
               </div>
             </section>
 

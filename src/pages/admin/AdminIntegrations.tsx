@@ -505,7 +505,7 @@ export default function AdminIntegrations() {
                   hint={resendState.has_api_key ? "••• API-Key hinterlegt" : "re_..."}
                 />
                 <p className={fieldHintClass}>
-                  Versand läuft zentral über <strong className="font-semibold text-foreground">info@padel2go-official.de</strong>{" "}
+                  Versand läuft zentral über <strong className="font-semibold text-foreground">contact@padel2go.eu</strong>{" "}
                   (in Resend verifizierte Domain, Kunden können direkt antworten). Nur den API-Key eintragen.
                 </p>
               </div>

@@ -6,10 +6,10 @@ import { Resend } from "npm:resend@4.0.0";
 // Single source of truth for the sender identity. padel2go-official.de is the
 // domain verified in Resend. We send FROM info@ (a real, forwarded mailbox) so
 // customers can simply reply — no unreachable noreply@ address.
-export const DEFAULT_FROM = "PADEL2GO <info@padel2go-official.de>";
+export const DEFAULT_FROM = "PADEL2GO <contact@padel2go.eu>";
 // Reply-to for customer-facing mail + inbox for internal notifications (same mailbox).
-export const REPLY_TO_EMAIL = "info@padel2go-official.de";
-export const INTERNAL_INBOX = "info@padel2go-official.de";
+export const REPLY_TO_EMAIL = "contact@padel2go.eu";
+export const INTERNAL_INBOX = "contact@padel2go.eu";
 
 export const APP_URL = "https://www.padel2go-official.de";
 // Served from the Vite `public/` folder of the web app (public/email/logo-written.png).
@@ -159,7 +159,7 @@ export function emailShell(o: EmailShellOpts): string {
           <tr>
             <td align="center" bgcolor="${BRAND.black}" class="p2g-px" style="background-color:${BRAND.black};padding:26px 40px 30px;border-radius:0 0 16px 16px;border-top:1px solid ${BRAND.border};font-family:${FONT_BODY};">
               <p style="margin:0 0 12px;font-size:12px;line-height:1.7;color:${BRAND.faint};">
-                PADEL2GO OpCo UG (haftungsbeschränkt) · Am Neudeck 12 · 81541 München<br>
+                PADEL2GO OpCo UG (haftungsbeschränkt) · Humboldtstraße 34 · 81543 München<br>
                 Geschäftsführer: Florian Steinfelder, David Klemm · Amtsgericht München, HRB 312382
               </p>
               <p style="margin:0 0 12px;font-size:12px;line-height:1.7;">

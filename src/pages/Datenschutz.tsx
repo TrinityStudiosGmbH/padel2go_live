@@ -36,8 +36,8 @@ const Datenschutz = () => {
               <h2 className="text-xl font-bold mb-4 text-primary">{t("controller.heading")}</h2>
               <div className="space-y-1 text-foreground text-sm leading-relaxed">
                 <p className="font-medium">PADEL2GO OpCo UG (haftungsbeschränkt)</p>
-                <p>Am Neudeck 12</p>
-                <p>81541 München</p>
+                <p>Humboldtstraße 34</p>
+                <p>81543 München</p>
                 <p>Deutschland</p>
                 <p className="mt-3">
                   {t("controller.emailLabel")}{" "}
