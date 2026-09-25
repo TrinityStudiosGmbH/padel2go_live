@@ -146,7 +146,7 @@ supabase/
 - **Lobby-Anteile** bekommen Belege (`lobby_share`); Event-Tickets (`event_ticket`) sind als Belegart vorbereitet, ein Bezahlweg existiert noch nicht.
 - **Manuelle Posten & Fixkosten** in `pnl_entries` (einmalig oder monatlich/quartalsweise/jährlich), aufgelöst durch `pnl_entry_occurrences()`. Nur Admins.
 - `lobby-api` lehnt Geldaktionen ab, solange `feature_lobbies_state = hidden`.
-- **Belege-Tab** `/admin/belege` liest die View `admin_receipts` (Beleg + Kategorie + Sport + Referenz). CSV der Auswahl entsteht im Browser; **ZIP** (ein PDF je Beleg + `belege.csv`) baut die Edge Function `receipts-export` — Renderer in `_shared/receiptPdf.ts`, geteilt mit `receipt-pdf`. Höchstens 500 Belege je Export; der Export folgt der Datenansicht, Testexporte tragen „TEST“ im Dateinamen.
+- **Belege-Tab** `/admin/belege` liest die View `admin_receipts` (Beleg + Kategorie + Sport + Referenz). CSV der Auswahl entsteht im Browser; **ZIP** (ein PDF je Beleg + `belege.csv`) entsteht **im Browser** (`fflate`): jedes PDF kommt einzeln von `receipt-pdf`, drei gleichzeitig. Eine Server-Funktion dafür scheiterte an der ~2 s Rechenzeitgrenze der Edge Functions. Der Export folgt der Datenansicht, Testexporte tragen „TEST“ im Dateinamen.
 - **Übersicht** hat den Umschalter *Gebucht/Realisiert* (`basis`): Kacheln nach `created_at` bzw. `start_time`, PnL nach Beleg- bzw. Leistungsdatum. PnL-Modell in `src/lib/pnl.ts`, Sektion `components/admin/overview/PnlSection.tsx`.
 - Admin → Buchungen hält einen Realtime-Kanal auf `bookings` und lädt bei jeder Änderung nach.
 

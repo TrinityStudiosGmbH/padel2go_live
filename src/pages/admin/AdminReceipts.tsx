@@ -12,6 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { InvoiceDownloadButton } from "@/components/InvoiceDownloadButton";
 import { useDataMode } from "@/hooks/useDataMode";
+import { zipSync, strToU8 } from "fflate";
 
 interface ReceiptRow {
   id: string;
@@ -88,48 +89,89 @@ export default function AdminReceipts() {
     { gross: 0, tax: 0, net: 0, fee: 0 },
   ), [filtered]);
 
-  const exportCsv = () => {
-    const real = filtered;
-    if (!real.length) return toast.info("Keine Belege in der Auswahl");
+  const buildCsv = (rows: ReceiptRow[]) => {
     const num = (c: number) => ((c ?? 0) / 100).toFixed(2).replace(".", ",");
     const esc = (v: unknown) => { const s = String(v ?? ""); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
     const header = "Belegnummer;Art;Sport;Datum;Leistungsdatum;Empfänger;Beschreibung;Brutto;Zahlbetrag;Netto;USt-Satz;USt-Betrag;Stripe-Gebühr";
-    const lines = real.map((r) => [
+    const lines = rows.map((r) => [
       esc(r.receipt_number), esc(CATEGORY_LABEL[r.category] + (r.is_refund ? " (Korrektur)" : "")), esc(r.sport ?? ""),
       format(new Date(r.issued_at), "dd.MM.yyyy"), r.service_date ? format(new Date(r.service_date), "dd.MM.yyyy") : "",
       esc(r.recipient_name ?? r.recipient_email ?? ""), esc(r.description),
       num(r.gross_cents), num(r.paid_cents), num(r.net_cents), String(r.tax_rate).replace(".", ","), num(r.tax_cents), num(r.stripe_fee_cents ?? 0),
     ].join(";"));
-    const blob = new Blob(["\uFEFF" + [header, ...lines].join("\n")], { type: "text/csv;charset=utf-8" });
+    return "\uFEFF" + [header, ...lines].join("\n");
+  };
+
+  const saveBlob = (blob: Blob, name: string) => {
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `p2g-belege${isTest ? "-TEST" : ""}-${from}_${to}.csv`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
     URL.revokeObjectURL(url);
   };
 
+  const exportCsv = () => {
+    if (!filtered.length) return toast.info("Keine Belege in der Auswahl");
+    saveBlob(new Blob([buildCsv(filtered)], { type: "text/csv;charset=utf-8" }), `p2g-belege${isTest ? "-TEST" : ""}-${from}_${to}.csv`);
+  };
+
+  const [zipProgress, setZipProgress] = useState<{ done: number; total: number } | null>(null);
+
+  /**
+   * ZIP entsteht im Browser: jedes PDF kommt einzeln von receipt-pdf (mit
+   * eigenem Zeitbudget), gepackt wird hier. Eine Server-Funktion, die alle
+   * PDFs am Stueck baut, laeuft ab einer Handvoll Belegen in die Rechenzeit-
+   * grenze der Edge Functions. So geht es fuer 5 wie fuer 500.
+   */
   const exportZip = async (label: string, f: string, t: string) => {
     setZipBusy(label);
+    setZipProgress(null);
     try {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
       if (!token) return toast.error("Bitte neu anmelden");
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receipts-export`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
-        body: JSON.stringify({ from: f, to: t, is_test: isTest === true }),
-      });
-      if (!res.ok) {
-        const msg = await res.json().catch(() => null);
-        return toast.error(msg?.error ?? "Export fehlgeschlagen");
-      }
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a"); a.href = url; a.download = `p2g-belege${isTest ? "-TEST" : ""}-${f}_${t}.zip`; a.click();
-      URL.revokeObjectURL(url);
-      toast.success(`${res.headers.get("X-Receipt-Count") ?? ""} Belege als ZIP exportiert`.trim());
+
+      const { data, error } = await (supabase as any)
+        .from("admin_receipts")
+        .select("id, receipt_number, receipt_type, source_id, recipient_name, recipient_email, description, gross_cents, paid_cents, net_cents, tax_rate, tax_cents, stripe_fee_cents, issued_at, service_date, is_test, category, is_refund, sport, reference_code")
+        .eq("is_test", isTest)
+        .gte("issued_at", `${f}T00:00:00+02:00`)
+        .lte("issued_at", `${t}T23:59:59+02:00`)
+        .order("receipt_number", { ascending: true })
+        .limit(1000);
+      if (error) throw error;
+      const list = (data ?? []) as ReceiptRow[];
+      if (!list.length) return toast.info("Keine Belege in diesem Zeitraum");
+
+      const files: Record<string, Uint8Array> = {};
+      let done = 0;
+      setZipProgress({ done, total: list.length });
+      const fehler: string[] = [];
+      // Drei gleichzeitig: schnell genug, ohne die Funktion zu ueberrennen.
+      const queue = [...list];
+      const worker = async () => {
+        for (let r = queue.shift(); r; r = queue.shift()) {
+          const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/receipt-pdf`, {
+            method: "POST",
+            headers: { Authorization: `Bearer ${token}`, apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY, "Content-Type": "application/json" },
+            body: JSON.stringify({ receipt_id: r.id }),
+          });
+          if (res.ok) files[`${r.receipt_number}.pdf`] = new Uint8Array(await res.arrayBuffer());
+          else fehler.push(r.receipt_number);
+          done += 1;
+          setZipProgress({ done, total: list.length });
+        }
+      };
+      await Promise.all([worker(), worker(), worker()]);
+
+      files["belege.csv"] = strToU8(buildCsv(list));
+      const zipped = zipSync(files, { level: 6 });
+      saveBlob(new Blob([zipped as BlobPart], { type: "application/zip" }), `p2g-belege${isTest ? "-TEST" : ""}-${f}_${t}.zip`);
+      if (fehler.length) toast.warning(`${fehler.length} Beleg(e) fehlen im ZIP: ${fehler.slice(0, 3).join(", ")}${fehler.length > 3 ? "…" : ""}`);
+      else toast.success(`${list.length} Belege als ZIP exportiert`);
     } catch (e) {
       toast.error("Export fehlgeschlagen", { description: (e as Error).message });
     } finally {
       setZipBusy(null);
+      setZipProgress(null);
     }
   };
 
@@ -160,6 +202,9 @@ export default function AdminReceipts() {
             <Button size="sm" onClick={exportCsv} className="rounded-[10px]">
               <Download className="h-3.5 w-3.5" /> CSV Auswahl
             </Button>
+            {zipProgress && (
+              <span className="font-mono text-[11.5px] text-muted-foreground">{zipProgress.done} / {zipProgress.total} PDFs</span>
+            )}
           </div>
         </div>
 
