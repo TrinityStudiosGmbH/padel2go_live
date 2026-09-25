@@ -111,10 +111,11 @@ BEGIN
   SELECT
     (CASE WHEN p_bucket = 'total' THEN p_from ELSE date_trunc(p_bucket, z.d::timestamp)::date END) AS bucket_start,
     z.line,
-    SUM(z.gross) AS gross_cents,
-    SUM(z.tax)   AS tax_cents,
-    SUM(z.net)   AS net_cents,
-    SUM(z.n)::int AS item_count
+    -- SUM ueber bigint liefert numeric; die Signatur verspricht bigint.
+    SUM(z.gross)::bigint AS gross_cents,
+    SUM(z.tax)::bigint   AS tax_cents,
+    SUM(z.net)::bigint   AS net_cents,
+    SUM(z.n)::int        AS item_count
   FROM zeilen z
   GROUP BY 1, 2
   ORDER BY 1, 2;
